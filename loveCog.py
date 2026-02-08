@@ -3,12 +3,13 @@ from discord.ext import commands
 from bot import TerrierBot, Context
 
 async def setup(bot : TerrierBot):
-    await bot.add_cog(HelloCog(bot))
+    await bot.add_cog(LoveCog(bot))
 
-class HelloCog(commands.Cog, name="Hello"):
+class LoveCog(commands.Cog, name="Love"):
     def __init__(self, bot : TerrierBot):
         self.bot : TerrierBot = bot
-        print("Hello Cog Ready")        
+        
+        print("Love Cog Ready")        
 
     @commands.Cog.listener()
     async def on_message(self, message : discord.Message):
@@ -18,6 +19,6 @@ class HelloCog(commands.Cog, name="Hello"):
 
     @commands.command()
     # @commands.is_owner()
-    async def hello(self, ctx : Context):
-        _ = await ctx.send(f"Hello {ctx.author.display_name}! I am TerrierBot!")
+    async def love(self, ctx : Context):
+        _ = await ctx.send(":heart: Terrier Love — Coming Soon! :heart:")
         # you can do stuff here when someone executes the command "test"
