@@ -14,11 +14,11 @@ class TestCog(commands.Cog, name="Test"):
     @commands.Cog.listener()
     async def on_message(self, message : discord.Message):
         if message.author == self.bot.user:
-            return
+            return 
         # you can do stuff here when someone sends a message
 
     @commands.command()
     # @commands.is_owner()
     async def test(self, ctx : Context):
-        pass
+        _ = await ctx.send("This is a test cog by so selene featuring owo")
         # you can do stuff here when someone executes the command "test"
