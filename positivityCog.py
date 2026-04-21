@@ -71,7 +71,8 @@ class PositivityCog(commands.Cog, name="Positivity"):
 
             self._save_state()
             await message.channel.send(
-                f"Happy Positivity Tuesday, <@{author_id}>! 🌸✨ You have been selected to make a positive comment about yourself, a fellow member, or anything else. 💖"
+                f"Happy Positivity Tuesday, <@{author_id}>! 🌸✨ You have been selected to make a positive comment about yourself, a fellow member, or anything else. 💖",
+                allowed_mentions=discord.AllowedMentions(users=False)
             )
             return
 
@@ -165,9 +166,9 @@ class PositivityCog(commands.Cog, name="Positivity"):
         for user_id in reversed(recent_selected):
             member = ctx.guild.get_member(user_id)
             if member is not None:
-                entries.append(f"{member.display_name} ({user_id})")
+                entries.append(member.display_name)
             else:
-                entries.append(f"Unknown User ({user_id})")
+                entries.append("Unknown User")
         _ = await ctx.send(
             "Positivity cooldown list (most recent first): "
             + ", ".join(entries)
