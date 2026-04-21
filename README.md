@@ -17,3 +17,16 @@ You only need to do this setup once.
 To run TerrierBot:
 1. Make sure you're in the python virtual environment (see step 3 of setup)
 2. Run with `python bot.py`
+
+## Positivity Tuesday
+
+TerrierBot includes a positivity feature that can post this message at a configurable cadence:
+
+"Happy Positivity Tuesday! You have been selected to make a positive comment toward a member of the server."
+
+Use these commands in a server (requires Manage Server permission):
+
+- `=positivity` shows current status and interval
+- `=positivity enable [x]` enables the feature, optionally setting the interval to every x messages
+- `=positivity disable` disables the feature
+- `=positivity interval <x>` updates the interval to every x messages
