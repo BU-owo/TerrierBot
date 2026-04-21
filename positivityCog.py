@@ -1,3 +1,4 @@
+import random
 import shelve
 
 import discord
@@ -18,11 +19,17 @@ class PositivityCog(commands.Cog, name="Positivity"):
         self.enabled_by_guild: dict[int, bool] = {}
         self.interval_by_guild: dict[int, int] = {}
         self.count_by_guild: dict[int, int] = {}
+        self.recent_speakers_by_guild: dict[int, list[int]] = {}
+        self.recent_selected_by_guild: dict[int, list[int]] = {}
+        self.recent_speaker_pool_size = 50
+        self.selection_cooldown_size = 5
 
         with shelve.open("terrierbot.shelve") as sh:
             self.enabled_by_guild = sh.get("positivity_enabled_by_guild", {})
             self.interval_by_guild = sh.get("positivity_interval_by_guild", {})
             self.count_by_guild = sh.get("positivity_count_by_guild", {})
+            self.recent_speakers_by_guild = sh.get("positivity_recent_speakers_by_guild", {})
+            self.recent_selected_by_guild = sh.get("positivity_recent_selected_by_guild", {})
 
         print("Positivity Cog Ready")
 
@@ -31,6 +38,8 @@ class PositivityCog(commands.Cog, name="Positivity"):
             sh["positivity_enabled_by_guild"] = self.enabled_by_guild
             sh["positivity_interval_by_guild"] = self.interval_by_guild
             sh["positivity_count_by_guild"] = self.count_by_guild
+            sh["positivity_recent_speakers_by_guild"] = self.recent_speakers_by_guild
+            sh["positivity_recent_selected_by_guild"] = self.recent_selected_by_guild
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -43,15 +52,42 @@ class PositivityCog(commands.Cog, name="Positivity"):
         if not self.enabled_by_guild.get(guild_id, False):
             return
 
+        author_id = message.author.id
+        recent_speakers = self.recent_speakers_by_guild.get(guild_id, [])
+        if author_id in recent_speakers:
+            recent_speakers.remove(author_id)
+        recent_speakers.append(author_id)
+        if len(recent_speakers) > self.recent_speaker_pool_size:
+            recent_speakers = recent_speakers[-self.recent_speaker_pool_size :]
+        self.recent_speakers_by_guild[guild_id] = recent_speakers
+
         interval = self.interval_by_guild.get(guild_id, self.default_interval)
         current_count = self.count_by_guild.get(guild_id, 0) + 1
         self.count_by_guild[guild_id] = current_count
 
         if current_count >= interval:
             self.count_by_guild[guild_id] = 0
+            recent_selected = self.recent_selected_by_guild.get(guild_id, [])
+            candidates = list(dict.fromkeys(self.recent_speakers_by_guild.get(guild_id, [])))
+
+            available_candidates = [user_id for user_id in candidates if user_id not in recent_selected]
+            if available_candidates:
+                selected_user_id = random.choice(available_candidates)
+            elif candidates:
+                selected_user_id = random.choice(candidates)
+            else:
+                selected_user_id = author_id
+
+            if selected_user_id in recent_selected:
+                recent_selected.remove(selected_user_id)
+            recent_selected.append(selected_user_id)
+            if len(recent_selected) > self.selection_cooldown_size:
+                recent_selected = recent_selected[-self.selection_cooldown_size :]
+            self.recent_selected_by_guild[guild_id] = recent_selected
+
             self._save_state()
             await message.channel.send(
-                f"Happy Positivity Tuesday, {message.author.mention}! 🌸✨ You have been selected to make a positive comment about yourself, a fellow member, or anything else. 💖 <#1413696001503531039>"
+                f"Happy Positivity Tuesday, <@{selected_user_id}>! 🌸✨ You have been selected to make a positive comment about yourself, a fellow member, or anything else. 💖 <#1413696001503531039>"
             )
             return
 
