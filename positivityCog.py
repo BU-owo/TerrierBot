@@ -51,7 +51,7 @@ class PositivityCog(commands.Cog, name="Positivity"):
             self.count_by_guild[guild_id] = 0
             self._save_state()
             await message.channel.send(
-                f"Happy Positivity Tuesday, {message.author.mention}! 🌸✨ You have been selected to make a positive comment toward a member of the server. 💖"
+                f"Happy Positivity Tuesday, {message.author.mention}! 🌸✨ You have been selected to make a positive comment about yourself, a fellow member, or anything else. 💖 <#1413696001503531039>"
             )
             return
 
