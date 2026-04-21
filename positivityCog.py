@@ -161,8 +161,14 @@ class PositivityCog(commands.Cog, name="Positivity"):
             _ = await ctx.send("Positivity cooldown list is currently empty.")
             return
 
-        mentions = [f"<@{user_id}>" for user_id in reversed(recent_selected)]
+        entries: list[str] = []
+        for user_id in reversed(recent_selected):
+            member = ctx.guild.get_member(user_id)
+            if member is not None:
+                entries.append(f"{member.display_name} ({user_id})")
+            else:
+                entries.append(f"Unknown User ({user_id})")
         _ = await ctx.send(
             "Positivity cooldown list (most recent first): "
-            + ", ".join(mentions)
+            + ", ".join(entries)
         )
