@@ -146,3 +146,23 @@ class PositivityCog(commands.Cog, name="Positivity"):
         self._save_state()
 
         _ = await ctx.send(f"Positivity interval is now every {every_x_messages} messages.")
+
+    @positivity_group.command(name="cooldown")
+    @commands.has_permissions(manage_guild=True)
+    async def positivity_cooldown(self, ctx: Context):
+        if ctx.guild is None:
+            _ = await ctx.send("This command can only be used in a server.")
+            return
+
+        guild_id = ctx.guild.id
+        recent_selected = self.recent_selected_by_guild.get(guild_id, [])
+
+        if not recent_selected:
+            _ = await ctx.send("Positivity cooldown list is currently empty.")
+            return
+
+        mentions = [f"<@{user_id}>" for user_id in reversed(recent_selected)]
+        _ = await ctx.send(
+            "Positivity cooldown list (most recent first): "
+            + ", ".join(mentions)
+        )
