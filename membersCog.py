@@ -21,13 +21,14 @@ class MembersCog(commands.Cog, name="Members"):
 
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["Username", "Nickname", "Roles", "Joined At"])
+        writer.writerow(["Username", "Global Display Name", "Server Nickname", "Roles", "Joined At"])
 
         async for member in ctx.guild.fetch_members(limit=None):
             roles = [r.name for r in member.roles if r.name != "@everyone"]
             joined = member.joined_at.strftime("%Y-%m-%d %H:%M:%S") if member.joined_at else ""
             writer.writerow([
-                str(member),
+                member.name,
+                member.global_name or "",
                 member.nick or "",
                 ", ".join(roles),
                 joined,
