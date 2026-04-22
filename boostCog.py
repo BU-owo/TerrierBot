@@ -15,12 +15,7 @@ class BoostCog(commands.Cog, name="Boost"):
         if message.author == self.bot.user:
             return
         # you can do stuff here when someone sends a message
-        if message.type in (
-            discord.MessageType.premium_guild_subscription,
-            discord.MessageType.premium_guild_subscription_tier_1,
-            discord.MessageType.premium_guild_subscription_tier_2,
-            discord.MessageType.premium_guild_subscription_tier_3,
-        ):
+        if message.type == discord.MessageType.premium_guild_subscription:
             await message.channel.send(
                 f"""🎉 **Thank you for boosting, {message.author.mention}!**
 

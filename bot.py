@@ -162,8 +162,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members"]
 
 async def main():
     async with bot:
