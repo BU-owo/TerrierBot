@@ -109,12 +109,14 @@ bot.help_command = commands.DefaultHelpCommand()
 @bot.command()
 @commands.is_owner()
 async def disconnect(ctx : Context):
+    """Shut down TerrierBot. (Owner only)"""
     _ = await ctx.send("Bye!")
     await bot.close()
 
 @bot.command()
 @commands.is_owner()
 async def delete(ctx : Context):
+    """Delete the bot's most recent message in this channel. (Owner only)"""
     msg = await discord.utils.get(ctx.channel.history(), author=bot.user)
     if msg is None:
         error_msg = await ctx.send("I've never spoken here!")
@@ -133,29 +135,34 @@ SENDABLE_CHANNEL = (discord.TextChannel, discord.VoiceChannel, discord.StageChan
 @bot.group()
 @commands.is_owner()
 async def cog(ctx : Context):
+    """Manage cogs: load, unload, reload, and list. (Owner only)"""
     if ctx.invoked_subcommand is None:
         _ = await ctx.send("Invalid cog command")
 
 @cog.command(name="load")
 async def loadCog(ctx : Context, cogName : str):
+    """Load a cog by name, like: =cog load members."""
     await bot.load_extension(cogName if cogName.endswith("Cog") else cogName + "Cog")
     logging.info("Loaded Cog \"{}\"".format(cogName))
     _ = await ctx.send("Loaded Cog \"{}\"".format(cogName))
 
 @cog.command(name="unload")
 async def unloadCog(ctx : Context, cogName : str):
+    """Unload a cog by name, like: =cog unload members."""
     await bot.unload_extension(cogName if cogName.endswith("Cog") else cogName + "Cog")
     logging.info("Unloaded Cog \"{}\"".format(cogName))
     _ = await ctx.send("Unloaded Cog \"{}\"".format(cogName))
 
 @cog.command(name="reload")
 async def reloadCog(ctx : Context, cogName : str):
+    """Reload a cog by name, like: =cog reload members."""
     await bot.reload_extension(cogName if cogName.endswith("Cog") else cogName + "Cog")
     logging.info("Reloaded Cog \"{}\"".format(cogName))
     _ = await ctx.send("Reloaded Cog \"{}\"".format(cogName))
 
 @cog.command(name="list")
 async def listCogs(ctx : Context):
+    """Show loaded and unloaded cogs."""
     loadedCogs = list(map(lambda x: x.split("Cog")[0], bot.extensions.keys()))
     _ = await ctx.send(
         "**Loaded Cogs:**\n{}\n**Unloaded Cogs:**\n{}".format(
