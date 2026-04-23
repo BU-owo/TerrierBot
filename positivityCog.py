@@ -10,7 +10,7 @@ async def setup(bot: TerrierBot):
     await bot.add_cog(PositivityCog(bot))
 
 
-class PositivityCog(commands.Cog, name="Positivity"):
+class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tuesday — randomly selects a member to share something positive. Requires Manage Server to configure."):
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
 
@@ -83,6 +83,7 @@ class PositivityCog(commands.Cog, name="Positivity"):
     @commands.group(name="positivity", invoke_without_command=True)
     @commands.has_permissions(manage_guild=True)
     async def positivity_group(self, ctx: Context):
+        """Show the current Positivity Tuesday status and interval for this server. (Requires Manage Server)"""
         if ctx.guild is None:
             _ = await ctx.send("This command can only be used in a server.")
             return
@@ -97,6 +98,7 @@ class PositivityCog(commands.Cog, name="Positivity"):
     @positivity_group.command(name="enable")
     @commands.has_permissions(manage_guild=True)
     async def positivity_enable(self, ctx: Context, every_x_messages: int | None = None):
+        """Enable Positivity Tuesday. Optionally set how often it triggers: =positivity enable [every_x_messages] (Requires Manage Server)"""
         if ctx.guild is None:
             _ = await ctx.send("This command can only be used in a server.")
             return
@@ -119,6 +121,7 @@ class PositivityCog(commands.Cog, name="Positivity"):
     @positivity_group.command(name="disable")
     @commands.has_permissions(manage_guild=True)
     async def positivity_disable(self, ctx: Context):
+        """Disable Positivity Tuesday for this server. (Requires Manage Server)"""
         if ctx.guild is None:
             _ = await ctx.send("This command can only be used in a server.")
             return
@@ -133,6 +136,7 @@ class PositivityCog(commands.Cog, name="Positivity"):
     @positivity_group.command(name="interval")
     @commands.has_permissions(manage_guild=True)
     async def positivity_interval(self, ctx: Context, every_x_messages: int):
+        """Change how often Positivity Tuesday triggers: =positivity interval <every_x_messages> (Requires Manage Server)"""
         if ctx.guild is None:
             _ = await ctx.send("This command can only be used in a server.")
             return
@@ -151,6 +155,7 @@ class PositivityCog(commands.Cog, name="Positivity"):
     @positivity_group.command(name="cooldown")
     @commands.has_permissions(manage_guild=True)
     async def positivity_cooldown(self, ctx: Context):
+        """Show the recent Positivity Tuesday cooldown list (members who were recently selected). (Requires Manage Server)"""
         if ctx.guild is None:
             _ = await ctx.send("This command can only be used in a server.")
             return

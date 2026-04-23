@@ -5,7 +5,7 @@ from bot import TerrierBot, Context
 async def setup(bot : TerrierBot):
     await bot.add_cog(LoveCog(bot))
 
-class LoveCog(commands.Cog, name="Love"):
+class LoveCog(commands.Cog, name="Love", description="Spread the Terrier love."):
     def __init__(self, bot : TerrierBot):
         self.bot : TerrierBot = bot
         
@@ -20,5 +20,6 @@ class LoveCog(commands.Cog, name="Love"):
     @commands.command()
     # @commands.is_owner()
     async def love(self, ctx : Context):
+        """Send some Terrier love! (Coming soon)"""
         _ = await ctx.send(":heart: Terrier Love — Coming Soon! :heart:")
         # you can do stuff here when someone executes the command "test"

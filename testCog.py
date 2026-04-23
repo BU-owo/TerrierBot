@@ -5,7 +5,7 @@ from bot import TerrierBot, Context
 async def setup(bot : TerrierBot):
     await bot.add_cog(TestCog(bot))
 
-class TestCog(commands.Cog, name="Test"):
+class TestCog(commands.Cog, name="Test", description="Test commands."):
     def __init__(self, bot : TerrierBot):
         self.bot : TerrierBot = bot
 
@@ -20,5 +20,6 @@ class TestCog(commands.Cog, name="Test"):
     @commands.command()
     # @commands.is_owner()
     async def test(self, ctx : Context):
+        """Run a test command to make sure the bot is responding."""
         _ = await ctx.send("This is a test cog by so selene featuring owo")
         # you can do stuff here when someone executes the command "test"

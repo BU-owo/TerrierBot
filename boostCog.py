@@ -5,7 +5,7 @@ from bot import TerrierBot, Context
 async def setup(bot : TerrierBot):
     await bot.add_cog(BoostCog(bot))
 
-class BoostCog(commands.Cog, name="Boost"):
+class BoostCog(commands.Cog, name="Boost", description="Server boost rewards and announcements."):
     def __init__(self, bot : TerrierBot):
         self.bot : TerrierBot = bot
         print("Boost Cog Ready")        
