@@ -29,6 +29,10 @@ class TerrierBot(commands.Bot):
         logging.info(self.user.id)
         logging.info('------')
 
+        channel = self.get_channel(1396542256445391069)
+        if isinstance(channel, discord.TextChannel):
+            await channel.send("Hello, I am here now! 🐾")
+
     #============================================
     #Error Handling
     #============================================
