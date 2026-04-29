@@ -107,6 +107,9 @@ def build_message(today: date) -> str | None:
             "🔔 **LAST. DAY. OF. CLASSES.** Consume an alcoholic beverage if legal. 🫡",
             "📚 **IT'S THE LAST DAY OF CLASSES!** YIPPE YIPPEEE YYIPPEEEEEEEEEE",
             "😭 **IT'S THE LAST DAY OF CLASSES!!!** I AM NUMB INSIDE AHA. 🐾",
+            "📚 **IT'S THE LAST DAY OF CLASSES!** YOU DID IT BABYYYYYYYYY",
+            "📚 **IT'S THE LAST DAY OF CLASSES!** this is so exciting yayayaya",
+            "📚 **CLASSES ARE OVER TONIGHT!** Celebrate a bit before it is lock in time :)",
         ])
 
     # ── Counting down to last day of classes ──────────────────────────────────
@@ -128,11 +131,13 @@ def build_message(today: date) -> str | None:
 
     if left == 1:
         return random.choice([
-            "🫡 **1 day left until the last day of classes.** Please please please please hurry up. 🚄💨",
-            "😤 **TOMORROW is the last day of classes.** ONE. MORE. DAY. I think you can survive this. 🐾",
-            "🚨 **1 DAY.** The last day of classes is TOMORROW. ALMOST THERE LOSERSSSSSSSSSSS. 💙",
-            "😭 **TOMORROW IS THE LAST DAY OF CLASSES RAHHHHHHHH.** just gonna survive 1 more! 🐾",
-            "🔥 **24 HOURS. THAT'S ALL.** LOCK IN BITCHES IT IS ALMOST OVER. 💪",
+            f"🫡 **1 day left until the last day of classes.** Please please please please hurry up. 🚄💨",
+            f"😤 **TOMORROW is the last day of classes.** ONE. MORE. DAY. I think you can survive this. 🐾",
+            f"🚨 **1 DAY.** The last day of classes is TOMORROW. ALMOST THERE LOSERSSSSSSSSSSS. 💙",
+            f"😭 **TOMORROW IS THE LAST DAY OF CLASSES RAHHHHHHHH.** just gonna survive 1 more! 🐾",
+            f"🔥 **24 HOURS. THAT'S ALL.** LOCK IN BITCHES IT IS ALMOST OVER. 💪",
+            f"🔥 **{days(left)}** until the last day of classes. TOWOMOROWO!!!!!!!!!!!!!!!!!!! 👃✨",
+
         ])
 
     if left <= 3:
