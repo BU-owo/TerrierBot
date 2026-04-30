@@ -34,6 +34,10 @@ def build_message(today: date) -> str | None:
             "🎊 **COMMENCEMENT DAY HAS ARRIVED AND I AM GOING FERAL!!!** ARF ARF WOOF BARK GRRRRRRRRRRRRR MEOW MEOW ARF ARF BARK GROWL ARRRRGGGG WOOF",
             "🐾 **TODAY WE GRADUATE.** Unless youre a silly freshman! Because they do not graduate yet :)",
             "🎺 **ALL UNIVERSITY COMMENCEMENT!!!** GO GET A JOB now haha members of the workforce XD",
+            "🥹 **IT IS COMMENCEMENT DAY.** You get ur diploma mailed to you btw the convocation one is fake LMAO!! 🐾",
+            "🎶 **COMMENCEMENT DAY BABYYYYY.** I'm gona pee myself in excitement. 😭🐾",
+            "🏅 **ALL UNIVERSITY COMMENCEMENT IS TODAY.** GO GET HEAT STROKE! 🥵",
+            "🐾 **TODAY YOU BECOME AN ALUMNI.** u should probably change ur discord role hehehehehe!!! 🎓📧",
         ])
 
     # ── Commencement week ─────────────────────────────────────────────────────
@@ -46,6 +50,11 @@ def build_message(today: date) -> str | None:
             f"🌸 **{days(left)}** until All University Commencement. Are you gonna go?. 🐾",
             f"🎊 We are **{days(left)}** away from the big graduation ceremony YIPPEE 📸✨",
             f"🏛️ **{days(left)}** until Commencement. You should take photos and stuff to remember the week or smyn? 📷😭",
+            f"🎓 Commencement week!! **{days(left)}** until the big day. Consume alcohol. 📸🐾",
+            f"🥳 We are SO close. **{days(left)}** Just like my ex wife RIP honey. 🐾",
+            f"💐 **{days(left)}** until Commencement. ooga booga ooga booga. 😭🙏",
+            f"🎓 **{days(left)}** until the big ceremony. DIscord dot com slash bostonuniversity. 🐾",
+            f"🏛️ **{days(left)}** until you are officially an alumni. I'm so emotional im crine. 😭☀️",
         ])
 
     # ── Finals over ───────────────────────────────────────────────────────────
@@ -58,6 +67,11 @@ def build_message(today: date) -> str | None:
             "🎉 **IT'S OVER IT'S OVER IT'S OVER!!!** JUMP INTO THE CHARLES RIVER NOW. 🥂",
             "📚 **FINALS: DEFEATED.**  Good job gamers🍕",
             "🏆 **THE FINAL FINAL HAS BEEN EATEN.**. nom nom nom nom nom 🕊️✨",
+            "🎊 **THE FINALS HAVE BEEN ENDED.** Take a shower. You stink. 🌿😭",
+            "🥳 **FINALS ARE DONE BABYYYYYYY.** I forgor wot i learned. 🐾🎉",
+            "💤 **NO MORE FINALS.** Nap time loserssssssss. 😴✨",
+            "🏁 **YOU MADE IT THROUGH FINALS.** You deserve a sweet treat. 😅☕",
+            "🎺 **FINALS ARE OVER.** BARK BARK BARK WOOF WOOF CONGRATS!!! 🐾🎊",
         ])
 
     # ── Finals in progress ────────────────────────────────────────────────────
@@ -79,6 +93,11 @@ def build_message(today: date) -> str | None:
             f"🙈 Finals day {day_num}. **{days(left)}** left. You should drop your class that you hate. 🙈",
             f"🥤 Finals day {day_num}. **{days(left)}** until it's over. Don't pull all nighters. 💀",
             f"😵 It is finals day {day_num} and **{days(left)}** remain. Don't do drugs. 🕯️",
+            f"📝 Finals day {day_num}. **{days(left)}** left. Drink a monster bitch. 🐾💪",
+            f"☕ Day {day_num} of finals. **{days(left)}** remaining. How many red bulls have you had kit??? ⚡😅",
+            f"💀 Finals day {day_num}. **{days(left)}** to go. MEOW MEOW MEOW KITBY. 📚🌙",
+            f"🧠 Day {day_num}. **{days(left)}** left of finals. Idk what a neuron is cuz im not a lame bio major but you might! 🔥",
+            f"😤 Finals day {day_num}. **{days(left)}** remaining. Close TIKTOK you stupid braindead zoomer! 👀📖",
         ])
 
     # ── Finals start today ────────────────────────────────────────────────────
@@ -87,6 +106,10 @@ def build_message(today: date) -> str | None:
             "📝 **FINALS HAVE BEGUN.** LOCK THE FUCK IN 😅",
             "😱 **IT'S FINALS SEASON, BABY.** you got dis gumdrops!!!1 🐾",
             "☕ **FINALS START TODAY.** suffering time YIPPEEEEEEEEEE",
+            "📚 **FIRST FINAL DAY. LET'S GOOOOO.** YOU BETTER PASS. 🐾🔥",
+            "😤 **FINALS START NOW.** You're a genius. Gosh. 🧠💙",
+            "🧠 **TODAY FINALS BEGIN.** Final days or my finals day. 📚🐾",
+            "🔥 **FINALS SEASON.** If you dont have finals, you probably have projects you silly humanities major. 🐾☕",
         ])
 
     # ── Study period ──────────────────────────────────────────────────────────
@@ -95,9 +118,14 @@ def build_message(today: date) -> str | None:
         day_num = (today - STUDY_PERIOD_START).days + 1
         return random.choice([
             f"📖 Study period day {day_num}. Finals in **{days(left)}**. Lock in 🖤📚",
-            f"😬 Study period is upon us. **{days(left)}** until finals begin. The library is open. Your fate is unwritten. Let's keep it that way. ✍️",
+            f"😬 Study period is upon us. **{days(left)}** until finals begin. TAKE NOTES AND STUDY. ✍️",
             f"☕ **{days(left)}** until finals. STOP. 🔥",
             f"🕯️ Study period day {day_num}. **{days(left)}** until finals. Be sober. Eat. 🍕📚",
+            f"📖 Study period day {day_num}. **{days(left)}** until finals. STUDY BITCH STUDYC BTUCH. 💧📚",
+            f"😤 Day {day_num} of study period. **{days(left)}** until finals start. Touch grass and shower you stinker. 🌿",
+            f"☕ Study period day {day_num}. Finals in **{days(left)}**. Review your notes if you actually paid attention in class not playing Google Snake 📝😅",
+            f"🕯️ Day {day_num} of study period. **{days(left)}** until finals begin. MAKE SURE UR SLEEPING. 😴🌙",
+            f"🧠 Study period day {day_num}. **{days(left)}** until it's death time. 🐾💪",
         ])
 
     # ── Last day of classes ───────────────────────────────────────────────────
@@ -107,6 +135,11 @@ def build_message(today: date) -> str | None:
             "🔔 **LAST. DAY. OF. CLASSES.** Consume an alcoholic beverage if legal. 🫡",
             "📚 **IT'S THE LAST DAY OF CLASSES!** YIPPE YIPPEEE YYIPPEEEEEEEEEE",
             "😭 **IT'S THE LAST DAY OF CLASSES!!!** I AM NUMB INSIDE AHA. 🐾",
+            "🔔 **THE LAST DAY OF CLASSES IS TODAY.** Congratulations on surviving my goat!!! 🐾🎉",
+            "😤 **IT IS THE LAST DAY OF CLASSES!!!** no more skoo! 🔥",
+            "🎊 **LAST DAY OF CLASSES WAHOOOO.** time to start those papers hehehehe. 📚😅",
+            "🐾 **TODAY IS THE LAST DAY OF CLASSES!!!** You smelly. 😭✨",
+            "💙 **LAST DAY OF CLASSES HAS ARRIVED GAMERS.**. 🏁🐾",
         ])
 
     # ── Counting down to last day of classes ──────────────────────────────────
@@ -124,6 +157,11 @@ def build_message(today: date) -> str | None:
             f"🛌 Weekend time! **{days(left)}** until classes end. Touch some grass. 🌿",
             f"☀️ It's {day_name}. **{days(left)}** left of classes. WWAHHHHHHHHHHHHH. 🕊️",
             f"😴 It's {day_name} and that means no class. **{days(left)}** until the last day of classes. Thank rhett. 🐾",
+            f"🛋️ It's {day_name}! Rest up buttercup. **{days(left)}** until the last day of classes. 💤🐾",
+            f"🌿 Happy {day_name}! **{days(left)}** until classes are done. Go outside and hunt for baby wabbit. ☀️",
+            f"🎮 {day_name} detected! **{days(left)}** left of classes. teehee. 🐾",
+            f"☕ It's {day_name}. **{days(left)}** until the last day of classes.. 🥞😌",
+            f"😴 Weekend!!! **{days(left)}** until the last day of classes. 🔋🐾",
         ])
 
     if left == 1:
@@ -133,15 +171,25 @@ def build_message(today: date) -> str | None:
             "🚨 **1 DAY.** The last day of classes is TOMORROW. ALMOST THERE LOSERSSSSSSSSSSS. 💙",
             "😭 **TOMORROW IS THE LAST DAY OF CLASSES RAHHHHHHHH.** just gonna survive 1 more! 🐾",
             "🔥 **24 HOURS. THAT'S ALL.** LOCK IN BITCHES IT IS ALMOST OVER. 💪",
+            "🚨 **ONE SINGLE DAY OF CLASSES REMAINS.** You are insane for making it this far honestly. 🐾",
+            "💙 **1 DAY LEFT UNTIL THE LAST DAY OF CLASSES.** I'm not crying you're crying. 😭🐾",
+            "🔥 **TOMORROW IS THE LAST DAY OF CLASSES.** So close I can taste it. It tastes like Celsius. ⚡😤",
+            "🏁 **1 DAY.** Either you're ready or you're panicking. Both are valid. One more push!!! 💪🐾",
+            "🎯 **THE FINAL DAY IS TOMORROW.** Like, THE last day of classes. Not finals. Those come after lol. 😅📚",
         ])
 
     if left <= 3:
         return random.choice([
             f"🔥 **{days(left)}** until the last day of classes. We are SO close, just like my ex wife. 👃✨",
-            f"😤 **{days(left)}** left. Unlike your girlfriend, the semester is gonna finish. 💪🐾",
+            f"😤 **{days(left)}** left. Unlike your girlfriend, the semester is gonna finish. 💪",
             f"🏃 **{days(left)}** until classes end. GO GO GO GO GO GO GO GO. 🎽",
             f"😤 **{days(left)}** days of classes left. Almost there nerds!!!!! 🔥🐾",
             f"⚡ **{days(left)}** until the last day of classes. you got this gumdrop! 🏁",
+            f"🔥 **{days(left)}** LEFT OF CLASSES. oh em gee bih. 😤🐾",
+            f"💪 Only **{days(left)}** until the last day of classes. skip class and get noodles. 😌",
+            f"🏃 **{days(left)}** days left. WOOF. 🐾🏁",
+            f"😤 **{days(left)}** until classes end. pls dont give up. 💙",
+            f"🚀 **{days(left)}** of classes remaining. You got this nerd!!!! 🐾⚡",
         ])
 
     if left <= 7:
