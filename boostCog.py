@@ -32,11 +32,11 @@ class BoostCog(commands.Cog, name="Boost", description="Server boost rewards and
     async def boost(self, ctx: Context):
         """See what perks you get for boosting the server!"""
         _ = await ctx.send(
-            """💎 **Booster Perks**
+            """# **Why should I boost? Booster Perks!**
 
 • Custom name color (holographic, solid, or gradient)
 • Custom PNG or emoji next to your name (rule-compliant)
 • One server emote added (rule-compliant)
 
-*Boost the server and message a mod to claim your rewards!* 🚀"""
+*Boost the server and message a mod to get your customizations! Thank you!!!!*"""
         )

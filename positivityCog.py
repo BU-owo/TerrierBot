@@ -1,4 +1,5 @@
 import shelve
+from datetime import datetime
 
 import discord
 from discord.ext import commands
@@ -45,6 +46,9 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
 
         guild_id = message.guild.id
         if not self.enabled_by_guild.get(guild_id, False):
+            return
+
+        if datetime.now().weekday() != 1:  # 1 = Tuesday
             return
 
         author_id = message.author.id
@@ -104,6 +108,12 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
             return
 
         guild_id = ctx.guild.id
+
+        if datetime.now().weekday() != 1:  # 1 = Tuesday
+            day_name = datetime.now().strftime("%A")
+            _ = await ctx.send(f"You silly goose, it is {day_name}!")
+            return
+
         interval = every_x_messages or self.interval_by_guild.get(guild_id, self.default_interval)
         if interval < 1:
             _ = await ctx.send("Interval must be at least 1 message.")

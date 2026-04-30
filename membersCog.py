@@ -43,41 +43,8 @@ class MembersCog(commands.Cog, name="Members", description="Member exports and m
     @commands.is_owner()
     @commands.guild_only()
     async def exportprunecandidates(self, ctx: Context):
-        """Export members with no messages ever in this server and with no roles or only role ID 1474070492548956170."""
+        """Export members with no roles or only role ID 1474070492548956170."""
         assert ctx.guild is not None
-
-        status_msg = await ctx.send("Scanning server message history. This can take a while...")
-
-        seen_author_ids: set[int] = set()
-        history_targets: dict[int, discord.abc.Messageable] = {}
-
-        for channel in ctx.guild.text_channels:
-            history_targets[channel.id] = channel
-            for thread in channel.threads:
-                history_targets[thread.id] = thread
-            try:
-                async for thread in channel.archived_threads(limit=None):
-                    history_targets[thread.id] = thread
-            except (discord.Forbidden, discord.HTTPException):
-                continue
-
-        for forum in ctx.guild.forums:
-            for thread in forum.threads:
-                history_targets[thread.id] = thread
-            try:
-                async for thread in forum.archived_threads(limit=None):
-                    history_targets[thread.id] = thread
-            except (discord.Forbidden, discord.HTTPException):
-                continue
-
-        scanned_count = 0
-        for target in history_targets.values():
-            try:
-                async for message in target.history(limit=None):
-                    seen_author_ids.add(message.author.id)
-                scanned_count += 1
-            except (discord.Forbidden, discord.HTTPException):
-                continue
 
         output = io.StringIO()
         writer = csv.writer(output)
@@ -102,9 +69,6 @@ class MembersCog(commands.Cog, name="Members", description="Member exports and m
             if not (has_no_extra_roles or has_only_prune_role):
                 continue
 
-            if member.id in seen_author_ids:
-                continue
-
             joined = member.joined_at.strftime("%Y-%m-%d %H:%M:%S") if member.joined_at else ""
             writer.writerow([
                 member.name,
@@ -119,14 +83,9 @@ class MembersCog(commands.Cog, name="Members", description="Member exports and m
         output.seek(0)
         file = discord.File(
             fp=io.BytesIO(output.getvalue().encode()),
-            filename="prune_candidates_no_messages_ever.csv",
-        )
-        await status_msg.edit(
-            content=(
-                f"Done. Scanned {scanned_count} channels/threads and found {candidate_count} prune candidates."
-            )
+            filename="prune_candidates_role_filter_only.csv",
         )
         await ctx.send(
-            "Here is the prune candidate export (no messages ever + role filter):",
+            f"Found {candidate_count} prune candidates using role filter only.",
             file=file,
         )
