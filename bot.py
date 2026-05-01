@@ -5,6 +5,7 @@ from discord.ext import commands
 import logging
 import asyncio
 import shelve
+from datetime import datetime, timedelta, timezone
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,6 +17,7 @@ class TerrierBot(commands.Bot):
         super().__init__(command_prefix, **options) # pyright: ignore[reportAny]
 
         self.prefixes : dict[int, str] = {}
+        self._first_ready : bool = True
         with shelve.open("terrierbot.shelve") as sh:
             if "prefixes" in sh:
                 self.prefixes = sh["prefixes"]
@@ -29,9 +31,16 @@ class TerrierBot(commands.Bot):
         logging.info(self.user.id)
         logging.info('------')
 
-        channel = self.get_channel(1396542256445391069)
-        if isinstance(channel, discord.TextChannel):
-            await channel.send("Hello, I am here now! 🐾")
+        if self._first_ready:
+            self._first_ready = False
+            now = datetime.now(timezone.utc)
+            with shelve.open("terrierbot.shelve") as sh:
+                last_startup = sh.get("last_startup_msg")
+                if last_startup is None or (now - last_startup) > timedelta(hours=1):
+                    sh["last_startup_msg"] = now
+                    channel = self.get_channel(1396542256445391069)
+                    if isinstance(channel, discord.TextChannel):
+                        await channel.send("Hello, I am here now! 🐾")
 
     #============================================
     #Error Handling
@@ -173,8 +182,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction"]
 
 async def main():
     async with bot:
