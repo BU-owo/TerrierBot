@@ -11,8 +11,10 @@ MEAN_PHRASES = [
     "trash bot", "garbage bot", "you suck", "i hate you", "go away",
     "you're dumb", "youre dumb", "you are dumb",
     "you're stupid", "youre stupid", "you are stupid",
+    "hate","hatred","die","kill","kill yourself","kys","stfu","suck","sucks","suck it","sucks it","you suck","youre the worst","you're the worst",
     "horrible bot", "pathetic bot", "be quiet", "shut it",
-    "nobody asked", "no one asked", "stop talking",
+    "bad","stupid","dumb","idiot","worst","terrible","awful","useless","annoying","trash","garbage",
+    "nobody asked", "no one asked", "stop talking", "SYBAU","hate","hate you", "die","kill yourself","kys","stfu","suck","sucks","suck it","sucks it","you suck","youre the worst","you're the worst",
 ]
 
 NICE_PHRASES = [
