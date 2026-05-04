@@ -267,10 +267,12 @@ class EndCog(commands.Cog, name="End"):
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
         self.announcement_task.start()
+        self.hourly_task.start()
         print("End Cog Ready")
 
     def cog_unload(self):
         self.announcement_task.cancel()
+        self.hourly_task.cancel()
 
     @tasks.loop(time=[time(10, 0, tzinfo=ET), time(16, 0, tzinfo=ET)])
     async def announcement_task(self):
@@ -285,6 +287,20 @@ class EndCog(commands.Cog, name="End"):
 
     @announcement_task.before_loop
     async def before_announcement(self):
+        await self.bot.wait_until_ready()
+
+    @tasks.loop(hours=1)
+    async def hourly_task(self):
+        today = datetime.now(ET).date()
+        msg = build_message(today)
+        if msg is None:
+            return
+        channel = self.bot.get_channel(GENERAL_CHANNEL_ID)
+        if isinstance(channel, discord.TextChannel):
+            await channel.send(msg)
+
+    @hourly_task.before_loop
+    async def before_hourly(self):
         await self.bot.wait_until_ready()
 
     @commands.command()
