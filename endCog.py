@@ -277,6 +277,8 @@ class EndCog(commands.Cog, name="End"):
 
     @tasks.loop(time=[time(10, 0, tzinfo=ET), time(16, 0, tzinfo=ET)])
     async def announcement_task(self):
+        if self.hourly_task.is_running():
+            return
         today = datetime.now(ET).date()
         msg = build_scheduled_message(today)
         if msg is None:
