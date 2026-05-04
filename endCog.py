@@ -1,7 +1,8 @@
+import asyncio
 import random
 import discord
 from discord.ext import commands, tasks
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 from bot import TerrierBot, Context
 
@@ -302,6 +303,9 @@ class EndCog(commands.Cog, name="End"):
     @hourly_task.before_loop
     async def before_hourly(self):
         await self.bot.wait_until_ready()
+        now = datetime.now(timezone.utc)
+        next_hour = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+        await asyncio.sleep((next_hour - now).total_seconds())
 
     @commands.command()
     async def end(self, ctx: Context):
