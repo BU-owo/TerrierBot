@@ -81,7 +81,7 @@ def build_message(today: date) -> str | None:
         day_num = (today - FINALS_START).days + 1
         return random.choice([
             f"📝 Finals day {day_num}. **{days(left)}** until it's all over. Are you alive?. ☕💪",
-            f"😤 **{days(left)}** left of finals.drink alochol 🧠",
+            f"😤 **{days(left)}** left of finals. drink alochol 🧠",
             f"⚡ Finals are happening and so are you. **{days(left)}** to go. The AI wrote this but i leaves it cuz funny. 🔥",
             f"💀 Finals day {day_num}. We are **{days(left)}** from done. Lock in bitch. 🪑😭",
             f"🫠 Day {day_num} of finals. **{days(left)}** remaining. Your brain is a sponge and the sponge is wet and the floor is lava. Claude wrote that. 🧠",
@@ -99,6 +99,17 @@ def build_message(today: date) -> str | None:
             f"💀 Finals day {day_num}. **{days(left)}** to go. MEOW MEOW MEOW KITBY. 📚🌙",
             f"🧠 Day {day_num}. **{days(left)}** left of finals. Idk what a neuron is cuz im not a lame bio major but you might! 🔥",
             f"😤 Finals day {day_num}. **{days(left)}** remaining. Close TIKTOK you stupid braindead zoomer! 👀📖",
+            f"🎯 Finals day {day_num}. **{days(left)}** to go. You got this muscle mommy! 💙🐾",
+            f"😫 Day {day_num} of finals. **{days(left)}** left. SCREEEEEEEEEEECHHHHHHH. 😱📚",
+            f"🔋 Finals day {day_num}. **{days(left)}** remaining. drink watah you pissah! 💧",
+            f"😤 It's day {day_num}. **{days(left)}** until we're free. eepy. 😴",
+            f"🎪 Finals day {day_num}. **{days(left)}** to go. My final week. 🎭",
+            f"🧠 Day {day_num}. **{days(left)}** left. should've majored in art history smh. 😵",
+            f"💪 Finals day {day_num}. **{days(left)}** remaining. YOUVE GOT THIS. 🐾",
+            f"☕ Day {day_num} of finals. **{days(left)}** to go. redbull is a food group??? 🤔",
+            f"🌙 Finals day {day_num}. **{days(left)}** until the end. Take a power nap! 😭",
+            f"🔥 Day {day_num}. **{days(left)}** left of finals. You're killing it king! ⚔️",
+            f"📖 Finals day {day_num}. **{days(left)}** remaining. No pressure or anything though. 😅",
         ])
 
     # ── Finals start today ────────────────────────────────────────────────────
