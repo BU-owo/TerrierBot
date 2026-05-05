@@ -9,23 +9,23 @@ MEAN_PHRASES = [
     "bad bot", "shut up", "stupid", "dumb", "idiot", "hate you",
     "worst bot", "terrible bot", "awful bot", "useless bot", "annoying bot",
     "trash bot", "garbage bot", "you suck", "i hate you", "go away",
-    "you're dumb", "youre dumb", "you are dumb", "clanker"
+    "you're dumb", "youre dumb", "you are dumb", "clanker",
     "you're stupid", "youre stupid", "you are stupid",
-    "hate","hatred","die","kill","kill yourself","kys","stfu","suck","sucks","suck it","sucks it","you suck","youre the worst","you're the worst",
+    "hate", "hatred", "die", "kill", "kill yourself", "kys", "stfu", "suck", "sucks", "suck it", "sucks it", "youre the worst", "you're the worst",
     "horrible bot", "pathetic bot", "be quiet", "shut it",
-    "bad","stupid","dumb","idiot","worst","terrible","awful","useless","annoying","trash","garbage", "sybau",
-    "nobody asked", "no one asked", "stop talking", "SYBAU","hate","hate you", "die","kill yourself","kys","stfu","suck","sucks","suck it","sucks it","you suck","youre the worst","you're the worst",
+    "bad", "worst", "terrible", "awful", "useless", "annoying", "trash", "garbage", "sybau",
+    "nobody asked", "no one asked", "stop talking",
 ]
 
 NICE_PHRASES = [
     "good bot", "nice bot", "love you", "love u", "thank you", "thanks",
     "thank u", "thx", "you're the best", "youre the best", "you are the best",
     "you're great", "youre great", "you are great", "cute", "adorable", "sweet", "helpful", "appreciate you",
-    "you're awesome", "youre awesome", "you are awesome", "awesome","best","smart","helpful",
+    "you're awesome", "youre awesome", "you are awesome", "awesome", "best", "smart",
     "cute bot", "best bot", "smart bot", "good job", "well done",
     "amazing bot", "wonderful bot", "i love you", "i love u", "ily",
     "appreciate you", "you're helpful", "youre helpful", "great bot",
-    "you're cute", "youre cute", "you're sweet", "youre sweet","you're so cute"
+    "you're cute", "youre cute", "you're sweet", "youre sweet", "you're so cute"
 ]
 
 async def setup(bot : TerrierBot):
