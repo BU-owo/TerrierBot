@@ -13,7 +13,7 @@ MEAN_PHRASES = [
     "you're stupid", "youre stupid", "you are stupid",
     "hate","hatred","die","kill","kill yourself","kys","stfu","suck","sucks","suck it","sucks it","you suck","youre the worst","you're the worst",
     "horrible bot", "pathetic bot", "be quiet", "shut it",
-    "bad","stupid","dumb","idiot","worst","terrible","awful","useless","annoying","trash","garbage",
+    "bad","stupid","dumb","idiot","worst","terrible","awful","useless","annoying","trash","garbage", "sybau",
     "nobody asked", "no one asked", "stop talking", "SYBAU","hate","hate you", "die","kill yourself","kys","stfu","suck","sucks","suck it","sucks it","you suck","youre the worst","you're the worst",
 ]
 
