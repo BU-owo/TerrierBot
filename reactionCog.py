@@ -12,18 +12,18 @@ MEAN_PHRASES = [
     "you're dumb", "youre dumb", "you are dumb", "clanker",
     "you're stupid", "youre stupid", "you are stupid",
     "hate", "hatred", "die", "kill", "kill yourself", "kys", "stfu", "suck", "sucks", "suck it", "sucks it", "youre the worst", "you're the worst",
-    "horrible bot", "pathetic bot", "be quiet", "shut it",
+    "horrible bot", "pathetic bot", "be quiet", "shut it", "bad",
     "bad", "worst", "terrible", "awful", "useless", "annoying", "trash", "garbage", "sybau",
     "nobody asked", "no one asked", "stop talking",
 ]
 
 NICE_PHRASES = [
-    "good bot", "nice bot", "love you", "love u", "thank you", "thanks",
+    "good bot", "nice bot", "love you", "love u", "thank you", "thanks", "good morning", "i love",
     "thank u", "thx", "you're the best", "youre the best", "you are the best",
     "you're great", "youre great", "you are great", "cute", "adorable", "sweet", "helpful", "appreciate you",
     "you're awesome", "youre awesome", "you are awesome", "awesome", "best", "smart",
     "cute bot", "best bot", "smart bot", "good job", "well done",
-    "amazing bot", "wonderful bot", "i love you", "i love u", "ily",
+    "amazing bot", "wonderful bot", "i love you", "i love u", "ily", "good", "nice",
     "appreciate you", "you're helpful", "youre helpful", "great bot",
     "you're cute", "youre cute", "you're sweet", "youre sweet", "you're so cute"
 ]
