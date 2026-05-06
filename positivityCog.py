@@ -1,10 +1,13 @@
 import shelve
-from datetime import datetime
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from bot import Context, TerrierBot
+
+ET = ZoneInfo("America/New_York")
 
 
 async def setup(bot: TerrierBot):
@@ -21,14 +24,24 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
         self.count_by_guild: dict[int, int] = {}
         self.recent_selected_by_guild: dict[int, list[int]] = {}
         self.selection_cooldown_size = 5
+        # Guilds that have opted into auto-enable (set when first manually enabled)
+        self.opted_in_by_guild: dict[int, bool] = {}
+        # Guilds that manually disabled during the current Tuesday — skip auto-enable until next week
+        self.manually_disabled_by_guild: dict[int, bool] = {}
 
         with shelve.open("terrierbot.shelve") as sh:
             self.enabled_by_guild = sh.get("positivity_enabled_by_guild", {})
             self.interval_by_guild = sh.get("positivity_interval_by_guild", {})
             self.count_by_guild = sh.get("positivity_count_by_guild", {})
             self.recent_selected_by_guild = sh.get("positivity_recent_selected_by_guild", {})
+            self.opted_in_by_guild = sh.get("positivity_opted_in_by_guild", {})
+            self.manually_disabled_by_guild = sh.get("positivity_manually_disabled_by_guild", {})
 
+        self.tuesday_task.start()
         print("Positivity Cog Ready")
+
+    def cog_unload(self):
+        self.tuesday_task.cancel()
 
     def _save_state(self):
         with shelve.open("terrierbot.shelve") as sh:
@@ -36,6 +49,38 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
             sh["positivity_interval_by_guild"] = self.interval_by_guild
             sh["positivity_count_by_guild"] = self.count_by_guild
             sh["positivity_recent_selected_by_guild"] = self.recent_selected_by_guild
+            sh["positivity_opted_in_by_guild"] = self.opted_in_by_guild
+            sh["positivity_manually_disabled_by_guild"] = self.manually_disabled_by_guild
+
+    def _auto_enable_all(self):
+        """Enable all opted-in guilds that haven't manually disabled this week."""
+        for guild_id, opted in self.opted_in_by_guild.items():
+            if opted and not self.manually_disabled_by_guild.get(guild_id, False):
+                self.enabled_by_guild[guild_id] = True
+                self.count_by_guild[guild_id] = 0
+        self._save_state()
+
+    def _auto_disable_all(self):
+        """Disable all guilds and reset the manual-disable flag for next week."""
+        for guild_id in list(self.enabled_by_guild.keys()):
+            self.enabled_by_guild[guild_id] = False
+        self.manually_disabled_by_guild.clear()
+        self._save_state()
+
+    @tasks.loop(time=time(0, 0, tzinfo=ET))
+    async def tuesday_task(self):
+        now = datetime.now(ET)
+        if now.weekday() == 1:   # Tuesday just started
+            self._auto_enable_all()
+        elif now.weekday() == 2:  # Wednesday just started — Tuesday is over
+            self._auto_disable_all()
+
+    @tuesday_task.before_loop
+    async def before_tuesday_task(self):
+        await self.bot.wait_until_ready()
+        # If the bot starts mid-Tuesday, auto-enable immediately
+        if datetime.now(ET).weekday() == 1:
+            self._auto_enable_all()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -46,9 +91,6 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
 
         guild_id = message.guild.id
         if not self.enabled_by_guild.get(guild_id, False):
-            return
-
-        if datetime.now().weekday() != 1:  # 1 = Tuesday
             return
 
         author_id = message.author.id
@@ -109,8 +151,8 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
 
         guild_id = ctx.guild.id
 
-        if datetime.now().weekday() != 1:  # 1 = Tuesday
-            day_name = datetime.now().strftime("%A")
+        if datetime.now(ET).weekday() != 1:  # 1 = Tuesday
+            day_name = datetime.now(ET).strftime("%A")
             _ = await ctx.send(f"You silly goose, it is {day_name}!")
             return
 
@@ -122,6 +164,8 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
         self.enabled_by_guild[guild_id] = True
         self.interval_by_guild[guild_id] = interval
         self.count_by_guild[guild_id] = 0
+        self.opted_in_by_guild[guild_id] = True
+        self.manually_disabled_by_guild[guild_id] = False
         self._save_state()
 
         _ = await ctx.send(
@@ -139,6 +183,9 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
         guild_id = ctx.guild.id
         self.enabled_by_guild[guild_id] = False
         self.count_by_guild[guild_id] = 0
+        # Flag so auto-enable skips this guild until next Tuesday
+        if datetime.now(ET).weekday() == 1:
+            self.manually_disabled_by_guild[guild_id] = True
         self._save_state()
 
         _ = await ctx.send("Disabled Positivity Tuesday for this server.")
