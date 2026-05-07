@@ -72,15 +72,17 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
         now = datetime.now(ET)
         if now.weekday() == 1:   # Tuesday just started
             self._auto_enable_all()
-        elif now.weekday() == 2:  # Wednesday just started — Tuesday is over
+        else:
             self._auto_disable_all()
 
     @tuesday_task.before_loop
     async def before_tuesday_task(self):
         await self.bot.wait_until_ready()
-        # If the bot starts mid-Tuesday, auto-enable immediately
+        # Sync state on startup so stale enabled flags do not leak into non-Tuesdays.
         if datetime.now(ET).weekday() == 1:
             self._auto_enable_all()
+        else:
+            self._auto_disable_all()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -91,6 +93,10 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
 
         guild_id = message.guild.id
         if not self.enabled_by_guild.get(guild_id, False):
+            return
+
+        # Hard safety check: Positivity Tuesday should never run outside Tuesday ET.
+        if datetime.now(ET).weekday() != 1:
             return
 
         author_id = message.author.id

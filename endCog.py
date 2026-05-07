@@ -278,6 +278,8 @@ def build_scheduled_message(today: date) -> str | None:
 class EndCog(commands.Cog, name="End"):
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
+        self.last_hourly_bucket: str | None = None
+        self.last_announcement_bucket: str | None = None
         self.announcement_task.start()
         self.hourly_task.start()
         print("End Cog Ready")
@@ -290,7 +292,17 @@ class EndCog(commands.Cog, name="End"):
     async def announcement_task(self):
         if self.hourly_task.is_running():
             return
-        today = datetime.now(ET).date()
+
+        now = datetime.now(ET)
+        # Ignore delayed/catch-up runs after resume; only allow near the scheduled minute.
+        if now.minute > 5:
+            return
+
+        bucket = now.strftime("%Y-%m-%d-%H")
+        if bucket == self.last_announcement_bucket:
+            return
+
+        today = now.date()
         msg = build_scheduled_message(today)
         if msg is None:
             self.announcement_task.cancel()
@@ -298,6 +310,7 @@ class EndCog(commands.Cog, name="End"):
         channel = self.bot.get_channel(GENERAL_CHANNEL_ID)
         if isinstance(channel, discord.TextChannel):
             await channel.send(msg)
+            self.last_announcement_bucket = bucket
 
     @announcement_task.before_loop
     async def before_announcement(self):
@@ -305,13 +318,23 @@ class EndCog(commands.Cog, name="End"):
 
     @tasks.loop(hours=1)
     async def hourly_task(self):
-        today = datetime.now(ET).date()
+        now = datetime.now(ET)
+        # Ignore delayed/catch-up runs after resume; only allow near the top of the hour.
+        if now.minute > 5:
+            return
+
+        bucket = now.strftime("%Y-%m-%d-%H")
+        if bucket == self.last_hourly_bucket:
+            return
+
+        today = now.date()
         msg = build_message(today)
         if msg is None:
             return
         channel = self.bot.get_channel(GENERAL_CHANNEL_ID)
         if isinstance(channel, discord.TextChannel):
             await channel.send(msg)
+            self.last_hourly_bucket = bucket
 
     @hourly_task.before_loop
     async def before_hourly(self):
