@@ -12,7 +12,7 @@ LAST_DAY_CLASSES  = date(2026, 4, 30)
 STUDY_PERIOD_START = date(2026, 5, 1)
 STUDY_PERIOD_END   = date(2026, 5, 3)
 FINALS_START       = date(2026, 5, 4)
-FINALS_END         = date(2026, 5, 8)
+FINALS_END         = date(2026, 5, 9)
 COMMENCEMENT_START = date(2026, 5, 14)
 COMMENCEMENT_END   = date(2026, 5, 17)
 
@@ -73,6 +73,18 @@ def build_message(today: date) -> str | None:
             "💤 **NO MORE FINALS.** Nap time loserssssssss. 😴✨",
             "🏁 **YOU MADE IT THROUGH FINALS.** You deserve a sweet treat. 😅☕",
             "🎺 **FINALS ARE OVER.** BARK BARK BARK WOOF WOOF CONGRATS!!! 🐾🎊",
+        ])
+
+    # ── Last day of finals ──────────────────────────────────────────────────────
+    if today == FINALS_END - timedelta(days=1):
+        return random.choice([
+            "🏁 **IT'S THE LAST DAY OF FINALS!!!** mraowww 🐾🎊",
+            "😤 **TODAY IS THE LAST DAY OF FINALS.** im almost there aughhh. 🐾",
+            "🎊 **LAST DAY OF FINALS BABYYYYYYY.** YOU ARE SO CLOSE. 🐾😭",
+            "🧠 **ONE MORE FINAL.** glup glup glup glup 💙",
+            "🔥 **IT IS THE LAST DAY OF FINALS.** yippee!!!! most of yall are already done 📚🐾",
+            "😤 **LAST FINAL DAY!!!** Take a nap. 😴✨",
+            "💀 **THE END IS NEAR.** FINISH 🏁🎊",
         ])
 
     # ── Finals in progress ────────────────────────────────────────────────────
@@ -251,6 +263,9 @@ def build_scheduled_message(today: date) -> str | None:
 
     if today == FINALS_END:
         return "✅ **Finals are over!** Great work this semester, gamers! 🐾"
+
+    if today == FINALS_END - timedelta(days=1):
+        return "🏁 **Today is the last day of finals!** Finish strong — you're almost there! 🐾🎊"
 
     if FINALS_START <= today < FINALS_END:
         left = (FINALS_END - today).days
