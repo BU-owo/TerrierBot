@@ -303,21 +303,23 @@ class EndCog(commands.Cog, name="End"):
         self.announcement_task.cancel()
         self.hourly_task.cancel()
 
-    @tasks.loop(time=[time(10, 0, tzinfo=ET), time(16, 0, tzinfo=ET)])
+    @tasks.loop(time=[time(10, 0, tzinfo=ET)])
     async def announcement_task(self):
-        if self.hourly_task.is_running():
+        now = datetime.now(ET)
+        today = now.date()
+
+        # Only post during commencement week.
+        if not (COMMENCEMENT_START <= today <= COMMENCEMENT_END):
             return
 
-        now = datetime.now(ET)
-        # Ignore delayed/catch-up runs after resume; only allow near the scheduled minute.
+        # Ignore delayed/catch-up runs after resume.
         if now.minute > 5:
             return
 
-        bucket = now.strftime("%Y-%m-%d-%H")
+        bucket = now.strftime("%Y-%m-%d")
         if bucket == self.last_announcement_bucket:
             return
 
-        today = now.date()
         msg = build_scheduled_message(today)
         if msg is None:
             self.announcement_task.cancel()
@@ -343,8 +345,14 @@ class EndCog(commands.Cog, name="End"):
             return
 
         today = now.date()
+
+        # During commencement week, announcement_task handles the daily 10am post.
+        if COMMENCEMENT_START <= today <= COMMENCEMENT_END:
+            return
+
         msg = build_message(today)
         if msg is None:
+            self.hourly_task.cancel()
             return
         channel = self.bot.get_channel(GENERAL_CHANNEL_ID)
         if isinstance(channel, discord.TextChannel):
