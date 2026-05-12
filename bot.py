@@ -109,11 +109,69 @@ def command_prefix(bot : TerrierBot, msg : discord.Message):
     return commands.when_mentioned_or(prefix_for(bot, msg.guild))(bot, msg)
 bot = TerrierBot(command_prefix=command_prefix, description=description, intents=intents)
 
-bot.help_command = commands.DefaultHelpCommand()
+bot.help_command = None
 
 #============================================
 #Utility
 #============================================
+
+@bot.command(name="help")
+async def help_command(ctx: Context):
+    """Show categorized TerrierBot commands."""
+    embed = discord.Embed(
+        title="TerrierBot Commands",
+        description="Here are the command categories.",
+        color=discord.Color.red(),
+    )
+
+    embed.add_field(
+        name="Academic",
+        value=(
+            "`=rmp <firstname lastname|lastname>` - RateMyProfessors lookup for BU\n"
+            "`=class <CASEE100|CAS EE 100|EE 100>` - BU Bulletin course info"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="Information",
+        value=(
+            "`=banner` - Banner submission info\n"
+            "`=boost` - Server booster perks"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="Fun",
+        value=(
+            "`=hello` - Say hi\n"
+            "`=love` - Terrier love"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="Other",
+        value=(
+            "`=end` - Semester countdown message\n"
+            "`=test` - Test bot response"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="Mod / Restricted",
+        value=(
+            "Manage Server required:\n"
+            "`=positivity`, `=positivity enable`, `=positivity disable`, `=positivity interval`, `=positivity cooldown`\n\n"
+            "Owner only (prohibited for regular users):\n"
+            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`"
+        ),
+        inline=False,
+    )
+
+    await ctx.send(embed=embed)
 
 @bot.command()
 @commands.is_owner()
@@ -182,8 +240,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "bomo"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "bomo"]
 
 async def main():
     async with bot:
