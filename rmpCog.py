@@ -8,9 +8,86 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot, Context
+from classCog import _parse_course_query
 
 RMP_GRAPHQL_URL = "https://www.ratemyprofessors.com/graphql"
 BU_DISPLAY_NAME = "Boston University"
+
+DEPARTMENT_DEFAULT_SCHOOL: dict[str, str] = {
+    "biology": "CAS",
+    "chemistry": "CAS",
+    "chemistry and biochemistry": "CAS",
+    "computer science": "CAS",
+    "economics": "CAS",
+    "english": "CAS",
+    "history": "CAS",
+    "mathematics": "CAS",
+    "math": "CAS",
+    "philosophy": "CAS",
+    "physics": "CAS",
+    "political science": "CAS",
+    "psychology": "CAS",
+}
+
+
+class ClassLookupView(discord.ui.View):
+    def __init__(self, bot: TerrierBot, classes: list[str], preferred_school: str | None = None):
+        super().__init__(timeout=180)
+        self.bot = bot
+        self.preferred_school = preferred_school
+
+        if len(classes) > 6:
+            self.add_item(ClassLookupSelect(classes[:25]))
+        else:
+            for cls in classes[:6]:
+                self.add_item(ClassLookupButton(cls))
+
+    async def send_lookup(self, interaction: discord.Interaction, class_code: str) -> None:
+        class_cog = self.bot.get_cog("Class")
+        if class_cog is None or not hasattr(class_cog, "lookup_course"):
+            await interaction.response.send_message("Class lookup cog is not loaded.", ephemeral=True)
+            return
+
+        query = class_code
+        if self.preferred_school and re.fullmatch(r"[A-Z]{2,3}\s+[0-9]{3}[A-Z]?", class_code):
+            query = f"{self.preferred_school} {class_code}"
+
+        await interaction.response.defer(thinking=True)
+        embed, error = await class_cog.lookup_course(query)
+        if error:
+            await interaction.followup.send(error, ephemeral=True)
+            return
+        if embed is None:
+            await interaction.followup.send("Unknown class lookup error.", ephemeral=True)
+            return
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+class ClassLookupSelect(discord.ui.Select):
+    def __init__(self, classes: list[str]):
+        options = [discord.SelectOption(label=cls, value=cls) for cls in classes]
+        super().__init__(placeholder="Pick a class to open its BU Bulletin page", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if self.view is None or not isinstance(self.view, ClassLookupView):
+            await interaction.response.send_message("This menu is no longer active.", ephemeral=True)
+            return
+
+        await self.view.send_lookup(interaction, self.values[0])
+
+
+class ClassLookupButton(discord.ui.Button[ClassLookupView]):
+    def __init__(self, class_code: str):
+        super().__init__(label=class_code, style=discord.ButtonStyle.secondary)
+        self.class_code = class_code
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if self.view is None:
+            await interaction.response.send_message("This button is no longer active.", ephemeral=True)
+            return
+
+        await self.view.send_lookup(interaction, self.class_code)
 
 
 async def setup(bot: TerrierBot):
@@ -120,30 +197,133 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
         return [edge.get("node", {}) for edge in edges if edge.get("node")]
 
     async def _get_teacher_detail(self, teacher_id: str) -> dict:
-        query = """
-        query TeacherDetails($id: ID!) {
-          node(id: $id) {
-            ... on Teacher {
-              id
-              courseCodes {
-                courseName
-                courseCount
-              }
-              ratings(first: 20) {
-                edges {
-                  node {
-                    class
-                    date
-                  }
+        rich_query = """
+        query TeacherDetails($id: ID!, $after: String) {
+                    node(id: $id) {
+                        ... on Teacher {
+                            id
+                            courseCodes {
+                                courseName
+                                courseCount
+                            }
+                            ratings(first: 100, after: $after) {
+                                edges {
+                                    node {
+                                        class
+                                        date
+                                        helpfulRatingRounded
+                                        difficultyRatingRounded
+                                        qualityRating
+                                    }
+                                }
+                                pageInfo {
+                                    hasNextPage
+                                    endCursor
+                                }
+                            }
+                        }
+                    }
                 }
-              }
-            }
-          }
-        }
-        """
-        data = await self._graphql(query, {"id": teacher_id})
-        node = data.get("data", {}).get("node", {})
-        return node if isinstance(node, dict) else {}
+                """
+
+        fallback_query = """
+        query TeacherDetails($id: ID!, $after: String) {
+                    node(id: $id) {
+                        ... on Teacher {
+                            id
+                            courseCodes {
+                                courseName
+                                courseCount
+                            }
+                            ratings(first: 100, after: $after) {
+                                edges {
+                                    node {
+                                        class
+                                        date
+                                    }
+                                }
+                                pageInfo {
+                                    hasNextPage
+                                    endCursor
+                                }
+                            }
+                        }
+                    }
+                }
+                """
+
+        try:
+            cursor: str | None = None
+            merged_node: dict = {}
+            merged_edges: list[dict] = []
+
+            while True:
+                data = await self._graphql(rich_query, {"id": teacher_id, "after": cursor})
+                node = data.get("data", {}).get("node", {})
+                if not isinstance(node, dict):
+                    break
+
+                if not merged_node:
+                    merged_node = node
+                else:
+                    for key in ("courseCodes", "id"):
+                        if key in node and key not in merged_node:
+                            merged_node[key] = node[key]
+
+                ratings = node.get("ratings", {})
+                edges = ratings.get("edges", []) if isinstance(ratings, dict) else []
+                if isinstance(edges, list):
+                    merged_edges.extend(edge for edge in edges if isinstance(edge, dict))
+
+                page_info = ratings.get("pageInfo", {}) if isinstance(ratings, dict) else {}
+                has_next_page = bool(page_info.get("hasNextPage")) if isinstance(page_info, dict) else False
+                cursor = page_info.get("endCursor") if isinstance(page_info, dict) else None
+                if not has_next_page or not cursor:
+                    break
+
+            if merged_node:
+                merged_node["ratings"] = {"edges": merged_edges}
+            return merged_node
+        except Exception:
+            try:
+                data = await self._graphql(fallback_query, {"id": teacher_id, "after": None})
+            except Exception:
+                return {}
+
+            node = data.get("data", {}).get("node", {})
+            return node if isinstance(node, dict) else {}
+
+    def _normalize_class_code(self, raw: str) -> str | None:
+        cleaned = " ".join(raw.upper().split())
+        if not cleaned:
+            return None
+
+        try:
+            school, subject, number = _parse_course_query(cleaned)
+            if school:
+                return f"{school} {subject} {number}"
+        except ValueError:
+            pass
+
+        m = re.search(r"\b([A-Z]{3})\s*([A-Z]{2,3})\s*([0-9]{3}[A-Z]?)\b", cleaned)
+        if m:
+            return f"{m.group(1)} {m.group(2)} {m.group(3)}"
+
+        m = re.search(r"\b([A-Z]{2,3})\s*([0-9]{3}[A-Z]?)\b", cleaned)
+        if m:
+            return f"{m.group(1)} {m.group(2)}"
+
+        return cleaned
+
+    def _preferred_school_for_department(self, department: str | None) -> str | None:
+        if not isinstance(department, str):
+            return None
+
+        normalized = re.sub(r"\s+", " ", department.strip().lower())
+        if not normalized:
+            return None
+
+        return DEPARTMENT_DEFAULT_SCHOOL.get(normalized)
 
     def _add_course_names(self, classes: list[str], course_items: object) -> None:
         if not isinstance(course_items, list):
@@ -158,9 +338,32 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
                 name = None
 
             if isinstance(name, str):
-                clean = name.strip()
+                clean = self._normalize_class_code(name) or name.strip()
                 if clean and clean not in classes:
                     classes.append(clean)
+
+    def _course_count_map(self, course_items: object) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        if not isinstance(course_items, list):
+            return counts
+
+        for item in course_items:
+            if not isinstance(item, dict):
+                continue
+
+            raw_name = item.get("courseName")
+            if not isinstance(raw_name, str):
+                continue
+
+            key = self._normalize_class_code(raw_name)
+            if not key:
+                continue
+
+            raw_count = item.get("courseCount")
+            count = int(raw_count) if isinstance(raw_count, int) else 0
+            counts[key] = max(counts.get(key, 0), count)
+
+        return counts
 
     def _name_tokens(self, text: str) -> list[str]:
         return [t for t in re.split(r"[^a-z0-9]+", text.lower()) if t]
@@ -222,6 +425,53 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
     def _rank_matches(self, query_name: str, matches: list[dict]) -> list[dict]:
         return sorted(matches, key=lambda p: self._match_score(query_name, p), reverse=True)
 
+    def _score_emoji(self, value: float | None, *, is_difficulty: bool = False) -> str:
+        if not isinstance(value, (int, float)):
+            return "⚪"
+
+        score = float(value)
+        if is_difficulty:
+            if score <= 2.0:
+                return "🟢"
+            if score <= 3.5:
+                return "🟡"
+            return "🔴"
+
+        if score >= 4.0:
+            return "🟢"
+        if score >= 3.0:
+            return "🟡"
+        return "🔴"
+
+    def _class_sort_key(self, class_code: str) -> tuple[str, int, str]:
+        compact = " ".join(class_code.upper().split())
+        m = re.match(r"^(?:([A-Z]{2,3})\s+)?([A-Z]{2,3})(\d{3}[A-Z]?)$", compact.replace(" ", ""))
+        if m:
+            school = m.group(1) or ""
+            subject = m.group(2)
+            number_part = m.group(3)
+        else:
+            parts = compact.split()
+            school = parts[0] if len(parts) == 3 else ""
+            subject = parts[1] if len(parts) == 3 else (parts[0] if parts else compact)
+            number_part = parts[2] if len(parts) == 3 else (parts[1] if len(parts) > 1 else "")
+
+        number_match = re.match(r"(\d+)([A-Z]?)", number_part)
+        number = int(number_match.group(1)) if number_match else 0
+        suffix = number_match.group(2) if number_match else ""
+        return (subject, number, f"{school} {suffix}".strip())
+
+    def _embed_color_for_rating(self, value: float | None) -> discord.Color:
+        if not isinstance(value, (int, float)):
+            return discord.Color.light_grey()
+
+        score = float(value)
+        if score >= 4.0:
+            return discord.Color.green()
+        if score >= 3.0:
+            return discord.Color.gold()
+        return discord.Color.red()
+
     def _dedupe_by_id(self, matches: list[dict]) -> list[dict]:
         seen: set[str] = set()
         unique: list[dict] = []
@@ -281,6 +531,7 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
         first = prof.get("firstName", "")
         last = prof.get("lastName", "")
         dept = prof.get("department") or "Unknown department"
+        preferred_school = self._preferred_school_for_department(dept if isinstance(dept, str) else None)
         rating = prof.get("avgRating")
         difficulty = prof.get("avgDifficulty")
         num_ratings = prof.get("numRatings")
@@ -297,15 +548,23 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
             take_again_text = "N/A"
 
         classes: list[str] = []
+        per_class_helpful: dict[str, list[float]] = {}
+        per_class_difficulty: dict[str, list[float]] = {}
+        per_class_review_counts: dict[str, int] = {}
+        per_class_counts: dict[str, int] = {}
 
         # Fast path: search results can already include course codes.
         self._add_course_names(classes, prof.get("courseCodes", []))
+        per_class_counts.update(self._course_count_map(prof.get("courseCodes", [])))
 
         if isinstance(teacher_id, str) and teacher_id:
             try:
                 detail = await self._get_teacher_detail(teacher_id)
 
                 self._add_course_names(classes, detail.get("courseCodes", []))
+                detail_counts = self._course_count_map(detail.get("courseCodes", []))
+                for key, value in detail_counts.items():
+                    per_class_counts[key] = max(per_class_counts.get(key, 0), value)
 
                 edges = detail.get("ratings", {}).get("edges", [])
                 if isinstance(edges, list):
@@ -313,14 +572,57 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
                         node = edge.get("node", {}) if isinstance(edge, dict) else {}
                         reviewed_class = node.get("class") if isinstance(node, dict) else None
                         if isinstance(reviewed_class, str):
-                            clean = reviewed_class.strip()
+                            clean = self._normalize_class_code(reviewed_class) or reviewed_class.strip()
                             if clean and clean not in classes:
                                 classes.append(clean)
+                            if clean:
+                                per_class_review_counts[clean] = per_class_review_counts.get(clean, 0) + 1
+
+                            helpful = node.get("helpfulRatingRounded") if isinstance(node, dict) else None
+                            if not isinstance(helpful, (int, float)):
+                                helpful = node.get("qualityRating") if isinstance(node, dict) else None
+                            if isinstance(helpful, (int, float)):
+                                per_class_helpful.setdefault(clean, []).append(float(helpful))
+
+                            difficulty_val = node.get("difficultyRatingRounded") if isinstance(node, dict) else None
+                            if isinstance(difficulty_val, (int, float)):
+                                per_class_difficulty.setdefault(clean, []).append(float(difficulty_val))
             except Exception:
                 # Keep the command resilient; class details are extra context.
                 pass
 
-        classes_text = ", ".join(classes[:10]) if classes else "N/A"
+        ordered_classes = sorted(classes, key=self._class_sort_key)
+        classes_text = ", ".join(ordered_classes[:10]) if ordered_classes else "N/A"
+        class_lines: list[str] = []
+        class_width = max((len(code) for code in ordered_classes), default=0)
+        for class_code in ordered_classes:
+            helpful_vals = per_class_helpful.get(class_code, [])
+            difficulty_vals = per_class_difficulty.get(class_code, [])
+            review_count = per_class_review_counts.get(class_code, 0)
+            if review_count == 0:
+                review_count = per_class_counts.get(class_code, 0)
+
+            if helpful_vals:
+                avg_helpful = sum(helpful_vals) / len(helpful_vals)
+                helpful_text = f"{self._score_emoji(avg_helpful)} {avg_helpful:.2f}/5"
+            elif review_count > 0 and isinstance(rating, (int, float)):
+                helpful_text = f"{self._score_emoji(rating)} {float(rating):.2f}/5 (est)"
+            else:
+                helpful_text = f"{self._score_emoji(None)} N/A"
+
+            if difficulty_vals:
+                avg_difficulty = sum(difficulty_vals) / len(difficulty_vals)
+                difficulty_text_local = f"{self._score_emoji(avg_difficulty, is_difficulty=True)} {avg_difficulty:.2f}/5"
+            elif review_count > 0 and isinstance(difficulty, (int, float)):
+                difficulty_text_local = f"{self._score_emoji(difficulty, is_difficulty=True)} {float(difficulty):.2f}/5 (est)"
+            else:
+                difficulty_text_local = f"{self._score_emoji(None, is_difficulty=True)} N/A"
+
+            class_lines.append(
+                f"{class_code}: Rating {helpful_text}, Difficulty {difficulty_text_local}, Reviews {review_count}"
+            )
+
+        class_ratings_text = "\n".join(class_lines[:10]) if class_lines else "N/A"
 
         embed = discord.Embed(
             title=f"{first} {last}".strip() or cleaned,
@@ -329,14 +631,15 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
                 if is_bu_result
                 else f"No BU match found. Closest RateMyProfessors result for '{cleaned}' (might not be BU)."
             ),
-            color=discord.Color.red(),
+            color=self._embed_color_for_rating(rating if isinstance(rating, (int, float)) else None),
         )
         embed.add_field(name="Department", value=dept, inline=True)
-        embed.add_field(name="Rating", value=rating_text, inline=True)
-        embed.add_field(name="Difficulty", value=difficulty_text, inline=True)
+        embed.add_field(name="Rating", value=f"{self._score_emoji(rating)} {rating_text}", inline=True)
+        embed.add_field(name="Difficulty", value=f"{self._score_emoji(difficulty, is_difficulty=True)} {difficulty_text}", inline=True)
         embed.add_field(name="# Ratings", value=count_text, inline=True)
         embed.add_field(name="Would Take Again", value=take_again_text, inline=True)
         embed.add_field(name="Reviewed Classes", value=classes_text, inline=False)
+        embed.add_field(name="Per-Class Ratings", value=class_ratings_text[:1024], inline=False)
 
         if legacy_id:
             embed.add_field(
@@ -359,4 +662,11 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
                     inline=False,
                 )
 
-        await ctx.send(embed=embed)
+        class_buttons = [c for c in classes if re.search(r"\d{3}[A-Z]?$", c)]
+        if class_buttons:
+            await ctx.send(
+                embed=embed,
+                view=ClassLookupView(self.bot, class_buttons, preferred_school=preferred_school),
+            )
+        else:
+            await ctx.send(embed=embed)

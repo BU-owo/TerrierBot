@@ -227,6 +227,49 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
                 resp.raise_for_status()
                 return await resp.text()
 
+    async def lookup_course(self, query: str) -> tuple[discord.Embed | None, str | None]:
+        try:
+            explicit_school, subject, number = _parse_course_query(query)
+            school, ambiguous = _resolve_school(explicit_school, subject)
+        except ValueError as exc:
+            return None, str(exc)
+
+        if ambiguous:
+            return (
+                None,
+                f"Subject code {subject} exists in multiple schools: {', '.join(ambiguous)}. "
+                f"Please include school code, e.g. =class CAS {subject} {number}",
+            )
+
+        slug = SCHOOL_SLUG.get(school)
+        if slug is None:
+            return None, f"I don't have a bulletin path mapping for {school} yet."
+
+        url = f"https://www.bu.edu/academics/{slug}/courses/{school.lower()}-{subject.lower()}-{number.lower()}/"
+
+        try:
+            page_html = await self._fetch_course_html(url)
+        except Exception as exc:
+            return None, f"Bulletin lookup failed: {type(exc).__name__}: {exc}"
+
+        if page_html is None:
+            return None, f"Course not found on the BU Bulletin: {school} {subject} {number}\n{url}"
+
+        details = self._parse_course_page(page_html)
+
+        embed = discord.Embed(
+            title=details["title"],
+            description=details["code"],
+            color=discord.Color.gold(),
+            url=url,
+        )
+        embed.add_field(name="Units", value=details["units"], inline=True)
+        embed.add_field(name="Prereqs", value=details["prereqs"][:1024], inline=False)
+        embed.add_field(name="BU Hub", value=details["hubs"][:1024], inline=False)
+        embed.add_field(name="Description", value=details["description"][:1024], inline=False)
+
+        return embed, None
+
     def _parse_course_page(self, html_doc: str) -> dict[str, str]:
         title = ""
         code = ""
@@ -329,48 +372,12 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
         =class CAS EE 100
         =class EE 100
         """
-        try:
-            explicit_school, subject, number = _parse_course_query(query)
-            school, ambiguous = _resolve_school(explicit_school, subject)
-        except ValueError as exc:
-            await ctx.send(str(exc))
+        embed, error = await self.lookup_course(query)
+        if error:
+            await ctx.send(error)
             return
-
-        if ambiguous:
-            await ctx.send(
-                f"Subject code {subject} exists in multiple schools: {', '.join(ambiguous)}. "
-                f"Please include school code, e.g. =class CAS {subject} {number}"
-            )
+        if embed is None:
+            await ctx.send("Unknown class lookup error.")
             return
-
-        slug = SCHOOL_SLUG.get(school)
-        if slug is None:
-            await ctx.send(f"I don't have a bulletin path mapping for {school} yet.")
-            return
-
-        url = f"https://www.bu.edu/academics/{slug}/courses/{school.lower()}-{subject.lower()}-{number.lower()}/"
-
-        try:
-            page_html = await self._fetch_course_html(url)
-        except Exception as exc:
-            await ctx.send(f"Bulletin lookup failed: {type(exc).__name__}: {exc}")
-            return
-
-        if page_html is None:
-            await ctx.send(f"Course not found on the BU Bulletin: {school} {subject} {number}\n{url}")
-            return
-
-        details = self._parse_course_page(page_html)
-
-        embed = discord.Embed(
-            title=details["title"],
-            description=details["code"],
-            color=discord.Color.gold(),
-            url=url,
-        )
-        embed.add_field(name="Units", value=details["units"], inline=True)
-        embed.add_field(name="Prereqs", value=details["prereqs"][:1024], inline=False)
-        embed.add_field(name="BU Hub", value=details["hubs"][:1024], inline=False)
-        embed.add_field(name="Description", value=details["description"][:1024], inline=False)
 
         await ctx.send(embed=embed)
