@@ -219,13 +219,20 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
         headers = {
             "User-Agent": "Mozilla/5.0",
         }
-        timeout = aiohttp.ClientTimeout(total=12)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url, headers=headers, allow_redirects=True) as resp:
-                if resp.status == 404:
-                    return None
-                resp.raise_for_status()
-                return await resp.text()
+        timeout = aiohttp.ClientTimeout(total=30)
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.get(url, headers=headers, allow_redirects=True) as resp:
+                        if resp.status == 404:
+                            return None
+                        resp.raise_for_status()
+                        return await resp.text()
+            except (aiohttp.ServerTimeoutError, TimeoutError) as exc:
+                last_exc = exc
+                continue
+        raise last_exc
 
     async def lookup_course(self, query: str) -> tuple[discord.Embed | None, str | None]:
         try:
