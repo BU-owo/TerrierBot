@@ -293,6 +293,16 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
             node = data.get("data", {}).get("node", {})
             return node if isinstance(node, dict) else {}
 
+    def _subject_number_key(self, class_code: str) -> str:
+        """Return the 'SUBJECT NUMBER' part of a code, stripping any school prefix.
+
+        e.g. 'CAS PY 211' -> 'PY 211', 'PY 211' -> 'PY 211'
+        """
+        m = re.match(r"^[A-Z]{3}\s+([A-Z]{2,3}\s+[0-9]{3}[A-Z]?)$", class_code.upper().strip())
+        if m:
+            return m.group(1)
+        return class_code
+
     def _normalize_class_code(self, raw: str) -> str | None:
         cleaned = " ".join(raw.upper().split())
         if not cleaned:
@@ -590,6 +600,25 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
             except Exception:
                 # Keep the command resilient; class details are extra context.
                 pass
+
+        # Merge variants like "PY 211" and "CAS PY 211" — same course, different how RMP stored it.
+        sn_map: dict[str, str] = {}  # subject_number_key -> canonical code
+        for code in classes:
+            key = self._subject_number_key(code)
+            existing = sn_map.get(key)
+            if existing is None:
+                sn_map[key] = code
+            elif code != existing:
+                # Prefer the school-qualified form as the canonical display name.
+                canonical = code if re.match(r"^[A-Z]{3}\s+", code) else existing
+                other = existing if canonical == code else code
+                sn_map[key] = canonical
+                per_class_helpful.setdefault(canonical, []).extend(per_class_helpful.pop(other, []))
+                per_class_difficulty.setdefault(canonical, []).extend(per_class_difficulty.pop(other, []))
+                per_class_review_counts[canonical] = per_class_review_counts.get(canonical, 0) + per_class_review_counts.pop(other, 0)
+                per_class_counts[canonical] = max(per_class_counts.get(canonical, 0), per_class_counts.pop(other, 0))
+        # Rebuild list with only canonical entries, preserving order.
+        classes = list(dict.fromkeys(sn_map[self._subject_number_key(c)] for c in classes))
 
         ordered_classes = sorted(classes, key=self._class_sort_key)
         classes_text = ", ".join(ordered_classes[:10]) if ordered_classes else "N/A"

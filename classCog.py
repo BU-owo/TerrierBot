@@ -267,7 +267,7 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
         embed = discord.Embed(
             title=details["title"],
             description=details["code"],
-            color=discord.Color.gold(),
+            color=discord.Color.purple(),
             url=url,
         )
         embed.add_field(name="Units", value=details["units"], inline=True)
