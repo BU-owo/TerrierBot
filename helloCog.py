@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 from bot import TerrierBot, Context
 
@@ -22,3 +23,7 @@ class HelloCog(commands.Cog, name="Hello", description="Greeting commands."):
         """Say hello and have TerrierBot greet you back!"""
         _ = await ctx.send(f"Hello {ctx.author.display_name}! I am TerrierBot!")
         # you can do stuff here when someone executes the command "test"
+
+    @app_commands.command(name="hello", description="Say hi and have TerrierBot greet you back!")
+    async def hello_slash(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"Hello {interaction.user.display_name}! I am TerrierBot!")

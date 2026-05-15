@@ -1,6 +1,7 @@
 import asyncio
 import random
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -346,10 +347,6 @@ class EndCog(commands.Cog, name="End"):
 
         today = now.date()
 
-        # During commencement week, announcement_task handles the daily 10am post.
-        if COMMENCEMENT_START <= today <= COMMENCEMENT_END:
-            return
-
         msg = build_message(today)
         if msg is None:
             self.hourly_task.cancel()
@@ -375,6 +372,15 @@ class EndCog(commands.Cog, name="End"):
             await ctx.send("🎓 The semester is over! Congratulations, Terriers! Go live your life. 🐾❤️")
             return
         await ctx.send(msg)
+
+    @app_commands.command(name="end", description="How many days until the semester ends?")
+    async def end_slash(self, interaction: discord.Interaction):
+        today = datetime.now(ET).date()
+        msg = build_message(today)
+        if msg is None:
+            await interaction.response.send_message("🎓 The semester is over! Congratulations, Terriers! Go live your life. 🐾❤️")
+            return
+        await interaction.response.send_message(msg)
 
 
 async def setup(bot: TerrierBot):

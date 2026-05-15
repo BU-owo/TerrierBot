@@ -5,6 +5,7 @@ import re
 
 import aiohttp
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from bot import TerrierBot, Context
@@ -145,23 +146,23 @@ def _parse_course_query(raw_query: str) -> tuple[str | None, str, str]:
     upper = re.sub(r"\s+", " ", upper).strip()
 
     if not upper:
-        raise ValueError("Please provide a course code. Example: =class CAS EE 100")
+        raise ValueError("Please provide a course code. Example: =class CAS CH 101")
 
     compact = upper.replace(" ", "")
 
-    # CASEE100 / CASEE 100 style.
+    # CASCH101 / CASCH 101 style.
     m = re.fullmatch(r"([A-Z]{3})([A-Z]{2,3})(\d{3}[A-Z]?)", compact)
     if m:
         return _normalize_school(m.group(1)), m.group(2), m.group(3)
 
-    # EE100 style.
+    # CH101 style.
     m = re.fullmatch(r"([A-Z]{2,3})(\d{3}[A-Z]?)", compact)
     if m:
         return None, m.group(1), m.group(2)
 
     tokens = upper.split(" ")
 
-    # CAS EE 100
+    # CAS CH 101
     if len(tokens) == 3 and re.fullmatch(r"[A-Z]{3}", tokens[0]) and re.fullmatch(r"[A-Z]{2,3}", tokens[1]) and re.fullmatch(r"\d{3}[A-Z]?", tokens[2]):
         return _normalize_school(tokens[0]), tokens[1], tokens[2]
 
@@ -169,7 +170,7 @@ def _parse_course_query(raw_query: str) -> tuple[str | None, str, str]:
     if len(tokens) == 2 and re.fullmatch(r"[A-Z]{2,3}", tokens[0]) and re.fullmatch(r"\d{3}[A-Z]?", tokens[1]):
         return None, tokens[0], tokens[1]
 
-    # CAS EE100
+    # CAS CH101
     if len(tokens) == 2 and re.fullmatch(r"[A-Z]{3}", tokens[0]):
         m = re.fullmatch(r"([A-Z]{2,3})(\d{3}[A-Z]?)", tokens[1])
         if m:
@@ -181,7 +182,7 @@ def _parse_course_query(raw_query: str) -> tuple[str | None, str, str]:
         if m and re.fullmatch(r"\d{3}[A-Z]?", tokens[1]):
             return _normalize_school(m.group(1)), m.group(2), tokens[1]
 
-    raise ValueError("Couldn't parse course code. Try: =class CAS EE 100, =class CASEE100, or =class EE 100")
+    raise ValueError("Couldn't parse course code. Try: =class CAS CH 101, =class CASCH101, or =class CH 101")
 
 
 def _resolve_school(explicit_school: str | None, subject: str) -> tuple[str, list[str]]:
@@ -375,8 +376,8 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
         """Lookup a BU course from the Bulletin.
 
         Examples:
-        =class CASEE100
-        =class CAS EE 100
+        =class CASCH101
+        =class CAS CH 101
         =class EE 100
         """
         embed, error = await self.lookup_course(query)
@@ -388,3 +389,16 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
             return
 
         await ctx.send(embed=embed)
+
+    @app_commands.command(name="class", description="Look up a BU course from the Bulletin.")
+    @app_commands.describe(query="Course code (e.g. CAS CH 101, CASCH101, or CH 101)")
+    async def class_slash(self, interaction: discord.Interaction, query: str):
+        await interaction.response.defer()
+        embed, error = await self.lookup_course(query)
+        if error:
+            await interaction.followup.send(error)
+            return
+        if embed is None:
+            await interaction.followup.send("Unknown class lookup error.")
+            return
+        await interaction.followup.send(embed=embed)

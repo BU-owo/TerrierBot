@@ -3,6 +3,7 @@ from datetime import datetime, time
 from zoneinfo import ZoneInfo
 
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 
 from bot import Context, TerrierBot
@@ -15,6 +16,13 @@ async def setup(bot: TerrierBot):
 
 
 class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tuesday — randomly selects a member to share something positive. Requires Manage Server to configure."):
+
+    # Slash command group — Discord enforces Manage Server natively.
+    positivity_slash = app_commands.Group(
+        name="positivity",
+        description="Positivity Tuesday settings. Requires Manage Server.",
+        default_permissions=discord.Permissions(manage_guild=True),
+    )
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
 
@@ -240,4 +248,94 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
         _ = await ctx.send(
             "Positivity cooldown list (most recent first): "
             + ", ".join(entries)
+        )
+
+    # ── Slash command equivalents ──────────────────────────────────────────────
+
+    @positivity_slash.command(name="status", description="Show Positivity Tuesday status and interval for this server.")
+    async def positivity_slash_status(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+        guild_id = interaction.guild.id
+        enabled = self.enabled_by_guild.get(guild_id, False)
+        interval = self.interval_by_guild.get(guild_id, self.default_interval)
+        await interaction.response.send_message(
+            f"Positivity Tuesday is {'enabled' if enabled else 'disabled'} in this server. Current interval: every {interval} messages.",
+            ephemeral=True,
+        )
+
+    @positivity_slash.command(name="enable", description="Enable Positivity Tuesday.")
+    @app_commands.describe(every_x_messages="How often to trigger (default 100)")
+    async def positivity_slash_enable(self, interaction: discord.Interaction, every_x_messages: int | None = None):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+        guild_id = interaction.guild.id
+        if datetime.now(ET).weekday() != 1:
+            day_name = datetime.now(ET).strftime("%A")
+            await interaction.response.send_message(f"You silly goose, it is {day_name}!", ephemeral=True)
+            return
+        interval = every_x_messages or self.interval_by_guild.get(guild_id, self.default_interval)
+        if interval < 1:
+            await interaction.response.send_message("Interval must be at least 1 message.", ephemeral=True)
+            return
+        self.enabled_by_guild[guild_id] = True
+        self.interval_by_guild[guild_id] = interval
+        self.count_by_guild[guild_id] = 0
+        self.opted_in_by_guild[guild_id] = True
+        self.manually_disabled_by_guild[guild_id] = False
+        self._save_state()
+        await interaction.response.send_message(
+            f"Enabled Positivity Tuesday. I will send the message around every {interval} messages.",
+            ephemeral=True,
+        )
+
+    @positivity_slash.command(name="disable", description="Disable Positivity Tuesday for this server.")
+    async def positivity_slash_disable(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+        guild_id = interaction.guild.id
+        self.enabled_by_guild[guild_id] = False
+        self.count_by_guild[guild_id] = 0
+        if datetime.now(ET).weekday() == 1:
+            self.manually_disabled_by_guild[guild_id] = True
+        self._save_state()
+        await interaction.response.send_message("Disabled Positivity Tuesday for this server.", ephemeral=True)
+
+    @positivity_slash.command(name="interval", description="Change how often Positivity Tuesday triggers.")
+    @app_commands.describe(every_x_messages="Number of messages between triggers")
+    async def positivity_slash_interval(self, interaction: discord.Interaction, every_x_messages: int):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+        if every_x_messages < 1:
+            await interaction.response.send_message("Interval must be at least 1 message.", ephemeral=True)
+            return
+        guild_id = interaction.guild.id
+        self.interval_by_guild[guild_id] = every_x_messages
+        self.count_by_guild[guild_id] = 0
+        self._save_state()
+        await interaction.response.send_message(
+            f"Positivity interval is now every {every_x_messages} messages.", ephemeral=True
+        )
+
+    @positivity_slash.command(name="cooldown", description="Show the recent Positivity Tuesday cooldown list.")
+    async def positivity_slash_cooldown(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+        guild_id = interaction.guild.id
+        recent_selected = self.recent_selected_by_guild.get(guild_id, [])
+        if not recent_selected:
+            await interaction.response.send_message("Positivity cooldown list is currently empty.", ephemeral=True)
+            return
+        entries: list[str] = []
+        for user_id in reversed(recent_selected):
+            member = interaction.guild.get_member(user_id)
+            entries.append(member.display_name if member is not None else "Unknown User")
+        await interaction.response.send_message(
+            "Positivity cooldown list (most recent first): " + ", ".join(entries),
+            ephemeral=True,
         )

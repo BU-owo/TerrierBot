@@ -25,7 +25,7 @@ MEAN_PHRASES = [
     "worst bot ever", "worst thing ever", "end yourself", "delete yourself",
     "log off", "uninstall", "l bot", "l ratio", "bot moment", "skill issue",
     "cope", "touch grass", "what are you doing", "you make no sense",
-    "that makes no sense", "go die", "get out of here",
+    "that makes no sense", "go die", "get out of here", "fuck you", "fuck off",
 ]
 
 NICE_PHRASES = [

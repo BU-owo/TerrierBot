@@ -2,6 +2,7 @@ import random
 import shelve
 from datetime import datetime, timedelta
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 from bot import TerrierBot, Context
 
@@ -51,3 +52,7 @@ class BannerCog(commands.Cog, name="Banner"):
     async def banner(self, ctx: Context):
         """Want your photo or gif to be the server banner? Find out how!"""
         await ctx.send(BANNER_MESSAGE)
+
+    @app_commands.command(name="banner", description="Want your photo or gif to be the server banner? Find out how!")
+    async def banner_slash(self, interaction: discord.Interaction):
+        await interaction.response.send_message(BANNER_MESSAGE)

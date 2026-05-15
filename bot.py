@@ -120,15 +120,15 @@ async def help_command(ctx: Context):
     """Show categorized TerrierBot commands."""
     embed = discord.Embed(
         title="TerrierBot Commands",
-        description="Here are the command categories.",
+        description="Commands work with `=` prefix or `/` slash commands.",
         color=discord.Color.red(),
     )
 
     embed.add_field(
         name="Academic",
         value=(
-            "`=rmp <firstname lastname|lastname>` - RateMyProfessors lookup for BU\n"
-            "`=class <CASEE100|CAS EE 100|EE 100>` - BU Bulletin course info"
+            "`=rmp` or `/rmp` `<firstname lastname|lastname>` - RateMyProfessors lookup for BU\n"
+            "`=class` or `/class` `<CASCH101|CAS CH 101|CH 101>` - BU Bulletin course info"
         ),
         inline=False,
     )
@@ -136,8 +136,8 @@ async def help_command(ctx: Context):
     embed.add_field(
         name="Information",
         value=(
-            "`=banner` - Banner submission info\n"
-            "`=boost` - Server booster perks"
+            "`=banner` or `/banner` - Banner submission info\n"
+            "`=boost` or `/boost` - Server booster perks"
         ),
         inline=False,
     )
@@ -145,8 +145,8 @@ async def help_command(ctx: Context):
     embed.add_field(
         name="Fun",
         value=(
-            "`=hello` - Say hi\n"
-            "`=love` - Terrier love"
+            "`=hello` or `/hello` - Say hi\n"
+            "`=love` or `/love` - Terrier love"
         ),
         inline=False,
     )
@@ -154,8 +154,8 @@ async def help_command(ctx: Context):
     embed.add_field(
         name="Other",
         value=(
-            "`=end` - Semester countdown message\n"
-            "`=test` - Test bot response"
+            "`=end` or `/end` - Semester countdown message\n"
+            "`=test` or `/test` - Test bot response"
         ),
         inline=False,
     )
@@ -164,14 +164,23 @@ async def help_command(ctx: Context):
         name="Mod / Restricted",
         value=(
             "Manage Server required:\n"
-            "`=positivity`, `=positivity enable`, `=positivity disable`, `=positivity interval`, `=positivity cooldown`\n\n"
-            "Owner only (prohibited for regular users):\n"
-            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`"
+            "`=positivity`, `/positivity status/enable/disable/interval/cooldown`\n\n"
+            "Owner only (prefix only, no slash):\n"
+            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`, `=sync`"
         ),
         inline=False,
     )
 
     await ctx.send(embed=embed)
+
+@bot.command()
+@commands.is_owner()
+async def sync(ctx: Context):
+    """Sync slash commands to this server. (Owner only)"""
+    assert ctx.guild is not None
+    bot.tree.copy_global_to(guild=ctx.guild)
+    synced = await bot.tree.sync(guild=ctx.guild)
+    await ctx.send(f"Synced {len(synced)} slash command(s) to this server.")
 
 @bot.command()
 @commands.is_owner()

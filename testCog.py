@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 from bot import TerrierBot, Context
 
@@ -23,3 +24,7 @@ class TestCog(commands.Cog, name="Test", description="Test commands."):
         """Run a test command to make sure the bot is responding."""
         _ = await ctx.send("This is a test cog by so selene featuring owo")
         # you can do stuff here when someone executes the command "test"
+
+    @app_commands.command(name="test", description="Test that the bot is responding.")
+    async def test_slash(self, interaction: discord.Interaction):
+        await interaction.response.send_message("This is a test cog by so selene featuring owo")

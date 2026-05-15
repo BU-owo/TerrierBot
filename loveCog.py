@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 from bot import TerrierBot, Context
 
@@ -23,3 +24,7 @@ class LoveCog(commands.Cog, name="Love", description="Spread the Terrier love.")
         """Send some Terrier love! (Coming soon)"""
         _ = await ctx.send(":heart: Terrier Love — Coming Soon! :heart:")
         # you can do stuff here when someone executes the command "test"
+
+    @app_commands.command(name="love", description="Send some Terrier love!")
+    async def love_slash(self, interaction: discord.Interaction):
+        await interaction.response.send_message(":heart: Terrier Love — Coming Soon! :heart:")

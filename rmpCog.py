@@ -5,6 +5,7 @@ import re
 
 import aiohttp
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from bot import TerrierBot, Context
@@ -495,16 +496,13 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
             unique.append(prof)
         return unique
 
-    @commands.command(name="rmp")
-    async def rmp(self, ctx: Context, *, professor_name: str):
-        """Look up a Boston University professor on RateMyProfessors.
-
-        Usage: =rmp Firstname Lastname, or =rmp Lastname
-        """
+    async def _build_rmp_response(
+        self, professor_name: str
+    ) -> tuple[discord.Embed | None, discord.ui.View | None, str | None]:
+        """Core RMP lookup. Returns (embed, view, error_message)."""
         cleaned = " ".join(professor_name.split())
         if not cleaned:
-            await ctx.send("Please provide a professor name. Example: =rmp Jane Smith or =rmp Smith")
-            return
+            return None, None, "Please provide a professor name. Example: =rmp Jane Smith or =rmp Smith"
 
         try:
             school_id = await self._get_bu_school_id()
@@ -525,16 +523,14 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
             # Second pass (optional): broader match, explicitly labeled as possibly non-BU.
             fallback_results = await self._search_professors(cleaned, school_id=None, fallback=True)
         except Exception as exc:
-            await ctx.send(f"RMP lookup failed: {type(exc).__name__}: {exc}")
-            return
+            return None, None, f"RMP lookup failed: {type(exc).__name__}: {exc}"
 
         is_bu_result = len(bu_results) > 0
         results = bu_results if is_bu_result else fallback_results
         results = self._rank_matches(cleaned, results)
 
         if not results:
-            await ctx.send(f"No Boston University professor found for '{cleaned}'.")
-            return
+            return None, None, f"No Boston University professor found for '{cleaned}'."
 
         prof = results[0]
         teacher_id = prof.get("id")
@@ -692,10 +688,33 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
                 )
 
         class_buttons = [c for c in classes if re.search(r"\d{3}[A-Z]?$", c)]
-        if class_buttons:
-            await ctx.send(
-                embed=embed,
-                view=ClassLookupView(self.bot, class_buttons, preferred_school=preferred_school),
-            )
+        view = ClassLookupView(self.bot, class_buttons, preferred_school=preferred_school) if class_buttons else None
+        return embed, view, None
+
+    @commands.command(name="rmp")
+    async def rmp(self, ctx: Context, *, professor_name: str):
+        """Look up a Boston University professor on RateMyProfessors.
+
+        Usage: =rmp Firstname Lastname, or =rmp Lastname
+        """
+        embed, view, error = await self._build_rmp_response(professor_name)
+        if error:
+            await ctx.send(error)
+            return
+        if view:
+            await ctx.send(embed=embed, view=view)
         else:
             await ctx.send(embed=embed)
+
+    @app_commands.command(name="rmp", description="Look up a BU professor on RateMyProfessors.")
+    @app_commands.describe(professor_name="Professor's name (e.g. Jane Smith or Smith)")
+    async def rmp_slash(self, interaction: discord.Interaction, professor_name: str):
+        await interaction.response.defer()
+        embed, view, error = await self._build_rmp_response(professor_name)
+        if error:
+            await interaction.followup.send(error)
+            return
+        if view:
+            await interaction.followup.send(embed=embed, view=view)
+        else:
+            await interaction.followup.send(embed=embed)
