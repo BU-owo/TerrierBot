@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Callable, override
 import discord
+from discord import app_commands
 from discord.ext import commands
 import logging
 import asyncio
@@ -249,8 +250,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed"]
 
 async def main():
     async with bot:
