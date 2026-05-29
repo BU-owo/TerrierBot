@@ -112,6 +112,27 @@ bot = TerrierBot(command_prefix=command_prefix, description=description, intents
 
 bot.help_command = None
 
+
+@bot.tree.error
+async def on_app_command_error(
+    interaction: discord.Interaction,
+    error: app_commands.AppCommandError,
+) -> None:
+    msg = (
+        f"{type(error.original).__name__}: {error.original}"
+        if isinstance(error, app_commands.CommandInvokeError)
+        else str(error)
+    )
+    logging.error("App command error: %s", error)
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(msg, ephemeral=True)
+        else:
+            await interaction.response.send_message(msg, ephemeral=True)
+    except Exception:
+        pass
+
+
 #============================================
 #Utility
 #============================================
@@ -147,7 +168,8 @@ async def help_command(ctx: Context):
         name="Fun",
         value=(
             "`=hello` or `/hello` - Say hi\n"
-            "`=love` or `/love` - Terrier love"
+            "`=love` or `/love` - Terrier love\n"
+            "`=starleaderboard` or `/starleaderboard` - Star leaderboard"
         ),
         inline=False,
     )
@@ -167,7 +189,9 @@ async def help_command(ctx: Context):
             "Manage Server required:\n"
             "`=positivity`, `/positivity status/enable/disable/interval/cooldown`\n\n"
             "Owner only (prefix only, no slash):\n"
-            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`, `=sync`"
+            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`, `=sync`\n\n"
+            "Manage Server required (slash only):\n"
+            "`/starboard setchannel/threshold/enable/disable/status`"
         ),
         inline=False,
     )
@@ -250,8 +274,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard"]
 
 async def main():
     async with bot:

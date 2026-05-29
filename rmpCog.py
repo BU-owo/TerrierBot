@@ -54,7 +54,7 @@ class ClassLookupView(discord.ui.View):
             query = f"{self.preferred_school} {class_code}"
 
         await interaction.response.defer(thinking=True)
-        embed, error = await class_cog.lookup_course(query)
+        embed, _view, error = await class_cog.lookup_course(query)
         if error:
             await interaction.followup.send(error, ephemeral=True)
             return
