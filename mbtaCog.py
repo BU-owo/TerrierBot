@@ -304,7 +304,7 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
                 break
 
         return items
-
+    
     async def _build_mbta_embed(self) -> discord.Embed:
         eta_by_stop = await self._fetch_next_eta_by_stop()
         alerts = await self._fetch_active_alerts()
