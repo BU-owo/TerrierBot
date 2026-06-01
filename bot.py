@@ -159,7 +159,8 @@ async def help_command(ctx: Context):
         name="Information",
         value=(
             "`=banner` or `/banner` - Banner submission info\n"
-            "`=boost` or `/boost` - Server booster perks"
+            "`=boost` or `/boost` - Server booster perks\n"
+            "`=mbta` or `/mbta` - Live Green Line B ETAs for BU stops"
         ),
         inline=False,
     )
@@ -169,6 +170,7 @@ async def help_command(ctx: Context):
         value=(
             "`=hello` or `/hello` - Say hi\n"
             "`=love` or `/love` - Terrier love\n"
+            "`=pride` or `/pride` - Post the Pride role-color message\n"
             "`=starleaderboard` or `/starleaderboard` - Star leaderboard"
         ),
         inline=False,
@@ -274,8 +276,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard"]
+cogList = ["test", "hello", "love", "pride", "boost", "mbta", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard"]
+defaultCogs = ["test", "hello", "love", "pride", "boost", "mbta", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard"]
 
 async def main():
     async with bot:
