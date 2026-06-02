@@ -191,7 +191,7 @@ async def help_command(ctx: Context):
             "Manage Server required:\n"
             "`=positivity`, `/positivity status/enable/disable/interval/cooldown`\n\n"
             "Owner only (prefix only, no slash):\n"
-            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`, `=sync`\n\n"
+            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportmembersbycategory`, `=exportprunecandidates`, `=sync`\n\n"
             "Manage Server required (slash only):\n"
             "`/starboard setchannel/threshold/enable/disable/status`"
         ),
