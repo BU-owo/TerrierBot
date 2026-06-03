@@ -5,6 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 import logging
 import asyncio
+import os
 import shelve
 from datetime import datetime, timedelta, timezone
 
@@ -283,12 +284,11 @@ async def main():
     async with bot:
         for cog in defaultCogs:
             await bot.load_extension(cog + "Cog")
-        # '''
-        with open("token.txt") as f:
-            token = f.read()
-        '''
-        token = os.environ["DISCORD_TOKEN"]
-        '''
+        if os.path.exists("token.txt"):
+            with open("token.txt") as f:
+                token = f.read().strip()
+        else:
+            token = os.environ["DISCORD_TOKEN"]
         await bot.start(token)
 
 if __name__ == "__main__":
