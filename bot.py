@@ -7,7 +7,9 @@ import logging
 import asyncio
 import os
 import shelve
+import threading
 from datetime import datetime, timedelta, timezone
+from flask import Flask
 
 logging.basicConfig(level=logging.INFO)
 
@@ -112,6 +114,27 @@ def command_prefix(bot : TerrierBot, msg : discord.Message):
 bot = TerrierBot(command_prefix=command_prefix, description=description, intents=intents)
 
 bot.help_command = None
+
+health_app = Flask(__name__)
+
+
+@health_app.get("/")
+def health_check() -> str:
+    return "Bot is alive!"
+
+
+def start_health_server() -> None:
+    port = int(os.environ.get("PORT", 8080))
+    thread = threading.Thread(
+        target=health_app.run,
+        kwargs={
+            "host": "0.0.0.0",
+            "port": port,
+            "use_reloader": False,
+        },
+        daemon=True,
+    )
+    thread.start()
 
 
 @bot.tree.error
@@ -281,6 +304,7 @@ cogList = ["test", "hello", "love", "pride", "boost", "mbta", "positivity", "mem
 defaultCogs = ["test", "hello", "love", "pride", "boost", "mbta", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard"]
 
 async def main():
+    start_health_server()
     async with bot:
         for cog in defaultCogs:
             await bot.load_extension(cog + "Cog")
