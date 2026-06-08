@@ -26,8 +26,8 @@ def _build_embedreg_sequence() -> list[discord.Embed]:
             "It is HIGHLY recommended that you register as soon as you are able in order to grab the classes/times you want, but course "
             "registration is very flexible!\n\n"
             "View your registration time in your timezone:\n"
-            "[June 9th at 9am EDT (Transfers)](https://timee.io/20260609T1300?tl=Incoming+Student+Course+Registration+is+SOON+%28June+9th+and+June+11th+%40+9am+EST%29+-+tips+%2B+details)\n"
-            "[June 11th at 9am EDT (First-Years)](https://timee.io/20260611T1300?tl=Incoming+Student+Course+Registration+is+SOON+%28June+9th+and+June+11th+%40+9am+EST%29+-+tips+%2B+details)"
+            "<t:1781010000:t>\n"
+            "<t:1781182800:t>"
         ),
     )
 
@@ -187,7 +187,7 @@ def _build_embedreg_sequence() -> list[discord.Embed]:
             "This is exciting! Don't stress out over this, and know that you can't \"mess up\" at registration. There is nothing you and your "
             "advisor can't fix!\n\n"
             "Good luck jellybeans! ❤️\n\n"
-            "— u/BUowo"
+            "— OwO"
         ),
     )
 
