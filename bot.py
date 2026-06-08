@@ -1,15 +1,13 @@
 from __future__ import annotations
 from typing import Any, Callable, override
+import os
 import discord
 from discord import app_commands
 from discord.ext import commands
 import logging
 import asyncio
-import os
 import shelve
-import threading
 from datetime import datetime, timedelta, timezone
-from flask import Flask
 
 logging.basicConfig(level=logging.INFO)
 
@@ -115,27 +113,6 @@ bot = TerrierBot(command_prefix=command_prefix, description=description, intents
 
 bot.help_command = None
 
-health_app = Flask(__name__)
-
-
-@health_app.get("/")
-def health_check() -> str:
-    return "Bot is alive!"
-
-
-def start_health_server() -> None:
-    port = int(os.environ.get("PORT", 8080))
-    thread = threading.Thread(
-        target=health_app.run,
-        kwargs={
-            "host": "0.0.0.0",
-            "port": port,
-            "use_reloader": False,
-        },
-        daemon=True,
-    )
-    thread.start()
-
 
 @bot.tree.error
 async def on_app_command_error(
@@ -183,8 +160,7 @@ async def help_command(ctx: Context):
         name="Information",
         value=(
             "`=banner` or `/banner` - Banner submission info\n"
-            "`=boost` or `/boost` - Server booster perks\n"
-            "`=mbta` or `/mbta` - Live Green Line B ETAs for BU stops"
+            "`=boost` or `/boost` - Server booster perks"
         ),
         inline=False,
     )
@@ -194,7 +170,6 @@ async def help_command(ctx: Context):
         value=(
             "`=hello` or `/hello` - Say hi\n"
             "`=love` or `/love` - Terrier love\n"
-            "`=pride` or `/pride` - Post the Pride role-color message\n"
             "`=starleaderboard` or `/starleaderboard` - Star leaderboard"
         ),
         inline=False,
@@ -215,7 +190,7 @@ async def help_command(ctx: Context):
             "Manage Server required:\n"
             "`=positivity`, `/positivity status/enable/disable/interval/cooldown`\n\n"
             "Owner only (prefix only, no slash):\n"
-            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportmembersbycategory`, `=exportprunecandidates`, `=sync`\n\n"
+            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`, `=sync`\n\n"
             "Manage Server required (slash only):\n"
             "`/starboard setchannel/threshold/enable/disable/status`"
         ),
@@ -300,20 +275,23 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "pride", "boost", "mbta", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard"]
-defaultCogs = ["test", "hello", "love", "pride", "boost", "mbta", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard"]
+
+
+def _get_token() -> str:
+    token = os.environ.get("DISCORD_TOKEN")
+    if token:
+        return token
+    with open("token.txt") as f:
+        return f.read().strip()
+
 
 async def main():
-    start_health_server()
     async with bot:
         for cog in defaultCogs:
             await bot.load_extension(cog + "Cog")
-        if os.path.exists("token.txt"):
-            with open("token.txt") as f:
-                token = f.read().strip()
-        else:
-            token = os.environ["DISCORD_TOKEN"]
-        await bot.start(token)
+        await bot.start(_get_token())
 
 if __name__ == "__main__":
     asyncio.run(main())
