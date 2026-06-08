@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Any, Callable, override
 import os
+import threading
+from flask import Flask
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -293,5 +295,17 @@ async def main():
             await bot.load_extension(cog + "Cog")
         await bot.start(_get_token())
 
+def run_web_server() -> None:
+    app = Flask(__name__)
+
+    @app.route("/")
+    def index():
+        return "OK", 200
+
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
+
+
 if __name__ == "__main__":
+    threading.Thread(target=run_web_server, daemon=True).start()
     asyncio.run(main())
