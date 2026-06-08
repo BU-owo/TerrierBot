@@ -3,6 +3,7 @@ from typing import Any, Callable, override
 import os
 import threading
 from flask import Flask
+from werkzeug.serving import make_server
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -295,7 +296,7 @@ async def main():
             await bot.load_extension(cog + "Cog")
         await bot.start(_get_token())
 
-def run_web_server() -> None:
+def run_web_server(stop_event: threading.Event) -> None:
     app = Flask(__name__)
 
     @app.route("/")
@@ -303,9 +304,22 @@ def run_web_server() -> None:
         return "OK", 200
 
     port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    server = make_server("0.0.0.0", port, app)
+    server.timeout = 1
+    while not stop_event.is_set():
+        server.handle_request()
+    server.server_close()
+
+
+async def run_services() -> None:
+    stop_event = threading.Event()
+    web_task = asyncio.create_task(asyncio.to_thread(run_web_server, stop_event))
+    try:
+        await main()
+    finally:
+        stop_event.set()
+        await web_task
 
 
 if __name__ == "__main__":
-    threading.Thread(target=run_web_server, daemon=True).start()
-    asyncio.run(main())
+    asyncio.run(run_services())
