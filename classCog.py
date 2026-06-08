@@ -18,7 +18,10 @@ from bot import TerrierBot, Context
 # ---------------------------------------------------------------------------
 
 _FALL_TERM = "2268"
-_CSV_PATH  = Path("BU_R0032B_SR_CLASS_SCHD_DOWNLD.csv")
+_CSV_PATHS = [
+    Path("BU_R0032B_SR_CLASS_SCHD_DOWNLD.csv"),
+    Path("Fall2026Courses.csv"),
+]
 _COURSE_INDEX_CSV_PATH = Path("bu_courses_all.csv")
 
 # { (subject_area, catalog_nbr) : [raw CSV rows] }
@@ -26,21 +29,28 @@ _fall_schedule: dict[tuple[str, str], list[dict[str, str]]] = {}
 
 
 def _load_fall_schedule() -> None:
-    if not _CSV_PATH.exists():
-        return
-    try:
-        with open(_CSV_PATH, newline="", encoding="utf-8-sig", errors="replace") as f:
-            for row in csv.DictReader(f):
-                if row.get("Term", "").strip() != _FALL_TERM:
-                    continue
-                key = (
-                    row.get("Subject Area", "").strip().upper(),
-                    row.get("Catalog Nbr",  "").strip(),
-                )
-                _fall_schedule.setdefault(key, []).append(row)
-    except Exception as exc:
+    loaded_any = False
+    for csv_path in _CSV_PATHS:
+        if not csv_path.exists():
+            continue
+        loaded_any = True
+        try:
+            with open(csv_path, newline="", encoding="utf-8-sig", errors="replace") as f:
+                for row in csv.DictReader(f):
+                    if row.get("Term", "").strip() != _FALL_TERM:
+                        continue
+                    key = (
+                        row.get("Subject Area", "").strip().upper(),
+                        row.get("Catalog Nbr",  "").strip(),
+                    )
+                    _fall_schedule.setdefault(key, []).append(row)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("Could not load fall schedule CSV %s: %s", csv_path, exc)
+
+    if not loaded_any:
         import logging
-        logging.getLogger(__name__).warning("Could not load fall schedule CSV: %s", exc)
+        logging.getLogger(__name__).warning("No fall schedule CSV found. Looked for: %s", ", ".join(str(p) for p in _CSV_PATHS))
 
 
 _load_fall_schedule()
