@@ -18,7 +18,7 @@ from bot import TerrierBot, Context
 # ---------------------------------------------------------------------------
 
 _FALL_TERM = "2268"
-_CSV_PATH  = Path("Fall2026Courses.csv")
+_CSV_PATH  = Path("BU_R0032B_SR_CLASS_SCHD_DOWNLD.csv")
 
 # { (subject_area, catalog_nbr) : [raw CSV rows] }
 _fall_schedule: dict[tuple[str, str], list[dict[str, str]]] = {}
@@ -113,17 +113,13 @@ def _build_sections(rows: list[dict[str, str]]) -> list[dict]:
 def _fmt_section(g: dict, *, short: bool = False) -> str:
     """
     Format one section dict as 2 lines:
-      **A1** · Open · 108/130
+            **A1** · Open
       MWF 2:30–3:20PM · SCI 113 · T. Januario
     If short=True, condense to a single line (for compact overflow notes).
     """
-    try:
-        seats = f"{int(g['enrolled'])}/{int(g['cap'])}"
-    except ValueError:
-        seats = ""
     stat   = g["enrl_stat"] or "?"
     mode   = g["mode"]
-    header = f"**{g['section']}** · {stat}" + (f" · {seats}" if seats else "")
+    header = f"**{g['section']}** · {stat}"
     if mode and mode.lower() not in ("in-person", ""):
         header += f" · {mode}"
 
