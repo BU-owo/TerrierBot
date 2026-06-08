@@ -26,8 +26,8 @@ def _build_embedreg_sequence() -> list[discord.Embed]:
             "It is HIGHLY recommended that you register as soon as you are able in order to grab the classes/times you want, but course "
             "registration is very flexible!\n\n"
             "View your registration time in your timezone:\n"
-            "<t:1781010000:t>\n"
-            "<t:1781182800:t>"
+            "Transfer Students: <t:1781010000:t>\n"
+            "First-Year Students: <t:1781182800:t>"
         ),
     )
 
