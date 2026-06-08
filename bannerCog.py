@@ -25,6 +25,7 @@ async def setup(bot: TerrierBot):
 class BannerCog(commands.Cog, name="Banner"):
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
+        self._skip_first_loop_run = True
         self.weekly_banner.start()
         print("Banner Cog Ready")
 
@@ -33,6 +34,10 @@ class BannerCog(commands.Cog, name="Banner"):
 
     @tasks.loop(hours=1)
     async def weekly_banner(self):
+        if self._skip_first_loop_run:
+            self._skip_first_loop_run = False
+            return
+
         now = datetime.now(timezone.utc)
         with shelve.open(SHELVE_PATH) as sh:
             last_sent_raw = sh.get(SHELVE_KEY)

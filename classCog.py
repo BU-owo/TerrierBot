@@ -19,6 +19,7 @@ from bot import TerrierBot, Context
 
 _FALL_TERM = "2268"
 _CSV_PATH  = Path("BU_R0032B_SR_CLASS_SCHD_DOWNLD.csv")
+_COURSE_INDEX_CSV_PATH = Path("bu_courses_all.csv")
 
 # { (subject_area, catalog_nbr) : [raw CSV rows] }
 _fall_schedule: dict[tuple[str, str], list[dict[str, str]]] = {}
@@ -275,7 +276,7 @@ SCHOOL_TO_SUBJECTS: dict[str, set[str]] = {
     "ENG": {"BE", "BF", "EC", "EK", "ME", "MS", "SE"},
     "GMS": {"AN", "BC", "BI", "BN", "BT", "BY", "CI", "FA", "FC", "FS", "GC", "GE", "HS", "IM", "MA", "MD", "MH", "MI", "MM", "MS", "NU", "OB", "OH", "PA", "PH", "PM"},
     "HUB": {"CC", "FY", "IC", "RL", "SA", "SJ", "XC"},
-    "KHC": set(),
+    "KHC": {"AH", "AM", "AN", "BI", "CH", "EC", "EK", "EN", "FT", "HC", "HI", "IR", "LW", "MU", "NE", "PH", "PO", "PY", "RH", "RN", "SO", "ST", "UC", "VA", "XL"},
     "LAW": {"AM", "BK", "JD", "TX", "XB"},
     "MED": set(),
     "MET": {"AD", "AH", "AN", "AR", "AT", "BI", "BT", "CH", "CJ", "CM", "CS", "EC", "EN", "ES", "HC", "HI", "HU", "IS", "LD", "LX", "MA", "MG", "ML", "PH", "PO", "PS", "PY", "SO", "UA"},
@@ -292,6 +293,27 @@ SCHOOL_TO_SUBJECTS: dict[str, set[str]] = {
     "XAS": {"NS"},
     "XRG": {"AN", "BC", "BD", "ED", "GC", "HB", "HC", "HD", "HU", "SJ", "TF"},
 }
+
+
+def _augment_subject_mappings_from_course_index() -> None:
+    """Add school/subject pairs discovered in bu_courses_all.csv."""
+    if not _COURSE_INDEX_CSV_PATH.exists():
+        return
+    try:
+        with open(_COURSE_INDEX_CSV_PATH, newline="", encoding="utf-8-sig", errors="replace") as f:
+            for row in csv.reader(f):
+                if not row:
+                    continue
+                code = row[0].strip().upper()
+                m = re.fullmatch(r"([A-Z]{3})\s+([A-Z]{2,3})\s+\d{3}[A-Z]?", code)
+                if not m:
+                    continue
+                school, subject = m.group(1), m.group(2)
+                if school in SCHOOL_SLUG:
+                    SCHOOL_TO_SUBJECTS.setdefault(school, set()).add(subject)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Could not load school/subject index CSV: %s", exc)
 
 # Canonical school codes users might type.
 SCHOOL_ALIASES: dict[str, str] = {
@@ -328,6 +350,8 @@ SCHOOL_SLUG: dict[str, str] = {
     "XAS": "xas",
     "XRG": "xrg",
 }
+
+_augment_subject_mappings_from_course_index()
 
 SUBJECT_TO_SCHOOLS: dict[str, set[str]] = {}
 for school, subjects in SCHOOL_TO_SUBJECTS.items():
