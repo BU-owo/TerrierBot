@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 import re
 import urllib.parse
@@ -15,7 +16,7 @@ from bot import Context, TerrierBot
 ENGAGE_SEARCH_URL = "https://terriercentral.bu.edu/api/discovery/search/organizations"
 ENGAGE_BASE_URL = "https://terriercentral.bu.edu"
 
-RESULTS_PER_PAGE = 10
+RESULTS_PER_PAGE = 20
 
 CATEGORY_KEYWORDS: dict[str, int] = {
     "political": 12693,
@@ -36,17 +37,23 @@ def _get(obj: dict, *keys: str) -> Any:
 
 
 def _org_page_url(org: dict[str, Any]) -> str:
-    slug = _get(org, "ShortName", "shortName", "WebsiteKey", "websiteKey", "UrlIdentifier", "urlIdentifier")
+    """Extracts the native, server-provided unique URL key directly from the item payload."""
+    # Look up the exact identifier keys provided by CampusLabs endpoints
+    slug = _get(org, "WebsiteKey", "websiteKey", "UrlIdentifier", "urlIdentifier")
+    
     if slug:
-        # URL encode the slug so unencoded spaces do not break Discord markdown links
-        clean = urllib.parse.quote(str(slug).strip("/").split("/")[-1])
-        return f"{ENGAGE_BASE_URL}/organization/{clean}"
+        # Strip trailing/leading slashes and split just in case it returns a partial path
+        clean_slug = str(slug).strip("/").split("/")[-1]
+        return f"{ENGAGE_BASE_URL}/organization/{clean_slug}"
+    
+    # Fallback only if the backend somehow omits the slug completely
     name = _get(org, "Name", "name") or ""
     return f"{ENGAGE_BASE_URL}/organizations?query={urllib.parse.quote(str(name))}"
 
 
 def _org_name(org: dict[str, Any]) -> str:
-    return str(_get(org, "Name", "name") or "Unknown Organization")
+    raw_name = str(_get(org, "Name", "name") or "Unknown Organization")
+    return html.unescape(raw_name)
 
 
 def _build_embed(
@@ -56,22 +63,18 @@ def _build_embed(
     total: int,
     search_url: str,
 ) -> discord.Embed:
-    total_pages = max(1, (total + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
-    
-    # We compile the hyperlinked list directly inside the embed description for a much cleaner layout
     club_lines = []
     for org in results:
         name = _org_name(org)
         page_link = _org_page_url(org)
         club_lines.append(f"• [{name}]({page_link})")
         
-    description_header = f"**{total}** organization(s) found · Page {page} of {total_pages}\n\n"
-    full_description = description_header + "\n".join(club_lines)
+    full_description = "\n".join(club_lines)
 
     embed = discord.Embed(
         title=f"BU Clubs — {display}",
         description=full_description,
-        color=discord.Color.red(),
+        color=discord.Color.from_rgb(254, 231, 92),  # Cute pastel yellow 💛
         url=search_url,
     )
 
@@ -229,7 +232,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
             embed = discord.Embed(
                 title=f"BU Clubs — {display}",
                 description="No active organizations found.",
-                color=discord.Color.red(),
+                color=discord.Color.from_rgb(254, 231, 92),
                 url=search_url,
             )
             await ctx.send(embed=embed)
@@ -285,7 +288,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
             embed = discord.Embed(
                 title=f"BU Clubs — {display}",
                 description="No active organizations found.",
-                color=discord.Color.red(),
+                color=discord.Color.from_rgb(254, 231, 92),
                 url=search_url,
             )
             await interaction.followup.send(embed=embed)
