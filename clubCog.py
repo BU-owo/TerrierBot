@@ -60,7 +60,6 @@ def _get(obj: dict, *keys: str) -> Any:
 def _social_links(org: dict[str, Any]) -> list[str]:
     links: list[str] = []
 
-    # SocialLinks array: [{"Uri": "...", "Type": "Instagram"}, ...]
     social_list = _get(org, "SocialLinks", "socialLinks") or []
     for item in social_list:
         if not isinstance(item, dict):
@@ -75,14 +74,12 @@ def _social_links(org: dict[str, Any]) -> list[str]:
         label = kind.title() if kind else "Link"
         links.append(f"[{icon} {label}]({uri})")
 
-    # External website
     ext_url = _get(org, "ExternalWebsiteUrl", "externalWebsiteUrl", "websiteUrl", "WebsiteUrl")
     if ext_url:
         if not ext_url.startswith("http"):
             ext_url = "https://" + ext_url
         links.append(f"[🌐 Website]({ext_url})")
 
-    # Contacts: [{"EmailAddress": "...", "Name": "..."}, ...]
     contacts = _get(org, "Contacts", "contacts") or []
     for contact in contacts:
         if not isinstance(contact, dict):
@@ -90,7 +87,7 @@ def _social_links(org: dict[str, Any]) -> list[str]:
         email = _get(contact, "EmailAddress", "emailAddress", "Email", "email")
         if email:
             links.append(f"[📧 Email](mailto:{email})")
-            break  # one email is enough
+            break
 
     return links
 
@@ -191,15 +188,15 @@ class ClubPaginationView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(label="◀", style=discord.ButtonStyle.secondary)
-    async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):  # type: ignore[override]
+    async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._go_to(interaction, self.current_page - 1)
 
     @discord.ui.button(label="· / ·", style=discord.ButtonStyle.grey, disabled=True)
-    async def page_label(self, interaction: discord.Interaction, button: discord.ui.Button):  # type: ignore[override]
+    async def page_label(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
 
     @discord.ui.button(label="▶", style=discord.ButtonStyle.secondary)
-    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):  # type: ignore[override]
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._go_to(interaction, self.current_page + 1)
 
     async def on_timeout(self) -> None:
@@ -225,21 +222,20 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         skip: int = 0,
         take: int = RESULTS_PER_PAGE,
     ) -> tuple[list[dict[str, Any]], int]:
-        params: dict[str, Any] = {
-            "status": 1,
-            "take": take,
-            "skip": skip,
-            "orderBy": "UpperName",
-        }
-        if query:
-            params["query"] = query
-            
-        # --- CHANGE THIS PART ---
+        params: list[tuple[str, Any]] = [
+            ("status", 1),
+            ("take", take),
+            ("skip", skip),
+            ("orderBy", "UpperName"),
+        ]
+        
+        # Engage endpoint maps categories via matching array collections
         if category_id is not None:
-            # Engage's OData API often expects collection filters wrapped in brackets 
-            # or passed specifically as a list element for aiohttp to map correctly
-            params["categories"] = [category_id] 
-        # ------------------------
+            params.append(("categoryIds", category_id))
+        
+        # Only add a text query parameter if it contains search characters
+        if query and query.strip():
+            params.append(("query", query.strip()))
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -261,18 +257,23 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
 
     @staticmethod
     def _parse_args(raw: str) -> tuple[str | None, int | None, str]:
-        m = re.match(r"categories=(\d+)", raw.strip(), re.IGNORECASE)
+        cleaned = raw.strip()
+        
+        m = re.match(r"categories=(\d+)", cleaned, re.IGNORECASE)
         if m:
             cat_id = int(m.group(1))
             return None, cat_id, f"Category #{cat_id}"
-        if raw.strip().isdigit():
-            cat_id = int(raw.strip())
+            
+        if cleaned.isdigit():
+            cat_id = int(cleaned)
             return None, cat_id, f"Category #{cat_id}"
-        normalized = raw.strip().lower()
+            
+        normalized = cleaned.lower()
         if normalized in CATEGORY_KEYWORDS:
             cat_id = CATEGORY_KEYWORDS[normalized]
             return None, cat_id, normalized.title()
-        return raw.strip(), None, f'"{raw.strip()}"'
+            
+        return cleaned, None, f'"{cleaned}"'
 
     async def _respond(self, ctx: Context, raw: str) -> None:
         query, category_id, display = self._parse_args(raw)
@@ -281,7 +282,8 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         if query:
             tc_params["query"] = query
         if category_id is not None:
-            tc_params["categories"] = str(category_id)
+            tc_params["categoryIds"] = str(category_id)
+            
         search_url = ENGAGE_BASE_URL + "/organizations"
         if tc_params:
             search_url += "?" + urllib.parse.urlencode(tc_params)
@@ -320,7 +322,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
     async def club(self, ctx: Context, *, query: str):
         """Search BU clubs. =club blood | =club political | =club categories=12693"""
         async with ctx.typing():
-            await self._respond(ctx, query.strip())
+            await self._respond(ctx, query)
 
     # ------------------------------------------------------------------ #
     # Slash command
@@ -336,7 +338,8 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         if q:
             tc_params["query"] = q
         if category_id is not None:
-            tc_params["categories"] = str(category_id)
+            tc_params["categoryIds"] = str(category_id)
+            
         search_url = ENGAGE_BASE_URL + "/organizations"
         if tc_params:
             search_url += "?" + urllib.parse.urlencode(tc_params)
@@ -368,19 +371,14 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         await interaction.followup.send(embed=embed, view=view)
 
     # ------------------------------------------------------------------ #
-    # Debug: owner-only raw JSON dump to identify real field names
+    # Debug
     # ------------------------------------------------------------------ #
 
     @commands.command(name="clubdebug")
     @commands.is_owner()
     async def club_debug(self, ctx: Context, *, query: str = "blood"):
-        """Dump raw API JSON for a query (Owner only). Helps identify real field names."""
-        params: dict[str, Any] = {
-            "status": 1,
-            "take": 1,
-            "skip": 0,
-            "query": query,
-        }
+        """Dump raw API JSON for a query (Owner only)."""
+        params = [("status", 1), ("take", 1), ("skip", 0), ("query", query)]
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 ENGAGE_SEARCH_URL,
@@ -390,7 +388,6 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
             ) as resp:
                 raw = await resp.text()
 
-        # Pretty-print first 1900 chars
         try:
             pretty = json.dumps(json.loads(raw), indent=2)
         except Exception:
