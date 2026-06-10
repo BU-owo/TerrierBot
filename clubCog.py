@@ -222,18 +222,16 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         skip: int = 0,
         take: int = RESULTS_PER_PAGE,
     ) -> tuple[list[dict[str, Any]], int]:
-        # Rename standard parameters to match exact CampusLabs naming ('top' instead of 'take')
         params: dict[str, Any] = {
             "status": 1,
             "top": take,
             "skip": skip,
             "orderBy[0]": "UpperName asc",
-            "filter": ""
         }
         
-        # Format OData filter string required for category collections
+        # Explicit index serialization matches the internal structure of the platform's multi-select filter parameters
         if category_id is not None:
-            params["filter"] = f"CategoryIds/any(c: c eq {category_id})"
+            params["categoryIds[0]"] = category_id
         
         if query and query.strip():
             params["query"] = query.strip()
@@ -260,7 +258,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
     def _parse_args(raw: str) -> tuple[str | None, int | None, str]:
         cleaned = raw.strip()
         
-        # Match URL query parameters like categories=12693
+        # Parse out literal categories identifiers
         m = re.match(r"categories=(\d+)", cleaned, re.IGNORECASE)
         if m:
             cat_id = int(m.group(1))
@@ -273,15 +271,14 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         normalized = cleaned.lower()
         if normalized in CATEGORY_KEYWORDS:
             cat_id = CATEGORY_KEYWORDS[normalized]
-            return None, cat_id, normalized.title()
+            # Retain normalized text keyword in query so the API searches text or category in parallel
+            return cleaned, cat_id, normalized.title()
             
-        # Return text searches cleanly
         return cleaned, None, f'"{cleaned}"'
 
     async def _respond(self, ctx: Context, raw: str) -> None:
         query, category_id, display = self._parse_args(raw)
 
-        # Build user-clickable link to mimic standard web query behavior
         tc_params: dict[str, str] = {}
         if query:
             tc_params["query"] = query
