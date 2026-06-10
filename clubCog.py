@@ -222,20 +222,21 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         skip: int = 0,
         take: int = RESULTS_PER_PAGE,
     ) -> tuple[list[dict[str, Any]], int]:
-        params: list[tuple[str, Any]] = [
-            ("status", 1),
-            ("take", take),
-            ("skip", skip),
-            ("orderBy", "UpperName"),
-        ]
+        # Rename standard parameters to match exact CampusLabs naming ('top' instead of 'take')
+        params: dict[str, Any] = {
+            "status": 1,
+            "top": take,
+            "skip": skip,
+            "orderBy[0]": "UpperName asc",
+            "filter": ""
+        }
         
-        # Engage endpoint maps categories via matching array collections
+        # Format OData filter string required for category collections
         if category_id is not None:
-            params.append(("categoryIds", category_id))
+            params["filter"] = f"CategoryIds/any(c: c eq {category_id})"
         
-        # Only add a text query parameter if it contains search characters
         if query and query.strip():
-            params.append(("query", query.strip()))
+            params["query"] = query.strip()
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -259,6 +260,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
     def _parse_args(raw: str) -> tuple[str | None, int | None, str]:
         cleaned = raw.strip()
         
+        # Match URL query parameters like categories=12693
         m = re.match(r"categories=(\d+)", cleaned, re.IGNORECASE)
         if m:
             cat_id = int(m.group(1))
@@ -273,16 +275,18 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
             cat_id = CATEGORY_KEYWORDS[normalized]
             return None, cat_id, normalized.title()
             
+        # Return text searches cleanly
         return cleaned, None, f'"{cleaned}"'
 
     async def _respond(self, ctx: Context, raw: str) -> None:
         query, category_id, display = self._parse_args(raw)
 
+        # Build user-clickable link to mimic standard web query behavior
         tc_params: dict[str, str] = {}
         if query:
             tc_params["query"] = query
         if category_id is not None:
-            tc_params["categoryIds"] = str(category_id)
+            tc_params["categories"] = str(category_id)
             
         search_url = ENGAGE_BASE_URL + "/organizations"
         if tc_params:
@@ -338,7 +342,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         if q:
             tc_params["query"] = q
         if category_id is not None:
-            tc_params["categoryIds"] = str(category_id)
+            tc_params["categories"] = str(category_id)
             
         search_url = ENGAGE_BASE_URL + "/organizations"
         if tc_params:
@@ -378,7 +382,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
     @commands.is_owner()
     async def club_debug(self, ctx: Context, *, query: str = "blood"):
         """Dump raw API JSON for a query (Owner only)."""
-        params = [("status", 1), ("take", 1), ("skip", 0), ("query", query)]
+        params = {"status": 1, "top": 1, "skip": 0, "query": query}
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 ENGAGE_SEARCH_URL,
