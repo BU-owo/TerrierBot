@@ -45,7 +45,7 @@ class TerrierBot(commands.Bot):
                     sh["last_startup_msg"] = now
                     channel = self.get_channel(1396542256445391069)
                     if isinstance(channel, discord.TextChannel):
-                        await channel.send("Hello, I am here now! 🐾")
+                        await channel.send("Hello, I have restarted and am ready to help! 🐾")
 
     #============================================
     #Error Handling
@@ -278,8 +278,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club"]
 
 
 def _get_token() -> str:
