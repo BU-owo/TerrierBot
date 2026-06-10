@@ -158,11 +158,11 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         skip: int = 0,
         take: int = RESULTS_PER_PAGE,
     ) -> tuple[list[dict[str, Any]], int]:
+        # Removed orderBy parameter to default to similarity ranking
         params: dict[str, Any] = {
             "status": 1,
             "top": take,
             "skip": skip,
-            "orderBy[0]": "UpperName asc",
         }
         
         if category_id is not None:
@@ -202,12 +202,10 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
             cat_id = int(cleaned)
             return None, cat_id, f"Category #{cat_id}"
             
-        # Splits multi-word phrases to see if any single token matches a predefined category filter keyword
         words = cleaned.lower().split()
         for word in words:
             if word in CATEGORY_KEYWORDS:
                 cat_id = CATEGORY_KEYWORDS[word]
-                # Keeps the whole text query alive so multi-word details pass to the API alongside the category filter
                 return cleaned, cat_id, cleaned.title()
                 
         return cleaned, None, f'"{cleaned}"'
