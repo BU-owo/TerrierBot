@@ -13,6 +13,8 @@ from classCog import _parse_course_query
 
 RMP_GRAPHQL_URL = "https://www.ratemyprofessors.com/graphql"
 BU_DISPLAY_NAME = "Boston University"
+RMP_CHANNEL_ID = 1404891150871040050
+RMP_WARNING_EMOJI = "<:terrierbot:1472754408440860984>"
 
 DEPARTMENT_DEFAULT_SCHOOL: dict[str, str] = {
     "biology": "CAS",
@@ -691,6 +693,15 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
         view = ClassLookupView(self.bot, class_buttons, preferred_school=preferred_school) if class_buttons else None
         return embed, view, None
 
+    def _needs_channel_warning(self, channel: discord.abc.GuildChannel | discord.Thread | None) -> bool:
+        return channel is None or channel.id != RMP_CHANNEL_ID
+
+    def _channel_warning_text(self, user: discord.abc.User) -> str:
+        return (
+            f"{user.mention}, you really gotta be doing bot commands in <#{RMP_CHANNEL_ID}> bruh. "
+            f"OwO is gonna get mad and blame, me, Terrier Bot {RMP_WARNING_EMOJI}"
+        )
+
     @commands.command(name="rmp")
     async def rmp(self, ctx: Context, *, professor_name: str):
         """Look up a Boston University professor on RateMyProfessors.
@@ -706,6 +717,9 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
         else:
             await ctx.send(embed=embed)
 
+        if self._needs_channel_warning(ctx.channel if isinstance(ctx.channel, (discord.abc.GuildChannel, discord.Thread)) else None):
+            await ctx.send(self._channel_warning_text(ctx.author))
+
     @app_commands.command(name="rmp", description="Look up a BU professor on RateMyProfessors.")
     @app_commands.describe(professor_name="Professor's name (e.g. Jane Smith or Smith)")
     async def rmp_slash(self, interaction: discord.Interaction, professor_name: str):
@@ -718,3 +732,6 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
             await interaction.followup.send(embed=embed, view=view)
         else:
             await interaction.followup.send(embed=embed)
+
+        if self._needs_channel_warning(interaction.channel if isinstance(interaction.channel, (discord.abc.GuildChannel, discord.Thread)) else None):
+            await interaction.followup.send(self._channel_warning_text(interaction.user))
