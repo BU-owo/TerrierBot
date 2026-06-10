@@ -233,8 +233,13 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         }
         if query:
             params["query"] = query
+            
+        # --- CHANGE THIS PART ---
         if category_id is not None:
-            params["categories"] = category_id
+            # Engage's OData API often expects collection filters wrapped in brackets 
+            # or passed specifically as a list element for aiohttp to map correctly
+            params["categories"] = [category_id] 
+        # ------------------------
 
         try:
             async with aiohttp.ClientSession() as session:
