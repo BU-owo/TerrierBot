@@ -37,16 +37,12 @@ def _get(obj: dict, *keys: str) -> Any:
 
 
 def _org_page_url(org: dict[str, Any]) -> str:
-    """Extracts the native, server-provided unique URL key directly from the item payload."""
-    # Look up the exact identifier keys provided by CampusLabs endpoints
+    """Extracts the native unique URL key directly from the payload."""
     slug = _get(org, "WebsiteKey", "websiteKey", "UrlIdentifier", "urlIdentifier")
-    
     if slug:
-        # Strip trailing/leading slashes and split just in case it returns a partial path
         clean_slug = str(slug).strip("/").split("/")[-1]
         return f"{ENGAGE_BASE_URL}/organization/{clean_slug}"
     
-    # Fallback only if the backend somehow omits the slug completely
     name = _get(org, "Name", "name") or ""
     return f"{ENGAGE_BASE_URL}/organizations?query={urllib.parse.quote(str(name))}"
 
@@ -74,7 +70,7 @@ def _build_embed(
     embed = discord.Embed(
         title=f"BU Clubs — {display}",
         description=full_description,
-        color=discord.Color.from_rgb(254, 231, 92),  # Cute pastel yellow 💛
+        color=discord.Color.from_rgb(254, 231, 92),  # Cute yellow 💛
         url=search_url,
     )
 
@@ -206,11 +202,14 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
             cat_id = int(cleaned)
             return None, cat_id, f"Category #{cat_id}"
             
-        normalized = cleaned.lower()
-        if normalized in CATEGORY_KEYWORDS:
-            cat_id = CATEGORY_KEYWORDS[normalized]
-            return cleaned, cat_id, normalized.title()
-            
+        # Splits multi-word phrases to see if any single token matches a predefined category filter keyword
+        words = cleaned.lower().split()
+        for word in words:
+            if word in CATEGORY_KEYWORDS:
+                cat_id = CATEGORY_KEYWORDS[word]
+                # Keeps the whole text query alive so multi-word details pass to the API alongside the category filter
+                return cleaned, cat_id, cleaned.title()
+                
         return cleaned, None, f'"{cleaned}"'
 
     async def _respond(self, ctx: Context, raw: str) -> None:
