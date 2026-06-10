@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import urllib.parse
 from typing import Any
@@ -13,15 +14,26 @@ from bot import Context, TerrierBot
 
 ENGAGE_SEARCH_URL = "https://terriercentral.bu.edu/api/discovery/search/organizations"
 ENGAGE_BASE_URL = "https://terriercentral.bu.edu"
-ENGAGE_ORG_URL = "https://terriercentral.bu.edu/organization/{}"
 
-RESULTS_PER_PAGE = 5
-MAX_DESCRIPTION_LEN = 120
+RESULTS_PER_PAGE = 10
+MAX_DESC_LEN = 100
 
-# Known category name → ID mappings for autocomplete / convenience.
-# Run =club categories to see the full list from the API.
 CATEGORY_KEYWORDS: dict[str, int] = {
     "political": 12693,
+}
+
+SOCIAL_ICONS: dict[str, str] = {
+    "instagram": "📸",
+    "facebook": "📘",
+    "twitter": "🐦",
+    "x": "🐦",
+    "linkedin": "💼",
+    "youtube": "▶️",
+    "tiktok": "🎵",
+    "discord": "💬",
+    "snapchat": "👻",
+    "website": "🌐",
+    "email": "📧",
 }
 
 
@@ -29,101 +41,181 @@ async def setup(bot: TerrierBot) -> None:
     await bot.add_cog(ClubCog(bot))
 
 
-def _truncate(text: str, max_len: int = MAX_DESCRIPTION_LEN) -> str:
+def _truncate(text: str, max_len: int = MAX_DESC_LEN) -> str:
     if not text:
         return ""
     text = text.strip()
     return text if len(text) <= max_len else text[:max_len].rstrip() + "…"
 
 
+def _get(obj: dict, *keys: str) -> Any:
+    """Try multiple key variants (handles both camelCase and PascalCase)."""
+    for key in keys:
+        val = obj.get(key)
+        if val is not None and val != "" and val != []:
+            return val
+    return None
+
+
 def _social_links(org: dict[str, Any]) -> list[str]:
-    """Extract social / contact links from an org search result."""
     links: list[str] = []
 
-    # Primary website
-    website: str | None = org.get("websiteKey") or org.get("externalUrl")
-    if website:
-        if not website.startswith("http"):
-            website = "https://" + website
-        links.append(f"[Website]({website})")
+    # SocialLinks array: [{"Uri": "...", "Type": "Instagram"}, ...]
+    social_list = _get(org, "SocialLinks", "socialLinks") or []
+    for item in social_list:
+        if not isinstance(item, dict):
+            continue
+        uri = _get(item, "Uri", "uri", "Url", "url")
+        kind = (_get(item, "Type", "type") or "website").lower()
+        if not uri:
+            continue
+        if not uri.startswith("http"):
+            uri = "https://" + uri
+        icon = SOCIAL_ICONS.get(kind, "🔗")
+        label = kind.title() if kind else "Link"
+        links.append(f"[{icon} {label}]({uri})")
 
-    # Social media channels returned by the API
-    social_map = {
-        "facebookUrl": "Facebook",
-        "twitterUrl": "Twitter/X",
-        "instagramUrl": "Instagram",
-        "linkedinUrl": "LinkedIn",
-        "youtubeUrl": "YouTube",
-        "tiktokUrl": "TikTok",
-        "discordUrl": "Discord",
-        "snapchatUrl": "Snapchat",
-    }
-    for key, label in social_map.items():
-        url: str | None = org.get(key)
-        if url:
-            if not url.startswith("http"):
-                url = "https://" + url
-            links.append(f"[{label}]({url})")
+    # External website
+    ext_url = _get(org, "ExternalWebsiteUrl", "externalWebsiteUrl", "websiteUrl", "WebsiteUrl")
+    if ext_url:
+        if not ext_url.startswith("http"):
+            ext_url = "https://" + ext_url
+        links.append(f"[🌐 Website]({ext_url})")
 
-    # Contact email
-    email: str | None = org.get("contactEmail") or org.get("primaryContactEmail")
-    if email:
-        links.append(f"[Email](mailto:{email})")
+    # Contacts: [{"EmailAddress": "...", "Name": "..."}, ...]
+    contacts = _get(org, "Contacts", "contacts") or []
+    for contact in contacts:
+        if not isinstance(contact, dict):
+            continue
+        email = _get(contact, "EmailAddress", "emailAddress", "Email", "email")
+        if email:
+            links.append(f"[📧 Email](mailto:{email})")
+            break  # one email is enough
 
     return links
 
 
 def _org_page_url(org: dict[str, Any]) -> str:
-    slug: str | None = org.get("webUrl") or org.get("shortName") or org.get("urlIdentifier")
+    slug = _get(org, "ShortName", "shortName", "WebsiteKey", "websiteKey", "UrlIdentifier", "urlIdentifier")
     if slug:
-        clean = slug.strip("/").split("/")[-1]
-        return ENGAGE_ORG_URL.format(clean)
-    # fallback: search page with the name
-    name: str = org.get("name", "")
-    return f"{ENGAGE_BASE_URL}/organizations?query={urllib.parse.quote(name)}"
+        clean = str(slug).strip("/").split("/")[-1]
+        return f"{ENGAGE_BASE_URL}/organization/{clean}"
+    name = _get(org, "Name", "name") or ""
+    return f"{ENGAGE_BASE_URL}/organizations?query={urllib.parse.quote(str(name))}"
 
 
-def _build_org_embed(
+def _org_name(org: dict[str, Any]) -> str:
+    return str(_get(org, "Name", "name") or "Unknown Organization")
+
+
+def _org_summary(org: dict[str, Any]) -> str:
+    return _truncate(str(_get(org, "Summary", "summary", "Description", "description") or ""))
+
+
+def _build_embed(
     results: list[dict[str, Any]],
-    query_display: str,
+    display: str,
     page: int,
     total: int,
-    page_size: int,
     search_url: str,
 ) -> discord.Embed:
-    total_pages = max(1, (total + page_size - 1) // page_size)
+    total_pages = max(1, (total + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
     embed = discord.Embed(
-        title=f"BU Clubs — {query_display}",
-        description=f"Found **{total}** result(s) · Page {page}/{total_pages}",
+        title=f"BU Clubs — {display}",
+        description=f"**{total}** organization(s) found · Page {page} of {total_pages}",
         color=discord.Color.red(),
         url=search_url,
     )
-
     for org in results:
-        name: str = org.get("name") or "Unnamed Organization"
-        description: str = _truncate(org.get("summary") or org.get("description") or "")
+        name = _org_name(org)
+        summary = _org_summary(org)
         links = _social_links(org)
         page_link = _org_page_url(org)
-        links_str = "  ".join(links) if links else "No links listed"
 
-        value = f"[View on Terrier Central]({page_link})\n{links_str}"
-        if description:
-            value = f"*{description}*\n{value}"
+        parts: list[str] = []
+        if summary:
+            parts.append(f"*{summary}*")
+        parts.append(f"[Terrier Central]({page_link})")
+        if links:
+            parts.append("  ".join(links))
 
-        embed.add_field(name=name, value=value, inline=False)
+        embed.add_field(name=name, value="\n".join(parts), inline=False)
 
-    embed.set_footer(text="Terrier Central · terriercentral.bu.edu")
+    embed.set_footer(text="terriercentral.bu.edu")
     return embed
 
+
+# ------------------------------------------------------------------ #
+# Pagination view
+# ------------------------------------------------------------------ #
+
+class ClubPaginationView(discord.ui.View):
+    def __init__(
+        self,
+        cog: "ClubCog",
+        raw_query: str,
+        query: str | None,
+        category_id: int | None,
+        display: str,
+        search_url: str,
+        current_page: int,
+        total_pages: int,
+    ):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.raw_query = raw_query
+        self.query = query
+        self.category_id = category_id
+        self.display = display
+        self.search_url = search_url
+        self.current_page = current_page
+        self.total_pages = total_pages
+        self._update_buttons()
+
+    def _update_buttons(self) -> None:
+        self.prev_button.disabled = self.current_page <= 1
+        self.next_button.disabled = self.current_page >= self.total_pages
+        self.page_label.label = f"{self.current_page} / {self.total_pages}"
+
+    async def _go_to(self, interaction: discord.Interaction, page: int) -> None:
+        self.current_page = page
+        skip = (page - 1) * RESULTS_PER_PAGE
+        results, total = await self.cog._search(
+            query=self.query,
+            category_id=self.category_id,
+            skip=skip,
+        )
+        self.total_pages = max(1, (total + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
+        self._update_buttons()
+        embed = _build_embed(results, self.display, page, total, self.search_url)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="◀", style=discord.ButtonStyle.secondary)
+    async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):  # type: ignore[override]
+        await self._go_to(interaction, self.current_page - 1)
+
+    @discord.ui.button(label="· / ·", style=discord.ButtonStyle.grey, disabled=True)
+    async def page_label(self, interaction: discord.Interaction, button: discord.ui.Button):  # type: ignore[override]
+        await interaction.response.defer()
+
+    @discord.ui.button(label="▶", style=discord.ButtonStyle.secondary)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):  # type: ignore[override]
+        await self._go_to(interaction, self.current_page + 1)
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
+
+# ------------------------------------------------------------------ #
+# Cog
+# ------------------------------------------------------------------ #
 
 class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrier Central."):
     def __init__(self, bot: TerrierBot) -> None:
         self.bot = bot
         print("Club Cog Ready")
-
-    # ------------------------------------------------------------------ #
-    # Core fetch
-    # ------------------------------------------------------------------ #
 
     async def _search(
         self,
@@ -133,13 +225,8 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         skip: int = 0,
         take: int = RESULTS_PER_PAGE,
     ) -> tuple[list[dict[str, Any]], int]:
-        """
-        Returns (results, totalCount).
-        Pass query for keyword search, category_id for category filter.
-        Both can be combined.
-        """
         params: dict[str, Any] = {
-            "status": 1,  # active orgs only
+            "status": 1,
             "take": take,
             "skip": skip,
             "orderBy": "UpperName",
@@ -167,78 +254,58 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         total: int = data.get("@odata.count", len(items))
         return items, total
 
-    # ------------------------------------------------------------------ #
-    # Argument parsing helpers
-    # ------------------------------------------------------------------ #
-
     @staticmethod
     def _parse_args(raw: str) -> tuple[str | None, int | None, str]:
-        """
-        Detect whether raw looks like 'categories=12693' or a plain query.
-        Returns (query, category_id, display_label).
-        """
-        # explicit categories=N
         m = re.match(r"categories=(\d+)", raw.strip(), re.IGNORECASE)
         if m:
             cat_id = int(m.group(1))
             return None, cat_id, f"Category #{cat_id}"
-
-        # pure integer → treat as category id
         if raw.strip().isdigit():
             cat_id = int(raw.strip())
             return None, cat_id, f"Category #{cat_id}"
-
-        # known keyword → category
         normalized = raw.strip().lower()
         if normalized in CATEGORY_KEYWORDS:
             cat_id = CATEGORY_KEYWORDS[normalized]
             return None, cat_id, normalized.title()
-
-        # everything else → text query
         return raw.strip(), None, f'"{raw.strip()}"'
 
-    # ------------------------------------------------------------------ #
-    # Shared responder
-    # ------------------------------------------------------------------ #
-
-    async def _respond(
-        self,
-        send_fn,  # coroutine(embed) or interaction.response.send_message
-        raw: str,
-        page: int = 1,
-    ) -> None:
+    async def _respond(self, ctx: Context, raw: str) -> None:
         query, category_id, display = self._parse_args(raw)
-        skip = (page - 1) * RESULTS_PER_PAGE
 
-        results, total = await self._search(
-            query=query,
-            category_id=category_id,
-            skip=skip,
-            take=RESULTS_PER_PAGE,
-        )
-
-        # Build the canonical Terrier Central URL that mirrors the search
         tc_params: dict[str, str] = {}
         if query:
             tc_params["query"] = query
         if category_id is not None:
             tc_params["categories"] = str(category_id)
-        search_url = f"{ENGAGE_BASE_URL}/organizations"
+        search_url = ENGAGE_BASE_URL + "/organizations"
         if tc_params:
             search_url += "?" + urllib.parse.urlencode(tc_params)
+
+        results, total = await self._search(query=query, category_id=category_id, skip=0)
 
         if not results:
             embed = discord.Embed(
                 title=f"BU Clubs — {display}",
-                description="No active organizations found for that search.",
+                description="No active organizations found.",
                 color=discord.Color.red(),
                 url=search_url,
             )
-            await send_fn(embed=embed)
+            await ctx.send(embed=embed)
             return
 
-        embed = _build_org_embed(results, display, page, total, RESULTS_PER_PAGE, search_url)
-        await send_fn(embed=embed)
+        total_pages = max(1, (total + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
+        embed = _build_embed(results, display, 1, total, search_url)
+        view = ClubPaginationView(
+            cog=self,
+            raw_query=raw,
+            query=query,
+            category_id=category_id,
+            display=display,
+            search_url=search_url,
+            current_page=1,
+            total_pages=total_pages,
+        )
+        await ctx.send(embed=embed, view=view)
 
     # ------------------------------------------------------------------ #
     # Prefix command
@@ -246,40 +313,82 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
 
     @commands.command(name="club")
     async def club(self, ctx: Context, *, query: str):
-        """
-        Search BU clubs on Terrier Central.
-
-        Usage:
-          =club blood              — keyword search
-          =club political          — named category shortcut
-          =club categories=12693   — explicit category ID
-          =club 12693              — same, by raw number
-          =club blood page:2       — paginate results
-        """
-        # Optional page:N suffix
-        page = 1
-        page_match = re.search(r"\bpage:(\d+)\b", query, re.IGNORECASE)
-        if page_match:
-            page = max(1, int(page_match.group(1)))
-            query = query[: page_match.start()].strip()
-
+        """Search BU clubs. =club blood | =club political | =club categories=12693"""
         async with ctx.typing():
-            await self._respond(ctx.send, query, page)
+            await self._respond(ctx, query.strip())
 
     # ------------------------------------------------------------------ #
     # Slash command
     # ------------------------------------------------------------------ #
 
     @app_commands.command(name="club", description="Search BU clubs on Terrier Central.")
-    @app_commands.describe(
-        query='Keyword (e.g. "blood"), category keyword ("political"), or "categories=12693"',
-        page="Result page number (default 1)",
-    )
-    async def club_slash(
-        self,
-        interaction: discord.Interaction,
-        query: str,
-        page: int = 1,
-    ) -> None:
+    @app_commands.describe(query='Keyword (e.g. "blood"), category name ("political"), or "categories=12693"')
+    async def club_slash(self, interaction: discord.Interaction, query: str) -> None:
         await interaction.response.defer()
-        await self._respond(interaction.followup.send, query, max(1, page))
+
+        q, category_id, display = self._parse_args(query)
+        tc_params: dict[str, str] = {}
+        if q:
+            tc_params["query"] = q
+        if category_id is not None:
+            tc_params["categories"] = str(category_id)
+        search_url = ENGAGE_BASE_URL + "/organizations"
+        if tc_params:
+            search_url += "?" + urllib.parse.urlencode(tc_params)
+
+        results, total = await self._search(query=q, category_id=category_id, skip=0)
+
+        if not results:
+            embed = discord.Embed(
+                title=f"BU Clubs — {display}",
+                description="No active organizations found.",
+                color=discord.Color.red(),
+                url=search_url,
+            )
+            await interaction.followup.send(embed=embed)
+            return
+
+        total_pages = max(1, (total + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
+        embed = _build_embed(results, display, 1, total, search_url)
+        view = ClubPaginationView(
+            cog=self,
+            raw_query=query,
+            query=q,
+            category_id=category_id,
+            display=display,
+            search_url=search_url,
+            current_page=1,
+            total_pages=total_pages,
+        )
+        await interaction.followup.send(embed=embed, view=view)
+
+    # ------------------------------------------------------------------ #
+    # Debug: owner-only raw JSON dump to identify real field names
+    # ------------------------------------------------------------------ #
+
+    @commands.command(name="clubdebug")
+    @commands.is_owner()
+    async def club_debug(self, ctx: Context, *, query: str = "blood"):
+        """Dump raw API JSON for a query (Owner only). Helps identify real field names."""
+        params: dict[str, Any] = {
+            "status": 1,
+            "take": 1,
+            "skip": 0,
+            "query": query,
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                ENGAGE_SEARCH_URL,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=15),
+                headers={"Accept": "application/json"},
+            ) as resp:
+                raw = await resp.text()
+
+        # Pretty-print first 1900 chars
+        try:
+            pretty = json.dumps(json.loads(raw), indent=2)
+        except Exception:
+            pretty = raw
+        snippet = pretty[:1900]
+        await ctx.send(f"```json\n{snippet}\n```")
