@@ -16,36 +16,14 @@ ENGAGE_SEARCH_URL = "https://terriercentral.bu.edu/api/discovery/search/organiza
 ENGAGE_BASE_URL = "https://terriercentral.bu.edu"
 
 RESULTS_PER_PAGE = 10
-MAX_DESC_LEN = 100
 
 CATEGORY_KEYWORDS: dict[str, int] = {
     "political": 12693,
 }
 
-SOCIAL_ICONS: dict[str, str] = {
-    "instagram": "📸",
-    "facebook": "📘",
-    "twitter": "🐦",
-    "x": "🐦",
-    "linkedin": "💼",
-    "youtube": "▶️",
-    "tiktok": "🎵",
-    "discord": "💬",
-    "snapchat": "👻",
-    "website": "🌐",
-    "email": "📧",
-}
-
 
 async def setup(bot: TerrierBot) -> None:
     await bot.add_cog(ClubCog(bot))
-
-
-def _truncate(text: str, max_len: int = MAX_DESC_LEN) -> str:
-    if not text:
-        return ""
-    text = text.strip()
-    return text if len(text) <= max_len else text[:max_len].rstrip() + "…"
 
 
 def _get(obj: dict, *keys: str) -> Any:
@@ -57,45 +35,11 @@ def _get(obj: dict, *keys: str) -> Any:
     return None
 
 
-def _social_links(org: dict[str, Any]) -> list[str]:
-    links: list[str] = []
-
-    social_list = _get(org, "SocialLinks", "socialLinks") or []
-    for item in social_list:
-        if not isinstance(item, dict):
-            continue
-        uri = _get(item, "Uri", "uri", "Url", "url")
-        kind = (_get(item, "Type", "type") or "website").lower()
-        if not uri:
-            continue
-        if not uri.startswith("http"):
-            uri = "https://" + uri
-        icon = SOCIAL_ICONS.get(kind, "🔗")
-        label = kind.title() if kind else "Link"
-        links.append(f"[{icon} {label}]({uri})")
-
-    ext_url = _get(org, "ExternalWebsiteUrl", "externalWebsiteUrl", "websiteUrl", "WebsiteUrl")
-    if ext_url:
-        if not ext_url.startswith("http"):
-            ext_url = "https://" + ext_url
-        links.append(f"[🌐 Website]({ext_url})")
-
-    contacts = _get(org, "Contacts", "contacts") or []
-    for contact in contacts:
-        if not isinstance(contact, dict):
-            continue
-        email = _get(contact, "EmailAddress", "emailAddress", "Email", "email")
-        if email:
-            links.append(f"[📧 Email](mailto:{email})")
-            break
-
-    return links
-
-
 def _org_page_url(org: dict[str, Any]) -> str:
     slug = _get(org, "ShortName", "shortName", "WebsiteKey", "websiteKey", "UrlIdentifier", "urlIdentifier")
     if slug:
-        clean = str(slug).strip("/").split("/")[-1]
+        # URL encode the slug so unencoded spaces do not break Discord markdown links
+        clean = urllib.parse.quote(str(slug).strip("/").split("/")[-1])
         return f"{ENGAGE_BASE_URL}/organization/{clean}"
     name = _get(org, "Name", "name") or ""
     return f"{ENGAGE_BASE_URL}/organizations?query={urllib.parse.quote(str(name))}"
@@ -103,10 +47,6 @@ def _org_page_url(org: dict[str, Any]) -> str:
 
 def _org_name(org: dict[str, Any]) -> str:
     return str(_get(org, "Name", "name") or "Unknown Organization")
-
-
-def _org_summary(org: dict[str, Any]) -> str:
-    return _truncate(str(_get(org, "Summary", "summary", "Description", "description") or ""))
 
 
 def _build_embed(
@@ -117,26 +57,23 @@ def _build_embed(
     search_url: str,
 ) -> discord.Embed:
     total_pages = max(1, (total + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
+    
+    # We compile the hyperlinked list directly inside the embed description for a much cleaner layout
+    club_lines = []
+    for org in results:
+        name = _org_name(org)
+        page_link = _org_page_url(org)
+        club_lines.append(f"• [{name}]({page_link})")
+        
+    description_header = f"**{total}** organization(s) found · Page {page} of {total_pages}\n\n"
+    full_description = description_header + "\n".join(club_lines)
+
     embed = discord.Embed(
         title=f"BU Clubs — {display}",
-        description=f"**{total}** organization(s) found · Page {page} of {total_pages}",
+        description=full_description,
         color=discord.Color.red(),
         url=search_url,
     )
-    for org in results:
-        name = _org_name(org)
-        summary = _org_summary(org)
-        links = _social_links(org)
-        page_link = _org_page_url(org)
-
-        parts: list[str] = []
-        if summary:
-            parts.append(f"*{summary}*")
-        parts.append(f"[Terrier Central]({page_link})")
-        if links:
-            parts.append("  ".join(links))
-
-        embed.add_field(name=name, value="\n".join(parts), inline=False)
 
     embed.set_footer(text="terriercentral.bu.edu")
     return embed
@@ -229,7 +166,6 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
             "orderBy[0]": "UpperName asc",
         }
         
-        # Explicit index serialization matches the internal structure of the platform's multi-select filter parameters
         if category_id is not None:
             params["categoryIds[0]"] = category_id
         
@@ -258,7 +194,6 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
     def _parse_args(raw: str) -> tuple[str | None, int | None, str]:
         cleaned = raw.strip()
         
-        # Parse out literal categories identifiers
         m = re.match(r"categories=(\d+)", cleaned, re.IGNORECASE)
         if m:
             cat_id = int(m.group(1))
@@ -271,7 +206,6 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         normalized = cleaned.lower()
         if normalized in CATEGORY_KEYWORDS:
             cat_id = CATEGORY_KEYWORDS[normalized]
-            # Retain normalized text keyword in query so the API searches text or category in parallel
             return cleaned, cat_id, normalized.title()
             
         return cleaned, None, f'"{cleaned}"'
@@ -321,7 +255,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
 
     @commands.command(name="club")
     async def club(self, ctx: Context, *, query: str):
-        """Search BU clubs. =club blood | =club political | =club categories=12693"""
+        """Search BU clubs. =club blood | =club political"""
         async with ctx.typing():
             await self._respond(ctx, query)
 
@@ -330,7 +264,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
     # ------------------------------------------------------------------ #
 
     @app_commands.command(name="club", description="Search BU clubs on Terrier Central.")
-    @app_commands.describe(query='Keyword (e.g. "blood"), category name ("political"), or "categories=12693"')
+    @app_commands.describe(query='Keyword (e.g. "blood"), category name ("political")')
     async def club_slash(self, interaction: discord.Interaction, query: str) -> None:
         await interaction.response.defer()
 
