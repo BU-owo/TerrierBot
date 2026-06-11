@@ -11,10 +11,12 @@ from bot import TerrierBot, Context
 TOWOKEN_THRESHOLD = 6
 TOWOKEN_COOLDOWN_SECONDS = 10 * 60
 TOWOKEN_EMOJI = "<:towoken:1418616280772247659>"
+OWO_EMOJI = "<:towoken:1475665207882678383>"
 TOWOKEN_URL = "https://sites.google.com/view/towokens/"
 TOWOKEN_TEXT = (
     f"You have exceeded your Terrier Bot towoken limit {TOWOKEN_EMOJI}. "
-    "Please purchase more towokens using the powoints earned by completing a variety of side quests, riddles, and puzzles. Contact bridge trowoll OwO for more infowormation.\n"
+    "Please purchase more towokens using the powoints earned by completing a variety of side quests, riddles, and puzzles.\n"
+    f"Contact bridge trowoll OwO for more infowormation. {OWO_EMOJI} \n"
     "||/joke||" 
 )
 
