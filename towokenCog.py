@@ -11,7 +11,7 @@ from bot import TerrierBot, Context
 TOWOKEN_THRESHOLD = 6
 TOWOKEN_COOLDOWN_SECONDS = 10 * 60
 TOWOKEN_EMOJI = "<:towoken:1418616280772247659>"
-TOWOKEN_URL = "https://getstickbugged.lol/"
+TOWOKEN_URL = "https://sites.google.com/view/towokens/"
 TOWOKEN_TEXT = (
     f"You have exceeded your Terrier Bot towoken limit {TOWOKEN_EMOJI}. "
     "Please purchase more towokens using the powoints you have earned."
