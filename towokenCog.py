@@ -15,8 +15,9 @@ TOWOKEN_URL = "https://sites.google.com/view/towokens/"
 TOWOKEN_TEXT = (
     f"You have exceeded your Terrier Bot towoken limit {TOWOKEN_EMOJI}. "
     "Please purchase more towokens using the powoints you have earned.\n"
-    "||/joke||"
+    "||/joke||" 
 )
+
 
 
 async def setup(bot: TerrierBot):
