@@ -699,7 +699,7 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
     def _channel_warning_text(self, user: discord.abc.User) -> str:
         return (
             f"{user.mention}, you really gotta be doing bot commands in <#{RMP_CHANNEL_ID}> bruh. "
-            f"OwO is gonna get mad and blame, me, Terrier Bot {RMP_WARNING_EMOJI}"
+            f"OwO is gonna get mad and blame me, Terrier Bot {RMP_WARNING_EMOJI}"
         )
 
     @commands.command(name="rmp")
