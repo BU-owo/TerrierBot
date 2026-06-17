@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted  # <--- It lives right here in this file!
+    runs-on: self-hosted
     steps:
       - name: Pull latest code
         run: |
@@ -17,4 +17,6 @@ jobs:
       - name: Restart PM2 Process
         run: |
           cd /home/ubuntu/TerrierBot
-          ~/.npm-global/bin/pm2 restart terrierbot --update-env || pm2 restart terrierbot --update-env
+          # This forces your system to find PM2 no matter where it's hiding
+          export PATH=$PATH:/home/ubuntu/.npm-global/bin
+          pm2 restart terrierbot --update-env || npx pm2 restart terrierbot
