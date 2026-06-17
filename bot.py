@@ -53,6 +53,16 @@ class TerrierBot(commands.Bot):
 
     @override
     async def on_command_error(self, ctx : Context, error : commands.CommandError):
+        http_error = None
+        if isinstance(error, discord.HTTPException):
+            http_error = error
+        elif isinstance(error, commands.CommandInvokeError) and isinstance(error.original, discord.HTTPException):
+            http_error = error.original
+
+        if http_error is not None and http_error.status == 429:
+            logging.warning("Discord rate limit hit (429) in command error handler; skipping ctx.send")
+            return
+
         if isinstance(error, commands.CommandNotFound):
             logging.debug(f"command not found {ctx.message.content} (by {ctx.author})")
             return
