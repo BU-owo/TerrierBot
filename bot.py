@@ -47,6 +47,7 @@ class TerrierBot(commands.Bot):
                     if isinstance(channel, discord.TextChannel):
                         await channel.send("Hello, I have restarted and am ready to help! 🐾")
 
+
     #============================================
     #Error Handling
     #============================================
