@@ -420,6 +420,49 @@ def _trim_description(text: str) -> str:
     return trimmed
 
 
+_KNOWN_HUB_AREAS: set[str] = {
+    "Philosophical Inquiry and Life's Meanings",
+    "Aesthetic Exploration",
+    "Historical Consciousness",
+    "Scientific Inquiry I",
+    "Scientific Inquiry II",
+    "Social Inquiry I",
+    "Social Inquiry II",
+    "Quantitative Reasoning I",
+    "Quantitative Reasoning II",
+    "Individual in Community",
+    "Global Citizenship and Intercultural Literacy",
+    "Global Citizenship & Intercultural Literacy",
+    "Ethical Reasoning",
+    "Writing-Intensive Course",
+    "Writing-Intensive",
+    "Oral and/or Signed Communication",
+    "Oral/Signed Communication",
+    "Digital/Multimedia Expression",
+    "Critical Thinking",
+    "Research and Information Literacy",
+    "Research & Information Literacy",
+    "Teamwork/Collaboration",
+    "Creativity/Innovation",
+    "Creative/Innovative Thinking",
+}
+
+
+def _extract_hub_lines_fallback(text: str) -> list[str]:
+    """Extract HUB labels when pages list them as standalone lines (common on CDS pages)."""
+    lines = [ln.strip(" \t-*•") for ln in text.split("\n")]
+    units_idx = next((i for i, ln in enumerate(lines) if re.match(r"^Units?:", ln, flags=re.IGNORECASE)), len(lines))
+
+    found: list[str] = []
+    seen: set[str] = set()
+    for line in lines[:units_idx]:
+        if line in _KNOWN_HUB_AREAS and line not in seen:
+            seen.add(line)
+            found.append(line)
+
+    return found
+
+
 def _parse_course_query(raw_query: str) -> tuple[str | None, str, str]:
     upper = raw_query.upper().strip()
     upper = re.sub(r"[^A-Z0-9 ]", " ", upper)
@@ -652,6 +695,9 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
             if alt:
                 areas = [a.strip() for a in alt.group(1).split(",")]
                 hub_areas = [a for a in areas if a]
+
+        if not hub_areas:
+            hub_areas = _extract_hub_lines_fallback(text)
 
         hubs = ", ".join(hub_areas) if hub_areas else "None listed"
 
