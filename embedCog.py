@@ -563,3 +563,14 @@ class EmbedCog(commands.Cog, name="Embed", description="Send rich embeds. Owner 
 
         for embed in _build_embedreg_sequence():
             await ctx.channel.send(embed=embed)
+
+    @commands.command(name="embedhousing")
+    async def embedhousing(self, ctx: Context):
+        """Delete trigger message and post the housing FAQ embed sequence."""
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+        for embed in _build_embedhousing_sequence():
+            await ctx.channel.send(embed=embed)
