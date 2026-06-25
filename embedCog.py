@@ -246,9 +246,9 @@ def _build_embedhousing_sequence() -> list[discord.Embed]:
         name="What do I pack?",
         value=(
             "Here's the packing list. Consider buying things once you get to campus!\n"
-            "[BU's official packing guide](https://www.bu.edu/housing/living/what-to-bring/) • "
-            "[Packing checklist (Google Sheet)](https://docs.google.com/spreadsheets/d/1wycbvhXoJmffzKJz5RxjdVc4HeLxWd_nIOt_sPYVS0E/edit?usp=drive_link) • "
-            "[Parents' packing list](https://www.bu.edu/parentsprogram/resources/college-packing-list/)"
+            "- [BU's official packing guide](https://www.bu.edu/housing/living/what-to-bring/)\n"
+            "- [Packing checklist (Google Sheet)](https://docs.google.com/spreadsheets/d/1wycbvhXoJmffzKJz5RxjdVc4HeLxWd_nIOt_sPYVS0E/edit?usp=drive_link)\n"
+            "- [Parents' packing list](https://www.bu.edu/parentsprogram/resources/college-packing-list/)"
         ),
         inline=False,
     )
@@ -344,7 +344,7 @@ def _build_embedhousing_sequence() -> list[discord.Embed]:
     embed5.add_field(
         name="Showers (cs majors please disregard)",
         value=(
-            "• Always wear shower shoes, preferably ones with holes in them\n"
+            "• Always wear shower shoes, such as flip-flops or slides\n"
             "• Indicate you're in the shower by hanging your shower caddy on the door/wall or "
             "placing it inside the shower or right outside your door\n"
             "• You can hang your robe/towel on the hook outside your door! Consider getting a "
