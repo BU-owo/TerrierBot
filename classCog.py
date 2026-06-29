@@ -420,6 +420,74 @@ def _trim_description(text: str) -> str:
     return trimmed
 
 
+_KNOWN_HUB_AREAS: set[str] = {
+    "Philosophical Inquiry and Life's Meanings",
+    "Aesthetic Exploration",
+    "Historical Consciousness",
+    "Scientific Inquiry I",
+    "Scientific Inquiry II",
+    "Social Inquiry I",
+    "Social Inquiry II",
+    "Quantitative Reasoning I",
+    "Quantitative Reasoning II",
+    "Individual in Community",
+    "Global Citizenship and Intercultural Literacy",
+    "Global Citizenship & Intercultural Literacy",
+    "Ethical Reasoning",
+    "Writing-Intensive Course",
+    "Writing-Intensive",
+    "Oral and/or Signed Communication",
+    "Oral/Signed Communication",
+    "Digital/Multimedia Expression",
+    "Critical Thinking",
+    "Research and Information Literacy",
+    "Research & Information Literacy",
+    "Teamwork/Collaboration",
+    "Creativity/Innovation",
+    "Creative/Innovative Thinking",
+}
+
+
+def _extract_hub_from_html(html_doc: str) -> list[str]:
+    """
+    Extract HUB areas from the cf-hub-offerings element, which is present on
+    all BU Bulletin course pages regardless of school.  Falls back to scanning
+    for known hub-area names as standalone lines in the plain-text version of
+    the page (covers any edge-case pages that use a different markup).
+    """
+    # Primary: <… class="…cf-hub-offerings…">…<li>Area Name</li>…</…>
+    m = re.search(
+        r'class="[^"]*cf-hub-offerings[^"]*"[^>]*>(.*?)</(?:ul|div|section)',
+        html_doc,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if m:
+        items = re.findall(r"<li[^>]*>(.*?)</li>", m.group(1), flags=re.IGNORECASE | re.DOTALL)
+        areas = [_clean_text_fragment(item) for item in items]
+        areas = [a for a in areas if a]
+        if areas:
+            return areas
+
+    # Fallback: scan plain-text lines for known hub area names (e.g. CDS pages
+    # that embed them in a plain <ul> without the cf-hub-offerings class).
+    return _extract_hub_lines_fallback(_extract_text(html_doc))
+
+
+def _extract_hub_lines_fallback(text: str) -> list[str]:
+    """Extract HUB labels when pages list them as standalone lines (common on CDS pages)."""
+    lines = [ln.strip(" \t-*•") for ln in text.split("\n")]
+    units_idx = next((i for i, ln in enumerate(lines) if re.match(r"^Units?:", ln, flags=re.IGNORECASE)), len(lines))
+
+    found: list[str] = []
+    seen: set[str] = set()
+    for line in lines[:units_idx]:
+        if line in _KNOWN_HUB_AREAS and line not in seen:
+            seen.add(line)
+            found.append(line)
+
+    return found
+
+
 def _parse_course_query(raw_query: str) -> tuple[str | None, str, str]:
     upper = raw_query.upper().strip()
     upper = re.sub(r"[^A-Z0-9 ]", " ", upper)
@@ -641,18 +709,7 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
                 if block:
                     description = _trim_description(block) or "Description unavailable"
 
-        hub_areas: list[str] = []
-        for match in re.finditer(r"BU Hub areas?:\s*([^\.]+)", text, flags=re.IGNORECASE):
-            areas = [a.strip() for a in match.group(1).split(",")]
-            hub_areas = [a for a in areas if a]
-
-        if not hub_areas:
-            # Secondary pattern for pages that phrase this differently.
-            alt = re.search(r"fulfills .*? BU Hub .*?:\s*([^\.]+)", text, flags=re.IGNORECASE)
-            if alt:
-                areas = [a.strip() for a in alt.group(1).split(",")]
-                hub_areas = [a for a in areas if a]
-
+        hub_areas = _extract_hub_from_html(html_doc)
         hubs = ", ".join(hub_areas) if hub_areas else "None listed"
 
         return {

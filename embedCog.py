@@ -194,6 +194,186 @@ def _build_embedreg_sequence() -> list[discord.Embed]:
     return [embed1, embed2, embed3, embed4]
 
 
+def _build_embedhousing_sequence() -> list[discord.Embed]:
+    embed1 = discord.Embed(
+        color=discord.Color(0x93E5C8),
+        title="🏠 Housing FAQ",
+        description=(
+            "Got housing questions? Here's everything you need to know "
+        ),
+    )
+
+    embed2 = discord.Embed(
+        color=discord.Color(0x81BCB9),
+        title="🏠 Housing FAQ — Part 1: The Basics",
+    )
+    embed2.add_field(
+        name="Wait I hate my housing, how do I change it?",
+        value=(
+            "You really can't, but here's what you can try:\n"
+            "1. Email housing and ask nicely\n"
+            "2. Find someone to direct swap with\n"
+            "3. Deal with it"
+        ),
+        inline=False,
+    )
+    embed2.add_field(
+        name="Is [insert building name] really that bad?",
+        value=(
+            "All buildings have their pros/cons, but nothing at BU is absolutely terrible. "
+            "Maybe you're used to more luxury, but living in even the freshmen dorms is a great "
+            "experience! You'll meet lots of new people and learn about who you are as you adapt "
+            "to being away from home. So no, it's not that bad."
+        ),
+        inline=False,
+    )
+    embed2.add_field(
+        name="What is my dorm assignment like?",
+        value="[Read more here](https://sites.google.com/view/directswapconnections/housing-options)",
+        inline=False,
+    )
+    embed2.add_field(
+        name="How do I find my roommate's email?",
+        value=(
+            "You should have their name. With their name, start by looking on the "
+            "[BU directory](https://www.bu.edu/directory). If you can't find them there, "
+            "search for their Instagram, LinkedIn, or Facebook. Usually there are traces "
+            "of people online!"
+        ),
+        inline=False,
+    )
+    embed2.add_field(
+        name="What do I pack?",
+        value=(
+            "Here's the packing list. Consider buying things once you get to campus!\n"
+            "- [BU's official packing guide](https://www.bu.edu/housing/living/what-to-bring/)\n"
+            "- [Packing checklist (Google Sheet)](https://docs.google.com/spreadsheets/d/1wycbvhXoJmffzKJz5RxjdVc4HeLxWd_nIOt_sPYVS0E/edit?usp=drive_link)\n"
+            "- [Parents' packing list](https://www.bu.edu/parentsprogram/resources/college-packing-list/)"
+        ),
+        inline=False,
+    )
+
+    embed3 = discord.Embed(
+        color=discord.Color(0x6F92AA),
+        title="🏠 Housing FAQ — Part 2: Logistics & Living",
+    )
+    embed3.add_field(
+        name="Fenway/West/Danielsen is SOOOOOO FAR from my classes!!!! What do I do?",
+        value="There are shuttles, and walking is great for your physical and mental wellbeing! None of it is really that far!",
+        inline=False,
+    )
+    embed3.add_field(
+        name="How do I survive in the summer without AC?",
+        value=(
+            "Fans. Many fans. Keep the curtains closed in the day to keep the heat out. "
+            "Know that you'll be complaining about the cold in 2 weeks...."
+        ),
+        inline=False,
+    )
+    embed3.add_field(
+        name="How do I make friends?",
+        value=(
+            "Everyone on your floor is in the same boat as you! They're in a new environment "
+            "surrounded by strangers and they desperately want to find people to connect with! "
+            "I recommend putting your social media/phone on your door so people can add you, "
+            "and whenever you see someone, introduce yourself. If you want to walk around campus "
+            "or get lunch, grab someone from your floor by knocking on doors or wandering around "
+            "until you find someone, and bring them with you. KEEP YOUR DOOR OPEN WHEN YOU ARE IN! "
+            "I promise everyone else is scared and insecure about making friends (just like you!)"
+        ),
+        inline=False,
+    )
+    embed3.add_field(
+        name="What if I don't like my roommate???",
+        value=(
+            "Guess what, no one expects you to be lifelong BFFs with your freshman year roomie! "
+            "You can coexist and that is a perfectly normal and valid way to live together! If "
+            "there is hostility or conflict, start by openly communicating! Agree on rules and "
+            "courtesies you'll both practice... not everyone has the same expectations or cultural "
+            "standards for living together, and you might need to compromise a bit. If "
+            "communicating doesn't work, have an honest conversation with your RA, who can serve "
+            "as a mediator to help you guys out! This is normal!"
+        ),
+        inline=False,
+    )
+
+    embed4 = discord.Embed(
+        color=discord.Color(0x5D689B),
+        title="🏠 Housing FAQ — Part 3: Stuff & Rules",
+    )
+    embed4.add_field(
+        name="Do I need to bring a fridge or microwave?",
+        value=(
+            "BU offers microfridge rentals. If you have a roommate, communicate with them so you "
+            "don't both get them! You're allowed to bring your own mini fridge, however, "
+            "microwaves (that are NOT part of the microfridge) are not allowed."
+        ),
+        inline=False,
+    )
+    embed4.add_field(
+        name="Can I bring my pet!!!!!",
+        value="Girl. No.",
+        inline=False,
+    )
+    embed4.add_field(
+        name="Who's going to stop me from bringing beer, my pet hamster, and a microwave?",
+        value=(
+            "Actually, BU has the right to enter your space for any reason at any time! They "
+            "have the right to open the drawers of the BU furniture (i.e. the dresser). However, "
+            "they cannot open your personal belongings, such as a suitcase or storage unit you "
+            "bring. Please don't be an idiot."
+        ),
+        inline=False,
+    )
+    embed4.add_field(
+        name="Can I order Amazon to my dorm?",
+        value="Yes! Your shipping address is in your housing portal.",
+        inline=False,
+    )
+    embed4.add_field(
+        name="Wait, housing came out?",
+        value="Yes, for some people. Be patient if you haven't received it!",
+        inline=False,
+    )
+
+    embed5 = discord.Embed(
+        color=discord.Color(0x4B3F8C),
+        title="🚿 I'm scared of the communal bathrooms!",
+        description="That's completely normal! It just takes some getting used to. Here are some tips:",
+    )
+    embed5.add_field(
+        name="Showers (cs majors please disregard)",
+        value=(
+            "• Always wear shower shoes, such as flip-flops or slides\n"
+            "• Indicate you're in the shower by hanging your shower caddy on the door/wall or "
+            "placing it inside the shower or right outside your door\n"
+            "• You can hang your robe/towel on the hook outside your door! Consider getting a "
+            "robe to walk back to your dorm room!"
+        ),
+        inline=False,
+    )
+    embed5.add_field(
+        name="Toilets & Sinks",
+        value=(
+            "• Some people are bad at cleaning up after themselves, so please don't add to the issue\n"
+            "• Please don't dump things down the sink: it can clog, plus there's remnants of food, etc.\n"
+            "• Wash your hands!"
+        ),
+        inline=False,
+    )
+    embed5.add_field(
+        name="General",
+        value=(
+            "Do you care when you see someone brushing their teeth or shaving at a sink? No? "
+            "Then why do you think anyone else cares about you. Everyone has to do their business "
+            "in there, and caring about others is way too much effort."
+        ),
+        inline=False,
+    )
+
+    return [embed1, embed2, embed3, embed4, embed5]
+
+
 class EmbedModal(discord.ui.Modal, title="Send Embed"):
     embed_title = discord.ui.TextInput(
         label="Title",
@@ -382,4 +562,15 @@ class EmbedCog(commands.Cog, name="Embed", description="Send rich embeds. Owner 
             pass
 
         for embed in _build_embedreg_sequence():
+            await ctx.channel.send(embed=embed)
+
+    @commands.command(name="embedhousing")
+    async def embedhousing(self, ctx: Context):
+        """Delete trigger message and post the housing FAQ embed sequence."""
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+        for embed in _build_embedhousing_sequence():
             await ctx.channel.send(embed=embed)
