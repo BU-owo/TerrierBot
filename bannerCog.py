@@ -74,3 +74,4 @@ class BannerCog(commands.Cog, name="Banner"):
     @app_commands.command(name="banner", description="Want your photo or gif to be the server banner? Find out how!")
     async def banner_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message(BANNER_MESSAGE)
+        
