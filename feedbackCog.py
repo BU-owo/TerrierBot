@@ -105,12 +105,10 @@ class FeedbackCog(commands.Cog, name="Feedback", description="Anonymous feedback
     @app_commands.default_permissions(manage_guild=True)
     async def feedbacksetup_slash(self, interaction: discord.Interaction) -> None:
         embed = discord.Embed(
-            title="Anonymous Feedback",
+            title="Submit Anonymous Feedback",
             description=(
-                "Have something to say? Use the button below to submit feedback anonymously.\n\n"
-                "**Your identity is never recorded.** No username, ID, or metadata is stored "
-                "or shared — only the text you write is forwarded to the moderation team.\n\n"
-                "Click **Submit Feedback** whenever you're ready."
+                    "**Your identity is never recorded.** No username, ID, or metadata is logged."
+                    "Only the text you write is forwarded to the moderation team.\n\n"
             ),
             color=discord.Color.blurple(),
         )
@@ -121,12 +119,10 @@ class FeedbackCog(commands.Cog, name="Feedback", description="Anonymous feedback
     async def feedbacksetup_prefix(self, ctx: Context) -> None:
         """Post the anonymous feedback prompt in this channel. Requires Manage Server."""
         embed = discord.Embed(
-            title="Anonymous Feedback",
+            title="Submit Anonymous Feedback",
             description=(
-                "Have something to say? Use the button below to submit feedback anonymously.\n\n"
-                "**Your identity is never recorded.** No username, ID, or metadata is stored "
-                "or shared — only the text you write is forwarded to the moderation team.\n\n"
-                "Click **Submit Feedback** whenever you're ready."
+                    "**Your identity is never recorded.** No username, ID, or metadata is logged."
+                    "Only the text you write is forwarded to the moderation team.\n\n"
             ),
             color=discord.Color.blurple(),
         )
