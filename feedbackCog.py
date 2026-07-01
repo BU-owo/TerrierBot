@@ -7,7 +7,7 @@ from discord.ext import commands
 from bot import Context, TerrierBot
 
 FEEDBACK_CHANNEL_ID = 1401924438341062798
-FEEDBACK_ROLE_ID = 1402095379935395934
+FEEDBACK_ROLE_ID = 1401983902511530137
 
 
 async def setup(bot: TerrierBot):
