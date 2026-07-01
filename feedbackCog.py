@@ -108,7 +108,7 @@ class FeedbackCog(commands.Cog, name="Feedback", description="Anonymous feedback
             title="Submit Anonymous Feedback",
             description=(
                     "**Your identity is never recorded.** No username, ID, or metadata is logged."
-                    "Only the text you write is forwarded to the moderation team.\n\n"
+                    " Only the text you write is forwarded to the moderation team.\n\n"
             ),
             color=discord.Color.blurple(),
         )
@@ -122,7 +122,7 @@ class FeedbackCog(commands.Cog, name="Feedback", description="Anonymous feedback
             title="Submit Anonymous Feedback",
             description=(
                     "**Your identity is never recorded.** No username, ID, or metadata is logged."
-                    "Only the text you write is forwarded to the moderation team.\n\n"
+                    " Only the text you write is forwarded to the moderation team.\n\n"
             ),
             color=discord.Color.blurple(),
         )
