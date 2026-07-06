@@ -290,8 +290,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage"]
 
 
 def _get_token() -> str:
