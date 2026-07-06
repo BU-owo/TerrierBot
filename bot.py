@@ -175,7 +175,8 @@ async def help_command(ctx: Context):
         name="Information",
         value=(
             "`=banner` or `/banner` - Banner submission info\n"
-            "`=boost` or `/boost` - Server booster perks"
+            "`=boost` or `/boost` - Server booster perks\n"
+            "Anonymous feedback can be submitted via the button on the posted feedback embed"
         ),
         inline=False,
     )
@@ -203,7 +204,8 @@ async def help_command(ctx: Context):
         name="Mod / Restricted",
         value=(
             "Manage Server required:\n"
-            "`=positivity`, `/positivity status/enable/disable/interval/cooldown`\n\n"
+            "`=positivity`, `/positivity status/enable/disable/interval/cooldown`\n"
+            "`=feedbacksetup` or `/feedbacksetup` - Post the anonymous feedback prompt\n\n"
             "Owner only (prefix only, no slash):\n"
             "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`, `=sync`\n\n"
             "Manage Server required (slash only):\n"
@@ -290,8 +292,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole"]
 
 
 def _get_token() -> str:
