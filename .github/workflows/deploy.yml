@@ -20,3 +20,16 @@ jobs:
           # This forces your system to find PM2 no matter where it's hiding
           export PATH=$PATH:/home/ubuntu/.npm-global/bin
           pm2 restart terrierbot --update-env || npx pm2 restart terrierbot
+
+      - name: Restart PM2 Process
+        run: |
+          cd /home/ubuntu/TerrierBot
+          export PATH=$PATH:/home/ubuntu/.npm-global/bin
+          pm2 restart terrierbot --update-env || npx pm2 restart terrierbot
+
+      - name: Check PM2 status and logs
+        run: |
+          export PATH=$PATH:/home/ubuntu/.npm-global/bin
+          pm2 status
+          pm2 logs terrierbot --lines 50 --nostream
+
