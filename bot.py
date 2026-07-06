@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 logging.basicConfig(level=logging.INFO)
 
+
 type Context = commands.Context[TerrierBot]
 
 class TerrierBot(commands.Bot):
