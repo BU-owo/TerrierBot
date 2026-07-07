@@ -8,7 +8,8 @@ import imagehash
 # Generate one with: imagehash.phash(Image.open("scam.png"))
 KNOWN_SCAM_HASHES = [
     "c5ba36c9caa4318f",
-    "e1f0e187981f0ade"
+    "e1f0e187981f0ade",
+    "c59932cccdc338f4"
 ]
 
 # Hamming distance threshold for a "match" — lower = stricter.
