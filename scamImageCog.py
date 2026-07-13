@@ -26,7 +26,7 @@ KNOWN_SCAM_HASHES = [
 HASH_THRESHOLD = 10
 
 TIMEOUT_MINUTES = 60
-MOD_LOG_CHANNEL_ID = 1441889164898341098  # set to a channel ID if you want match alerts logged
+MOD_LOG_CHANNEL_ID = 1441888579147141170  # #message-logs — all scam alerts and confirmation prompts
 SCAMCATCHER_ROLE_ID = 1402095379935395934
 
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -338,7 +338,7 @@ class ScamImageCog(commands.Cog):
             except (discord.HTTPException, discord.Forbidden):
                 pass
 
-        # ── Confirmation prompt → mod log channel ─────────────────────────────
+        # ── Confirmation prompt → confirm channel ────────────────────────────
         if not attachment_hashes:
             await interaction.followup.send(
                 f"Cleanup complete ({total_deleted} message(s) removed), "
@@ -355,9 +355,10 @@ class ScamImageCog(commands.Cog):
             f"{interaction.user.mention} Cleanup done ({total_deleted} message(s) removed).\n\n"
             f"Add these hash(es) to the blocklist?\n{hash_list}"
         )
-        if log_channel:
+        confirm_channel = log_channel
+        if confirm_channel:
             try:
-                confirm_msg = await log_channel.send(
+                confirm_msg = await confirm_channel.send(
                     content=confirm_content,
                     view=view,
                     allowed_mentions=discord.AllowedMentions(users=True),
@@ -367,7 +368,7 @@ class ScamImageCog(commands.Cog):
                 pass
             try:
                 await interaction.followup.send(
-                    "Confirmation prompt posted in the mod log channel.", ephemeral=True
+                    "Confirmation prompt posted in the scam-reports channel.", ephemeral=True
                 )
             except discord.HTTPException:
                 pass
