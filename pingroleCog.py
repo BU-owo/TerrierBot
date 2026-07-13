@@ -50,7 +50,8 @@ class PingRoleCog(commands.Cog):
             return
 
         await interaction.response.send_message(
-            f"{interaction.user.mention} has pinged {guild_role.mention}: *{message}*"
+            f"{interaction.user.mention} has pinged {guild_role.mention}: *{message}*",
+            allowed_mentions=discord.AllowedMentions(roles=True, users=True, everyone=False),
         )
 
     @pingrole.error
