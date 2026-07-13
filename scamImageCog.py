@@ -16,7 +16,7 @@ KNOWN_SCAM_HASHES = [
 
 # Hamming distance threshold for a "match" — lower = stricter.
 # 0 = exact hash match, 5-10 is typically a reasonable fuzzy-match range.
-HASH_THRESHOLD = 8
+HASH_THRESHOLD = 10
 
 TIMEOUT_MINUTES = 60
 MOD_LOG_CHANNEL_ID = 1441889164898341098  # set to a channel ID if you want match alerts logged
