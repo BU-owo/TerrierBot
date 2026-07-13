@@ -9,7 +9,9 @@ import imagehash
 KNOWN_SCAM_HASHES = [
     "c5ba36c9caa4318f",
     "e1f0e187981f0ade",
-    "c59932cccdc338f4"
+    "c59932cccdc338f4",
+    "91aced9293ab09a7",
+    "91ac6d9293ab09b7",
 ]
 
 # Hamming distance threshold for a "match" — lower = stricter.
