@@ -53,6 +53,11 @@ class _HashConfirmView(discord.ui.View):
 
     @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        if not any(r.id == SCAMCATCHER_ROLE_ID for r in interaction.user.roles):  # type: ignore[union-attr]
+            await interaction.response.send_message(
+                "You don't have permission to use this button.", ephemeral=True
+            )
+            return
         added, skipped = [], []
         for h in self.new_hashes:
             if h not in self.cog.known_hashes:
@@ -75,6 +80,11 @@ class _HashConfirmView(discord.ui.View):
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        if not any(r.id == SCAMCATCHER_ROLE_ID for r in interaction.user.roles):  # type: ignore[union-attr]
+            await interaction.response.send_message(
+                "You don't have permission to use this button.", ephemeral=True
+            )
+            return
         for item in self.children:
             item.disabled = True  # type: ignore[attr-defined]
         try:
@@ -328,7 +338,7 @@ class ScamImageCog(commands.Cog):
             except (discord.HTTPException, discord.Forbidden):
                 pass
 
-        # ── Ephemeral confirmation for blocklist addition ──────────────────────
+        # ── Confirmation prompt → mod log channel ─────────────────────────────
         if not attachment_hashes:
             await interaction.followup.send(
                 f"Cleanup complete ({total_deleted} message(s) removed), "
@@ -340,14 +350,36 @@ class ScamImageCog(commands.Cog):
         hash_list = "\n".join(f"`{h}` — {att.filename}" for att, h in attachment_hashes)
         new_hashes = [h for _, h in attachment_hashes]
         view = _HashConfirmView(self, new_hashes)
-        msg = await interaction.followup.send(
-            f"Cleanup done ({total_deleted} message(s) removed).\n\n"
-            f"Add these hash(es) to the blocklist?\n{hash_list}",
-            view=view,
-            ephemeral=True,
-            wait=True,
+
+        confirm_content = (
+            f"{interaction.user.mention} Cleanup done ({total_deleted} message(s) removed).\n\n"
+            f"Add these hash(es) to the blocklist?\n{hash_list}"
         )
-        view.message = msg
+        if log_channel:
+            try:
+                confirm_msg = await log_channel.send(
+                    content=confirm_content,
+                    view=view,
+                    allowed_mentions=discord.AllowedMentions(users=True),
+                )
+                view.message = confirm_msg
+            except (discord.HTTPException, discord.Forbidden):
+                pass
+            try:
+                await interaction.followup.send(
+                    "Confirmation prompt posted in the mod log channel.", ephemeral=True
+                )
+            except discord.HTTPException:
+                pass
+        else:
+            # Fallback if log channel is unavailable
+            msg = await interaction.followup.send(
+                content=confirm_content,
+                view=view,
+                ephemeral=True,
+                wait=True,
+            )
+            view.message = msg
 
     # ── /removehash slash command ─────────────────────────────────────────────
 
