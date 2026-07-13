@@ -121,7 +121,8 @@ class ClubPaginationView(discord.ui.View):
         self.total_pages = max(1, (total + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
         self._update_buttons()
         embed = _build_embed(results, self.display, page, total, self.search_url)
-        await interaction.response.edit_message(embed=embed, view=self)
+        # display reflects the original user query; club names come from the Engage API — suppress all pings.
+        await interaction.response.edit_message(embed=embed, view=self, allowed_mentions=discord.AllowedMentions.none())
 
     @discord.ui.button(label="◀", style=discord.ButtonStyle.secondary)
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -232,7 +233,8 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
                 color=discord.Color.from_rgb(254, 231, 92),
                 url=search_url,
             )
-            await ctx.send(embed=embed)
+            # display reflects user query — suppress all pings.
+            await ctx.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
             return
 
         total_pages = max(1, (total + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
@@ -247,7 +249,8 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
             current_page=1,
             total_pages=total_pages,
         )
-        await ctx.send(embed=embed, view=view)
+        # display reflects user query; club names from Engage API could contain mention syntax — suppress all pings.
+        await ctx.send(embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none())
 
     # ------------------------------------------------------------------ #
     # Prefix command
@@ -288,7 +291,8 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
                 color=discord.Color.from_rgb(254, 231, 92),
                 url=search_url,
             )
-            await interaction.followup.send(embed=embed)
+            # display reflects user query — suppress all pings.
+            await interaction.followup.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
             return
 
         total_pages = max(1, (total + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
@@ -303,7 +307,8 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
             current_page=1,
             total_pages=total_pages,
         )
-        await interaction.followup.send(embed=embed, view=view)
+        # display reflects user query; club names from Engage API could contain mention syntax — suppress all pings.
+        await interaction.followup.send(embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none())
 
     # ------------------------------------------------------------------ #
     # Debug
@@ -328,4 +333,5 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         except Exception:
             pretty = raw
         snippet = pretty[:1900]
-        await ctx.send(f"```json\n{snippet}\n```")
+        # Raw API JSON could contain arbitrary text — suppress all pings.
+        await ctx.send(f"```json\n{snippet}\n```", allowed_mentions=discord.AllowedMentions.none())

@@ -731,30 +731,35 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
         =class EE 100
         """
         embed, view, error = await self.lookup_course(query)
+        # query is echoed in error messages (e.g. unknown subject code); BU Bulletin HTML
+        # is external data — suppress all pings on every send in this path.
+        _none = discord.AllowedMentions.none()
         if error:
-            await ctx.send(error)
+            await ctx.send(error, allowed_mentions=_none)
             return
         if embed is None:
-            await ctx.send("Unknown class lookup error.")
+            await ctx.send("Unknown class lookup error.", allowed_mentions=_none)
             return
 
         if view is not None:
-            await ctx.send(embed=embed, view=view)
+            await ctx.send(embed=embed, view=view, allowed_mentions=_none)
         else:
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, allowed_mentions=_none)
 
     @app_commands.command(name="class", description="Look up a BU course from the Bulletin.")
     @app_commands.describe(query="Course code (e.g. CAS CH 101, CASCH101, or CH 101)")
     async def class_slash(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
         embed, view, error = await self.lookup_course(query)
+        # query is echoed in error messages; BU Bulletin HTML is external data — suppress all pings.
+        _none = discord.AllowedMentions.none()
         if error:
-            await interaction.followup.send(error)
+            await interaction.followup.send(error, allowed_mentions=_none)
             return
         if embed is None:
-            await interaction.followup.send("Unknown class lookup error.")
+            await interaction.followup.send("Unknown class lookup error.", allowed_mentions=_none)
             return
         if view is not None:
-            await interaction.followup.send(embed=embed, view=view)
+            await interaction.followup.send(embed=embed, view=view, allowed_mentions=_none)
         else:
-            await interaction.followup.send(embed=embed)
+            await interaction.followup.send(embed=embed, allowed_mentions=_none)

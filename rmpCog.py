@@ -709,29 +709,37 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
         Usage: =rmp Firstname Lastname, or =rmp Lastname
         """
         embed, view, error = await self._build_rmp_response(professor_name)
+        # professor_name is echoed in error strings and embed descriptions/fields;
+        # suppress all pings so a crafted name can't trigger @everyone or role pings.
+        _none = discord.AllowedMentions.none()
         if error:
-            await ctx.send(error)
+            await ctx.send(error, allowed_mentions=_none)
             return
         if view:
-            await ctx.send(embed=embed, view=view)
+            await ctx.send(embed=embed, view=view, allowed_mentions=_none)
         else:
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, allowed_mentions=_none)
 
         if self._needs_channel_warning(ctx.channel if isinstance(ctx.channel, (discord.abc.GuildChannel, discord.Thread)) else None):
-            await ctx.send(self._channel_warning_text(ctx.author))
+            # Channel warning intentionally mentions the invoking user — allow user pings only.
+            await ctx.send(self._channel_warning_text(ctx.author), allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False))
 
     @app_commands.command(name="rmp", description="Look up a BU professor on RateMyProfessors.")
     @app_commands.describe(professor_name="Professor's name (e.g. Jane Smith or Smith)")
     async def rmp_slash(self, interaction: discord.Interaction, professor_name: str):
         await interaction.response.defer()
         embed, view, error = await self._build_rmp_response(professor_name)
+        # professor_name is echoed in error strings and embed descriptions/fields;
+        # suppress all pings so a crafted name can't trigger @everyone or role pings.
+        _none = discord.AllowedMentions.none()
         if error:
-            await interaction.followup.send(error)
+            await interaction.followup.send(error, allowed_mentions=_none)
             return
         if view:
-            await interaction.followup.send(embed=embed, view=view)
+            await interaction.followup.send(embed=embed, view=view, allowed_mentions=_none)
         else:
-            await interaction.followup.send(embed=embed)
+            await interaction.followup.send(embed=embed, allowed_mentions=_none)
 
         if self._needs_channel_warning(interaction.channel if isinstance(interaction.channel, (discord.abc.GuildChannel, discord.Thread)) else None):
-            await interaction.followup.send(self._channel_warning_text(interaction.user))
+            # Channel warning intentionally mentions the invoking user — allow user pings only.
+            await interaction.followup.send(self._channel_warning_text(interaction.user), allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False))

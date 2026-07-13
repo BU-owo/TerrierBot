@@ -125,7 +125,14 @@ def prefix_for(bot : TerrierBot, guild : discord.Guild | None):
 
 def command_prefix(bot : TerrierBot, msg : discord.Message):
     return commands.when_mentioned_or(prefix_for(bot, msg.guild))(bot, msg)
-bot = TerrierBot(command_prefix=command_prefix, description=description, intents=intents)
+bot = TerrierBot(
+    command_prefix=command_prefix,
+    description=description,
+    intents=intents,
+    # Safe global default: any cog that omits explicit allowed_mentions will still
+    # suppress @everyone and role pings while preserving user mentions.
+    allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=True),
+)
 
 bot.help_command = None
 

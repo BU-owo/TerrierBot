@@ -361,7 +361,9 @@ class ScamImageCog(commands.Cog):
                 confirm_msg = await confirm_channel.send(
                     content=confirm_content,
                     view=view,
-                    allowed_mentions=discord.AllowedMentions(users=True),
+                    # confirm_content includes att.filename (user-controlled upload names);
+                    # allow only the intentional reporter mention — block roles and @everyone.
+                    allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False),
                 )
                 view.message = confirm_msg
             except (discord.HTTPException, discord.Forbidden):

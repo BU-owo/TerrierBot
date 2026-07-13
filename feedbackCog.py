@@ -64,6 +64,9 @@ class FeedbackModal(discord.ui.Modal, title="Anonymous Feedback"):
             await channel.send(
                 content=f"<@&{FEEDBACK_ROLE_ID}>",
                 embed=embed,
+                # embed.description contains user-supplied feedback text; allow only the
+                # intentional role ping — block @everyone and user mentions from the embed body.
+                allowed_mentions=discord.AllowedMentions(roles=True, users=False, everyone=False),
             )
         except discord.HTTPException as e:
             logging.error("feedbackCog: failed to send feedback embed: %s", e)
