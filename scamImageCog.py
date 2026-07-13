@@ -1,11 +1,18 @@
 import io
+import json
+import logging
+import os
+from datetime import timedelta
+
 import discord
+from discord import app_commands
 from discord.ext import commands
 from PIL import Image
 import imagehash
 
-# Add known scam image hashes here (perceptual hashes, as strings).
-# Generate one with: imagehash.phash(Image.open("scam.png"))
+log = logging.getLogger(__name__)
+
+# Fallback constant — only used for one-time migration if data/scam_hashes.json is absent.
 KNOWN_SCAM_HASHES = [
     "c5ba36c9caa4318f",
     "e1f0e187981f0ade",
@@ -22,10 +29,100 @@ TIMEOUT_MINUTES = 60
 MOD_LOG_CHANNEL_ID = 1441889164898341098  # set to a channel ID if you want match alerts logged
 SCAMCATCHER_ROLE_ID = 1402095379935395934
 
+_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+_HASHES_FILE = os.path.join(_DATA_DIR, "scam_hashes.json")
+
+
+# ── Confirmation view ─────────────────────────────────────────────────────────
+
+class _HashConfirmView(discord.ui.View):
+    def __init__(self, cog: "ScamImageCog", new_hashes: list[str]):
+        super().__init__(timeout=60)
+        self.cog = cog
+        self.new_hashes = new_hashes
+        self.message: discord.Message | None = None
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            item.disabled = True  # type: ignore[attr-defined]
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        added, skipped = [], []
+        for h in self.new_hashes:
+            if h not in self.cog.known_hashes:
+                self.cog.known_hashes.add(h)
+                added.append(h)
+            else:
+                skipped.append(h)
+        self.cog.save_hashes()
+
+        for item in self.children:
+            item.disabled = True  # type: ignore[attr-defined]
+
+        parts = [f"✅ Added {len(added)} new hash(es) to blocklist."]
+        if skipped:
+            parts.append(f"{len(skipped)} already present (skipped).")
+        try:
+            await interaction.response.edit_message(content=" ".join(parts), view=self)
+        except discord.HTTPException:
+            pass
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        for item in self.children:
+            item.disabled = True  # type: ignore[attr-defined]
+        try:
+            await interaction.response.edit_message(
+                content="Cancelled — no hashes added.", view=self
+            )
+        except discord.HTTPException:
+            pass
+
+
+# ── Cog ───────────────────────────────────────────────────────────────────────
 
 class ScamImageCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.known_hashes: set[str] = set()
+        self.load_hashes()
+
+        self._ctx_menu = app_commands.ContextMenu(
+            name="Report Image(s)",
+            callback=self.report_images,
+        )
+        self.bot.tree.add_command(self._ctx_menu)
+
+    async def cog_unload(self) -> None:
+        self.bot.tree.remove_command(self._ctx_menu.name, type=self._ctx_menu.type)
+
+    # ── Hash persistence ──────────────────────────────────────────────────────
+
+    def load_hashes(self) -> None:
+        if not os.path.exists(_HASHES_FILE):
+            os.makedirs(_DATA_DIR, exist_ok=True)
+            self.known_hashes = set(KNOWN_SCAM_HASHES)
+            self.save_hashes()
+            log.info("scamImageCog: migrated KNOWN_SCAM_HASHES constant → %s", _HASHES_FILE)
+            return
+        with open(_HASHES_FILE, "r", encoding="utf-8") as f:
+            self.known_hashes = set(json.load(f))
+
+    def save_hashes(self) -> None:
+        os.makedirs(_DATA_DIR, exist_ok=True)
+        with open(_HASHES_FILE, "w", encoding="utf-8") as f:
+            json.dump(sorted(self.known_hashes), f, indent=2)
+
+    # ── Internal helpers ──────────────────────────────────────────────────────
+
+    def _has_scamcatcher_role(self, member: discord.Member) -> bool:
+        return any(r.id == SCAMCATCHER_ROLE_ID for r in member.roles)
 
     async def _hash_matches(self, image_bytes: bytes) -> bool:
         try:
@@ -34,11 +131,13 @@ class ScamImageCog(commands.Cog):
         except Exception:
             return False
 
-        for known in KNOWN_SCAM_HASHES:
+        for known in self.known_hashes:
             known_hash = imagehash.hex_to_hash(known)
             if (h - known_hash) <= HASH_THRESHOLD:
                 return True
         return False
+
+    # ── Automatic on_message listener (unchanged) ─────────────────────────────
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -96,6 +195,188 @@ class ScamImageCog(commands.Cog):
                     embed=embed,
                     allowed_mentions=discord.AllowedMentions(roles=True),
                 )
+
+    # ── Context menu: Report Image(s) ─────────────────────────────────────────
+
+    async def report_images(
+        self, interaction: discord.Interaction, message: discord.Message
+    ) -> None:
+        if not self._has_scamcatcher_role(interaction.user):  # type: ignore[arg-type]
+            await interaction.response.send_message(
+                "You don't have permission to use this command.", ephemeral=True
+            )
+            return
+
+        image_attachments = [
+            a for a in message.attachments
+            if a.content_type and a.content_type.startswith("image/")
+        ]
+        if not image_attachments:
+            await interaction.response.send_message(
+                "No images found on that message.", ephemeral=True
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        # Compute hashes
+        attachment_hashes: list[tuple[discord.Attachment, str]] = []
+        for att in image_attachments:
+            try:
+                data = await att.read()
+                img = Image.open(io.BytesIO(data))
+                h = str(imagehash.phash(img))
+                attachment_hashes.append((att, h))
+            except Exception:
+                pass
+
+        # ── Multi-channel cleanup (last 5 min) ────────────────────────────────
+        target_author = message.author
+
+        # Always delete the reported message immediately, regardless of age.
+        try:
+            await message.delete()
+        except discord.HTTPException:
+            pass
+
+        # Timeout the reported author.
+        try:
+            import datetime
+            await target_author.timeout(
+                datetime.timedelta(minutes=TIMEOUT_MINUTES),
+                reason="Posted scam image (manually reported)",
+            )
+        except discord.Forbidden:
+            pass  # bot lacks permission or role hierarchy issue
+        except discord.HTTPException:
+            pass
+
+        cutoff = discord.utils.utcnow() - timedelta(minutes=5)
+        log_channel = self.bot.get_channel(MOD_LOG_CHANNEL_ID) if MOD_LOG_CHANNEL_ID else None
+        channel_counts: list[tuple[str, int]] = []
+
+        for channel in interaction.guild.text_channels:  # type: ignore[union-attr]
+            deleted_in_channel = 0
+            try:
+                count = 0
+                async for msg in channel.history(after=cutoff, oldest_first=False):
+                    if count >= 200:
+                        break
+                    count += 1
+
+                    if msg.author.id != target_author.id:
+                        continue
+                    img_attachments = [
+                        a for a in msg.attachments
+                        if a.content_type and a.content_type.startswith("image/")
+                    ]
+                    if not img_attachments:
+                        continue
+
+                    # Read bytes before deletion — URL dies after delete
+                    saved: list[tuple[discord.Attachment, bytes]] = []
+                    for att in img_attachments:
+                        try:
+                            saved.append((att, await att.read()))
+                        except Exception:
+                            pass
+
+                    try:
+                        await msg.delete()
+                        deleted_in_channel += 1
+                    except (discord.HTTPException, discord.Forbidden):
+                        continue
+
+                    if log_channel:
+                        try:
+                            files = [
+                                discord.File(io.BytesIO(b), filename=att.filename)
+                                for att, b in saved
+                            ]
+                            log_embed = discord.Embed(
+                                title="Deleted image message (report cleanup)",
+                                description=(
+                                    f"User: {target_author.mention} ({target_author.id})\n"
+                                    f"Channel: #{channel.name}"
+                                ),
+                                color=discord.Color.orange(),
+                            )
+                            await log_channel.send(embed=log_embed, files=files)
+                        except (discord.HTTPException, discord.Forbidden):
+                            pass
+
+            except discord.Forbidden:
+                pass
+
+            if deleted_in_channel:
+                channel_counts.append((channel.name, deleted_in_channel))
+
+        # Cleanup summary → log channel
+        total_deleted = sum(n for _, n in channel_counts)
+        if log_channel and total_deleted:
+            try:
+                breakdown = "\n".join(f"• #{name}: {n}" for name, n in channel_counts)
+                summary_embed = discord.Embed(
+                    title="🗑️ Scam wave cleanup",
+                    description=(
+                        f"Deleted **{total_deleted}** message(s) from "
+                        f"{target_author.mention} across **{len(channel_counts)}** "
+                        f"channel(s) (image scam wave)\n\n{breakdown}"
+                    ),
+                    color=discord.Color.red(),
+                )
+                await log_channel.send(embed=summary_embed)
+            except (discord.HTTPException, discord.Forbidden):
+                pass
+
+        # ── Ephemeral confirmation for blocklist addition ──────────────────────
+        if not attachment_hashes:
+            await interaction.followup.send(
+                f"Cleanup complete ({total_deleted} message(s) removed), "
+                "but no images could be hashed.",
+                ephemeral=True,
+            )
+            return
+
+        hash_list = "\n".join(f"`{h}` — {att.filename}" for att, h in attachment_hashes)
+        new_hashes = [h for _, h in attachment_hashes]
+        view = _HashConfirmView(self, new_hashes)
+        msg = await interaction.followup.send(
+            f"Cleanup done ({total_deleted} message(s) removed).\n\n"
+            f"Add these hash(es) to the blocklist?\n{hash_list}",
+            view=view,
+            ephemeral=True,
+            wait=True,
+        )
+        view.message = msg
+
+    # ── /removehash slash command ─────────────────────────────────────────────
+
+    @app_commands.command(name="removehash", description="Remove a hash from the scam image blocklist.")
+    @app_commands.describe(hash="The perceptual hash string to remove.")
+    async def removehash(self, interaction: discord.Interaction, hash: str) -> None:
+        if not self._has_scamcatcher_role(interaction.user):  # type: ignore[arg-type]
+            await interaction.response.send_message(
+                "You don't have permission to use this command.", ephemeral=True
+            )
+            return
+
+        if hash in self.known_hashes:
+            self.known_hashes.discard(hash)
+            self.save_hashes()
+            try:
+                await interaction.response.send_message(
+                    f"✅ Removed `{hash}` from the blocklist.", ephemeral=True
+                )
+            except discord.HTTPException:
+                pass
+        else:
+            try:
+                await interaction.response.send_message(
+                    "Hash not found in blocklist.", ephemeral=True
+                )
+            except discord.HTTPException:
+                pass
 
 
 async def setup(bot: commands.Bot):

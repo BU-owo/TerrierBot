@@ -5,3 +5,4 @@ __pycache__/
 .vscode/
 token.txt
 pyrightconfig.json
+data/scam_hashes.json
