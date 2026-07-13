@@ -219,6 +219,19 @@ class ScamImageCog(commands.Cog):
 
         await interaction.response.defer(ephemeral=True, thinking=True)
 
+        # Timeout the reported author immediately — before any sweep work.
+        target_author = message.author
+        try:
+            import datetime
+            await target_author.timeout(
+                datetime.timedelta(minutes=TIMEOUT_MINUTES),
+                reason="Posted scam image (manually reported)",
+            )
+        except discord.Forbidden:
+            pass  # bot lacks permission or role hierarchy issue
+        except discord.HTTPException:
+            pass
+
         # Compute hashes
         attachment_hashes: list[tuple[discord.Attachment, str]] = []
         for att in image_attachments:
@@ -231,7 +244,6 @@ class ScamImageCog(commands.Cog):
                 pass
 
         # ── Multi-channel cleanup (last 5 min) ────────────────────────────────
-        target_author = message.author
 
         # Always delete the reported message immediately, regardless of age.
         try:
@@ -239,24 +251,14 @@ class ScamImageCog(commands.Cog):
         except discord.HTTPException:
             pass
 
-        # Timeout the reported author.
-        try:
-            import datetime
-            await target_author.timeout(
-                datetime.timedelta(minutes=TIMEOUT_MINUTES),
-                reason="Posted scam image (manually reported)",
-            )
-        except discord.Forbidden:
-            pass  # bot lacks permission or role hierarchy issue
-        except discord.HTTPException:
-            pass
-
         cutoff = discord.utils.utcnow() - timedelta(minutes=5)
         log_channel = self.bot.get_channel(MOD_LOG_CHANNEL_ID) if MOD_LOG_CHANNEL_ID else None
-        channel_counts: list[tuple[str, int]] = []
+        # (channel_name, deleted_count, first_img_bytes_or_None, first_img_filename_or_None)
+        channel_records: list[tuple[str, int, bytes | None, str | None]] = []
 
         for channel in interaction.guild.text_channels:  # type: ignore[union-attr]
             deleted_in_channel = 0
+            first_img: tuple[bytes, str] | None = None
             try:
                 count = 0
                 async for msg in channel.history(after=cutoff, oldest_first=False):
@@ -273,7 +275,8 @@ class ScamImageCog(commands.Cog):
                     if not img_attachments:
                         continue
 
-                    # Read bytes before deletion — URL dies after delete
+                    # Read bytes before deletion — URL dies after delete.
+                    # Only need one representative image per channel.
                     saved: list[tuple[discord.Attachment, bytes]] = []
                     for att in img_attachments:
                         try:
@@ -287,45 +290,41 @@ class ScamImageCog(commands.Cog):
                     except (discord.HTTPException, discord.Forbidden):
                         continue
 
-                    if log_channel:
-                        try:
-                            files = [
-                                discord.File(io.BytesIO(b), filename=att.filename)
-                                for att, b in saved
-                            ]
-                            log_embed = discord.Embed(
-                                title="Deleted image message (report cleanup)",
-                                description=(
-                                    f"User: {target_author.mention} ({target_author.id})\n"
-                                    f"Channel: #{channel.name}"
-                                ),
-                                color=discord.Color.orange(),
-                            )
-                            await log_channel.send(embed=log_embed, files=files)
-                        except (discord.HTTPException, discord.Forbidden):
-                            pass
+                    # Keep the first successfully-saved image as the channel representative.
+                    if first_img is None and saved:
+                        first_img = (saved[0][1], saved[0][0].filename)
 
             except discord.Forbidden:
                 pass
 
             if deleted_in_channel:
-                channel_counts.append((channel.name, deleted_in_channel))
+                channel_records.append((
+                    channel.name,
+                    deleted_in_channel,
+                    first_img[0] if first_img else None,
+                    first_img[1] if first_img else None,
+                ))
 
-        # Cleanup summary → log channel
-        total_deleted = sum(n for _, n in channel_counts)
+        # Cleanup summary → one single embed with one representative image per channel
+        total_deleted = sum(n for _, n, _, _ in channel_records)
         if log_channel and total_deleted:
             try:
-                breakdown = "\n".join(f"• #{name}: {n}" for name, n in channel_counts)
+                breakdown = "\n".join(f"• #{name}: {n}" for name, n, _, _ in channel_records)
                 summary_embed = discord.Embed(
                     title="🗑️ Scam wave cleanup",
                     description=(
                         f"Deleted **{total_deleted}** message(s) from "
-                        f"{target_author.mention} across **{len(channel_counts)}** "
+                        f"{target_author.mention} across **{len(channel_records)}** "
                         f"channel(s) (image scam wave)\n\n{breakdown}"
                     ),
                     color=discord.Color.red(),
                 )
-                await log_channel.send(embed=summary_embed)
+                rep_files = [
+                    discord.File(io.BytesIO(b), filename=fname)
+                    for _, _, b, fname in channel_records[:10]
+                    if b is not None
+                ]
+                await log_channel.send(embed=summary_embed, files=rep_files)
             except (discord.HTTPException, discord.Forbidden):
                 pass
 
