@@ -29,6 +29,9 @@ TIMEOUT_MINUTES = 60
 MOD_LOG_CHANNEL_ID = 1441888579147141170  # #message-logs — all scam alerts and confirmation prompts
 SCAMCATCHER_ROLE_ID = 1402095379935395934
 
+SPAM_CHANNEL_THRESHOLD = 3   # distinct channels within the window to trigger spam alert
+SPAM_WINDOW_SECONDS = 60     # rolling window for cross-channel spam detection
+
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 _HASHES_FILE = os.path.join(_DATA_DIR, "scam_hashes.json")
 
@@ -109,6 +112,9 @@ class ScamImageCog(commands.Cog):
         )
         self.bot.tree.add_command(self._ctx_menu)
 
+        # user_id -> list of (channel_id, timestamp) for cross-channel spam detection
+        self.recent_image_posts: dict[int, list[tuple[int, float]]] = {}
+
     async def cog_unload(self) -> None:
         self.bot.tree.remove_command(self._ctx_menu.name, type=self._ctx_menu.type)
 
@@ -156,14 +162,31 @@ class ScamImageCog(commands.Cog):
         if not message.attachments:
             return
 
+        has_image = False
         for attachment in message.attachments:
             if not attachment.content_type or not attachment.content_type.startswith("image/"):
                 continue
 
+            has_image = True
             image_bytes = await attachment.read()
             if await self._hash_matches(image_bytes):
                 await self._handle_scam(message)
                 return  # only need to act once per message
+
+        # ── Cross-channel spam tracking ───────────────────────────────────────
+        if has_image and not self._has_scamcatcher_role(message.author):  # type: ignore[arg-type]
+            uid = message.author.id
+            now = message.created_at.timestamp()
+            entries = self.recent_image_posts.get(uid, [])
+            # Prune entries outside the rolling window
+            entries = [(ch, ts) for ch, ts in entries if now - ts <= SPAM_WINDOW_SECONDS]
+            entries.append((message.channel.id, now))
+            self.recent_image_posts[uid] = entries
+
+            distinct_channels = len({ch for ch, _ in entries})
+            if distinct_channels >= SPAM_CHANNEL_THRESHOLD:
+                del self.recent_image_posts[uid]
+                await self._handle_channel_spam(message)
 
     async def _handle_scam(self, message: discord.Message):
         try:
@@ -206,6 +229,38 @@ class ScamImageCog(commands.Cog):
                     allowed_mentions=discord.AllowedMentions(roles=True),
                 )
 
+    async def _handle_channel_spam(self, message: discord.Message) -> None:
+        member = message.author
+        try:
+            import datetime
+            await member.timeout(  # type: ignore[union-attr]
+                datetime.timedelta(minutes=TIMEOUT_MINUTES),
+                reason="Cross-channel image spam detected",
+            )
+        except discord.Forbidden:
+            pass
+        except discord.HTTPException:
+            pass
+
+        try:
+            embed = discord.Embed(
+                title="⚠️ Possible cross-channel image spam",
+                description=(
+                    f"{member.mention} ({member.id}) posted images in "
+                    f"{SPAM_CHANNEL_THRESHOLD}+ channels within {SPAM_WINDOW_SECONDS}s "
+                    f"and has been timed out for {TIMEOUT_MINUTES} minutes. "
+                    "Please review and take further action if needed."
+                ),
+                color=discord.Color.orange(),
+            )
+            await message.channel.send(
+                content=f"<@&{SCAMCATCHER_ROLE_ID}>",
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions(roles=True),
+            )
+        except discord.HTTPException:
+            pass
+
     # ── Context menu: Report Image(s) ─────────────────────────────────────────
 
     async def report_images(
@@ -243,13 +298,13 @@ class ScamImageCog(commands.Cog):
             pass
 
         # Compute hashes
-        attachment_hashes: list[tuple[discord.Attachment, str]] = []
+        attachment_hashes: list[tuple[discord.Attachment, str, bytes]] = []
         for att in image_attachments:
             try:
                 data = await att.read()
                 img = Image.open(io.BytesIO(data))
                 h = str(imagehash.phash(img))
-                attachment_hashes.append((att, h))
+                attachment_hashes.append((att, h, data))
             except Exception:
                 pass
 
@@ -347,20 +402,25 @@ class ScamImageCog(commands.Cog):
             )
             return
 
-        hash_list = "\n".join(f"`{h}` — {att.filename}" for att, h in attachment_hashes)
-        new_hashes = [h for _, h in attachment_hashes]
+        hash_list = "\n".join(f"`{h}` — {att.filename}" for att, h, _ in attachment_hashes)
+        new_hashes = [h for _, h, _ in attachment_hashes]
         view = _HashConfirmView(self, new_hashes)
 
         confirm_content = (
             f"{interaction.user.mention} Cleanup done ({total_deleted} message(s) removed).\n\n"
             f"Add these hash(es) to the blocklist?\n{hash_list}"
         )
+        confirm_files = [
+            discord.File(io.BytesIO(b), filename=att.filename)
+            for att, _, b in attachment_hashes
+        ]
         confirm_channel = log_channel
         if confirm_channel:
             try:
                 confirm_msg = await confirm_channel.send(
                     content=confirm_content,
                     view=view,
+                    files=confirm_files,
                     # confirm_content includes att.filename (user-controlled upload names);
                     # allow only the intentional reporter mention — block roles and @everyone.
                     allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False),
@@ -376,9 +436,14 @@ class ScamImageCog(commands.Cog):
                 pass
         else:
             # Fallback if log channel is unavailable
+            fallback_files = [
+                discord.File(io.BytesIO(b), filename=att.filename)
+                for att, _, b in attachment_hashes
+            ]
             msg = await interaction.followup.send(
                 content=confirm_content,
                 view=view,
+                files=fallback_files,
                 ephemeral=True,
                 wait=True,
             )
