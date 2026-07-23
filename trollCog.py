@@ -11,6 +11,10 @@ EMOTICONS = [
     "（人◕ω◕）", "（●´ω｀●）", "（✿ ♡‿♡）", "（◠‿◠✿）", "^-^", "^_^",
     "＞_＜", "＞_＞", ":P", ":3", ";3", "x3", ":D", "xD", "XDDD",
     "（＾ｖ＾）", "ㅇㅅㅇ", "（• o •）", "ʕ•̫͡•ʔ", "ʕʘ‿ʘʔ", "（　'◟ '）",
+    "(˶˃ ᵕ ˂˶)", "(｡♥‿♥｡)", "(´｡• ᵕ •｡`)", "ദ്ദി(˵ •̀ ᴗ - ˵ )",
+    "(｡•́‿•̀｡)", "(๑ᵕ⌣ᵕ๑)", "(⁄ ⁄•⁄ω⁄•⁄ ⁄)", "(◕‿◕✿)", "(＾▽＾)",
+    "٩(｡•́‿•̀｡)۶", "(っ˘ω˘ς )", "( ˶ˆ ᗜ ˆ˵ )", "(｡U⁄ ⁄ ⁄ ⁄U｡)",
+    "(灬♥ω♥灬)", "◝(⁰▿⁰)◜",
 ]
 
 WORD_REPLACEMENTS = [
@@ -18,28 +22,99 @@ WORD_REPLACEMENTS = [
     (r"\bhave\b", "haz"),
     (r"\bhas\b", "haz"),
     (r"\bno\b", "nu"),
+    (r"\bthe\b", "da"),
+    (r"\bsmall\b", "smol"),
+    (r"\blittle\b", "smol"),
+    (r"\bthanks\b", "fanks"),
+    (r"\bthank\b", "fank"),
 ]
+
+# These get protected from the global r/l -> w pass so the "r" survives.
+CAT_REPLACEMENTS = [
+    (r"\bmeow+\b", "mrrrow"),
+    (r"\bpurr+\b", "purrr"),
+    (r"\bcat\b", "kitty"),
+]
+
+# Anything matching this stays completely untouched: URLs, custom Discord
+# emoji (<:name:id> / <a:name:id>), and unicode emoji.
+PROTECTED_PATTERN = re.compile(
+    r"https?://\S+"
+    r"|<a?:\w+:\d+>"
+    r"|[\U0001F1E6-\U0001F1FF\U0001F300-\U0001F5FF\U0001F600-\U0001F64F"
+    r"\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF"
+    r"\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F"
+    r"\U0001FA70-\U0001FAFF\u2600-\u26FF\u2700-\u27BF\uFE0F\u200D]+"
+)
+PLACEHOLDER_RE = re.compile(r"\uE000(\d+)\uE001")
+PLACEHOLDER_ONLY_WORD_RE = re.compile(r"^(?:\uE000\d+\uE001)+$")
+
+MID_WORD_STUTTER_CHANCE = 0.07
+TILDE_CHANCE = 0.10
+NYAIFY = True
+
+
+def _nyaify(text: str) -> str:
+    return re.sub(r"n([aeiou])", r"ny\1", text)
+
+
+def _escalate_exclamations(text: str) -> str:
+    return re.sub(r"!", lambda m: random.choice(["!", "!!", "!!!"]), text)
 
 
 def owo_ify(text: str) -> str:
     if not text:
-        text = ""
+        return f"w-w-w-... {random.choice(EMOTICONS)}"
 
-    result = text.lower()
+    tokens = []
+
+    def _stash(m: re.Match) -> str:
+        tokens.append(m.group(0))
+        return f"\uE000{len(tokens) - 1}\uE001"
+
+    masked = PROTECTED_PATTERN.sub(_stash, text)
+
+    result = masked.lower()
 
     for pattern, repl in WORD_REPLACEMENTS:
         result = re.sub(pattern, repl, result)
 
     result = result.replace("=", " da")
 
-    result = re.sub(r"[rl]", "w", result)
+    for pattern, repl in CAT_REPLACEMENTS:
+        def _cat_stash(m: re.Match, _repl=repl) -> str:
+            tokens.append(_repl)
+            return f"\uE000{len(tokens) - 1}\uE001"
+        result = re.sub(pattern, _cat_stash, result)
 
-    if result:
+    if NYAIFY:
+        result = _nyaify(result)
+
+    result = re.sub(r"[rl]", "w", result)
+    result = _escalate_exclamations(result)
+
+    # Mid-message stutter: stutter the first real (non-placeholder) char,
+    # with a randomized stutter length (w-, w-w-, or w-w-w-).
+    if result and result[0] not in ("\uE000",):
         first_char = result[0]
-        stutter = f"{first_char}-{first_char}-{first_char}-"
-        result = stutter + result
-    else:
-        result = "w-w-w-..."
+        stutter_len = random.randint(1, 3)
+        result = f"{(first_char + '-') * stutter_len}{result}"
+
+    # Occasional per-word stutter + tilde sprinkle, skipping placeholder words.
+    words = result.split(" ")
+    for i, word in enumerate(words):
+        if not word or PLACEHOLDER_ONLY_WORD_RE.match(word):
+            continue
+        if random.random() < MID_WORD_STUTTER_CHANCE:
+            c = word[0]
+            word = f"{c}-{word}"
+        if random.random() < TILDE_CHANCE:
+            word = f"{word}~"
+        words[i] = word
+    result = " ".join(words)
+
+    # Restore protected tokens exactly as they were.
+    result = PLACEHOLDER_RE.sub(lambda m: tokens[int(m.group(1))], result)
 
     result = f"{result} {random.choice(EMOTICONS)}"
 
