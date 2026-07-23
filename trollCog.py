@@ -50,7 +50,7 @@ PLACEHOLDER_RE = re.compile(r"\uE000(\d+)\uE001")
 PLACEHOLDER_ONLY_WORD_RE = re.compile(r"^(?:\uE000\d+\uE001)+$")
 
 MID_WORD_STUTTER_CHANCE = 0.10
-TILDE_CHANCE = 0.7
+TILDE_CHANCE = 0.07
 NYAIFY = True
 
 
