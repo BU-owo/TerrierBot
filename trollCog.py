@@ -50,7 +50,7 @@ PLACEHOLDER_RE = re.compile(r"\uE000(\d+)\uE001")
 PLACEHOLDER_ONLY_WORD_RE = re.compile(r"^(?:\uE000\d+\uE001)+$")
 
 MID_WORD_STUTTER_CHANCE = 0.10
-TILDE_CHANCE = 0.07
+TILDE_CHANCE = 0
 NYAIFY = True
 
 
@@ -108,8 +108,6 @@ def owo_ify(text: str) -> str:
         if random.random() < MID_WORD_STUTTER_CHANCE:
             c = word[0]
             word = f"{c}-{word}"
-        if random.random() < TILDE_CHANCE:
-            word = f"{word}~"
         words[i] = word
     result = " ".join(words)
 
