@@ -46,9 +46,27 @@ def owo_ify(text: str) -> str:
     return result
 
 
+WEBHOOK_NAME = "troll-webhook"
+
+
 class TrollCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    async def _get_webhook(self, channel: discord.TextChannel) -> discord.Webhook | None:
+        try:
+            webhooks = await channel.webhooks()
+        except discord.Forbidden:
+            return None
+
+        for wh in webhooks:
+            if wh.name == WEBHOOK_NAME:
+                return wh
+
+        try:
+            return await channel.create_webhook(name=WEBHOOK_NAME)
+        except discord.Forbidden:
+            return None
 
     @app_commands.command(name="troll", description="Toggle owo-troll mode on a user (mod only)")
     @app_commands.describe(user="The user to toggle troll mode for", mode="enable or disable")
@@ -112,6 +130,30 @@ class TrollCog(commands.Cog):
         except (discord.Forbidden, discord.NotFound):
             pass
 
+        target_channel = message.channel
+        thread_kwarg = discord.utils.MISSING
+
+        if isinstance(target_channel, discord.Thread):
+            thread_kwarg = target_channel
+            target_channel = target_channel.parent
+
+        webhook = None
+        if isinstance(target_channel, discord.TextChannel):
+            webhook = await self._get_webhook(target_channel)
+
+        if webhook is not None:
+            try:
+                await webhook.send(
+                    content=transformed,
+                    username=message.author.display_name,
+                    avatar_url=message.author.display_avatar.url,
+                    thread=thread_kwarg,
+                )
+                return
+            except discord.Forbidden:
+                pass
+
+        # Fallback if webhook creation/send failed
         try:
             await message.channel.send(f"**{message.author.display_name} says:** {transformed}")
         except discord.Forbidden:
