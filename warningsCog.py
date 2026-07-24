@@ -5,7 +5,8 @@ import sqlite3
 import os
 from datetime import datetime, timedelta, timezone
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "warnings.db")
+DB_DIR = os.path.expanduser("~/terrierbot_data")
+DB_PATH = os.path.join(DB_DIR, "warnings.db")
 NOTICE_CHANNEL_ID = 1401924438341062798
 
 RULES = {
@@ -33,6 +34,7 @@ class WarningsCog(commands.Cog):
         self.expiry_check.cancel()
 
     def _init_db(self):
+        os.makedirs(DB_DIR, exist_ok=True)
         conn = sqlite3.connect(DB_PATH)
         conn.execute(
             """
