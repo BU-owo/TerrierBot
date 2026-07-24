@@ -8,10 +8,11 @@ from discord.ext import commands
 
 from bot import TerrierBot, Context
 
-TOWOKEN_THRESHOLD = 6
+TOWOKEN_THRESHOLD = 12
 TOWOKEN_COOLDOWN_SECONDS = 10 * 60
 TOWOKEN_EMOJI = "<:towoken:1418616280772247659>"
 OWO_EMOJI = "<:towoken:1475665207882678383>"
+TOWOKEN_EXEMPT_USER_IDS = {1402095379935395934}
 TOWOKEN_URL = "https://sites.google.com/view/towokens/"
 TOWOKEN_TEXT = (
     f"You have exceeded your Terrier Bot towoken limit {TOWOKEN_EMOJI}. "
@@ -55,6 +56,8 @@ class TowokenCog(commands.Cog, name="Towoken", description="Silly towoken usage 
     async def on_command_completion(self, ctx: Context) -> None:
         if ctx.author.bot:
             return
+        if ctx.author.id in TOWOKEN_EXEMPT_USER_IDS:
+            return
         await self._maybe_send_towoken_notice(ctx.channel, ctx.author.id)
 
     @commands.Cog.listener()
@@ -63,5 +66,7 @@ class TowokenCog(commands.Cog, name="Towoken", description="Silly towoken usage 
         if interaction.user.bot:
             return
         if interaction.channel is None:
+            return
+        if interaction.user.id in TOWOKEN_EXEMPT_USER_IDS:
             return
         await self._maybe_send_towoken_notice(interaction.channel, interaction.user.id)
