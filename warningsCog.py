@@ -66,7 +66,22 @@ class WarningsCog(commands.Cog):
         expiry_months="Months until this warning expires (0-12, 0 = never expires)",
     )
     @app_commands.choices(
-        rule=[app_commands.Choice(name=f"{k}. {v}", value=k) for k, v in RULES.items()]
+        rule=[app_commands.Choice(name=f"{k}. {v}", value=k) for k, v in RULES.items()],
+        expiry_months=[
+            app_commands.Choice(name="Never expires", value=0),
+            app_commands.Choice(name="1 month", value=1),
+            app_commands.Choice(name="2 months", value=2),
+            app_commands.Choice(name="3 months (default)", value=3),
+            app_commands.Choice(name="4 months", value=4),
+            app_commands.Choice(name="5 months", value=5),
+            app_commands.Choice(name="6 months", value=6),
+            app_commands.Choice(name="7 months", value=7),
+            app_commands.Choice(name="8 months", value=8),
+            app_commands.Choice(name="9 months", value=9),
+            app_commands.Choice(name="10 months", value=10),
+            app_commands.Choice(name="11 months", value=11),
+            app_commands.Choice(name="12 months", value=12),
+        ],
     )
     async def warn(
         self,
@@ -113,6 +128,11 @@ class WarningsCog(commands.Cog):
             dm_embed.add_field(name="Rule", value=f"{rule}. {RULES[rule]}", inline=False)
             dm_embed.add_field(name="Reason", value=reason, inline=False)
             dm_embed.add_field(name="Expires", value=expiry_text, inline=False)
+            dm_embed.add_field(
+                name="Appeals",
+                value="Warnings can be appealed. To appeal, you must submit a ticket in <#1396542143803424768>.",
+                inline=False,
+            )
             dm_embed.set_footer(text=f"Warning ID: {warn_id}")
             await user.send(embed=dm_embed)
             dm_status = "DM sent"
@@ -217,24 +237,41 @@ class WarningsCog(commands.Cog):
         await ctx.send(embed=embed, ephemeral=True)
 
     # ---------- /warnremove ----------
+    async def _warn_id_autocomplete(self, interaction: discord.Interaction, current: str):
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT id, user_id, rule, reason FROM warnings WHERE active = 1 ORDER BY id DESC LIMIT 200"
+        ).fetchall()
+        conn.close()
+
+        choices = []
+        for warn_id, user_id, rule, reason in rows:
+            member = interaction.guild.get_member(user_id) if interaction.guild else None
+            name = member.display_name if member else f"user {user_id}"
+            label = f"#{warn_id} — {name} — Rule {rule} — {reason}"[:100]
+            if current.lower() in label.lower():
+                choices.append(app_commands.Choice(name=label, value=warn_id))
+        return choices[:25]
+
     @commands.hybrid_command(name="warnremove", description="Manually remove a warning")
     @is_mod()
-    @app_commands.describe(user="User the warning belongs to", warn_id="Warning ID to remove")
-    async def warnremove(self, ctx: commands.Context, user: discord.Member, warn_id: int):
+    @app_commands.describe(warn_id="Warning to remove (start typing to search)")
+    @app_commands.autocomplete(warn_id=_warn_id_autocomplete)
+    async def warnremove(self, ctx: commands.Context, warn_id: int):
         conn = self._conn()
         row = conn.execute(
-            "SELECT id FROM warnings WHERE id = ? AND user_id = ? AND active = 1",
-            (warn_id, user.id),
+            "SELECT user_id FROM warnings WHERE id = ? AND active = 1", (warn_id,)
         ).fetchone()
         if not row:
             conn.close()
-            await ctx.send(f"No active warning #{warn_id} found for {user.mention}.")
+            await ctx.send(f"No active warning #{warn_id} found.")
             return
 
+        user_id = row[0]
         conn.execute("UPDATE warnings SET active = 0 WHERE id = ?", (warn_id,))
         conn.commit()
         conn.close()
-        await ctx.send(f"Warning #{warn_id} removed for {user.mention}.")
+        await ctx.send(f"Warning #{warn_id} removed for <@{user_id}>.")
 
     # ---------- background expiry loop ----------
     @tasks.loop(minutes=30)
