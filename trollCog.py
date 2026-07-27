@@ -128,7 +128,7 @@ class TrollCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    async def _get_webhook(self, channel: discord.TextChannel) -> discord.Webhook | None:
+    async def _get_webhook(self, channel: discord.TextChannel | discord.ForumChannel) -> discord.Webhook | None:
         try:
             webhooks = await channel.webhooks()
         except discord.Forbidden:
@@ -152,7 +152,7 @@ class TrollCog(commands.Cog):
             target_channel = target_channel.parent
 
         webhook = None
-        if isinstance(target_channel, discord.TextChannel):
+        if isinstance(target_channel, (discord.TextChannel, discord.ForumChannel)):
             webhook = await self._get_webhook(target_channel)
 
         if webhook is not None:
