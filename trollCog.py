@@ -7,7 +7,7 @@ from discord.ext import commands
 TROLL_ROLE_ID = 1529519978976379061
 
 EMOTICONS = [
-    "fwendo", "Huoh", "._.", ";-;", ";_;", "（；ω；）", "ÙωÙ", "UwU",
+    "fwendo", "._.", ";-;", ";_;", "（；ω；）", "ÙωÙ", "UwU",
     "（人◕ω◕）", "（●´ω｀●）", "（✿ ♡‿♡）", "（◠‿◠✿）", "^-^", "^_^",
     "＞_＜", "＞_＞", ":P", ":3", ";3", "x3", ":D", "xD", "XDDD",
     "（＾ｖ＾）", "ㅇㅅㅇ", "（• o •）", "ʕ•̫͡•ʔ", "ʕʘ‿ʘʔ", "（　'◟ '）",
@@ -49,8 +49,8 @@ PROTECTED_PATTERN = re.compile(
 PLACEHOLDER_RE = re.compile(r"\uE000(\d+)\uE001")
 PLACEHOLDER_ONLY_WORD_RE = re.compile(r"^(?:\uE000\d+\uE001)+$")
 
-MID_WORD_STUTTER_CHANCE = 0.10
-TILDE_CHANCE = 0
+MID_WORD_STUTTER_CHANCE = 0.07
+TILDE_CHANCE = 0.10
 NYAIFY = True
 
 
@@ -108,6 +108,8 @@ def owo_ify(text: str) -> str:
         if random.random() < MID_WORD_STUTTER_CHANCE:
             c = word[0]
             word = f"{c}-{word}"
+        if random.random() < TILDE_CHANCE:
+            word = f"{word}~"
         words[i] = word
     result = " ".join(words)
 
@@ -140,6 +142,36 @@ class TrollCog(commands.Cog):
             return await channel.create_webhook(name=WEBHOOK_NAME)
         except discord.Forbidden:
             return None
+
+    async def _send_as(self, channel: discord.abc.Messageable, member: discord.abc.User, content: str) -> None:
+        target_channel = channel
+        thread_kwarg = discord.utils.MISSING
+
+        if isinstance(target_channel, discord.Thread):
+            thread_kwarg = target_channel
+            target_channel = target_channel.parent
+
+        webhook = None
+        if isinstance(target_channel, discord.TextChannel):
+            webhook = await self._get_webhook(target_channel)
+
+        if webhook is not None:
+            try:
+                await webhook.send(
+                    content=content,
+                    username=member.display_name,
+                    avatar_url=member.display_avatar.url,
+                    thread=thread_kwarg,
+                )
+                return
+            except discord.Forbidden:
+                pass
+
+        # Fallback if webhook creation/send failed
+        try:
+            await channel.send(f"**{member.display_name} says:** {content}")
+        except discord.Forbidden:
+            pass
 
     @app_commands.command(name="troll", description="Toggle owo-troll mode on a user (mod only)")
     @app_commands.describe(user="The user to toggle troll mode for", mode="enable or disable")
@@ -181,6 +213,23 @@ class TrollCog(commands.Cog):
         else:
             raise error
 
+    @commands.hybrid_command(name="uwu", description="uwu-ify your own message")
+    @app_commands.describe(text="The text to uwu-ify")
+    async def uwu(self, ctx: commands.Context, *, text: str):
+        transformed = owo_ify(text)
+
+        if ctx.interaction is None:
+            # Prefix invocation (=uwu ...): delete the user's raw command message.
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.NotFound):
+                pass
+        else:
+            # Slash invocation: acknowledge quietly, the webhook message is the real output.
+            await ctx.interaction.response.send_message("uwuified!", ephemeral=True)
+
+        await self._send_as(ctx.channel, ctx.author, transformed)
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot:
@@ -203,34 +252,7 @@ class TrollCog(commands.Cog):
         except (discord.Forbidden, discord.NotFound):
             pass
 
-        target_channel = message.channel
-        thread_kwarg = discord.utils.MISSING
-
-        if isinstance(target_channel, discord.Thread):
-            thread_kwarg = target_channel
-            target_channel = target_channel.parent
-
-        webhook = None
-        if isinstance(target_channel, discord.TextChannel):
-            webhook = await self._get_webhook(target_channel)
-
-        if webhook is not None:
-            try:
-                await webhook.send(
-                    content=transformed,
-                    username=message.author.display_name,
-                    avatar_url=message.author.display_avatar.url,
-                    thread=thread_kwarg,
-                )
-                return
-            except discord.Forbidden:
-                pass
-
-        # Fallback if webhook creation/send failed
-        try:
-            await message.channel.send(f"**{message.author.display_name} says:** {transformed}")
-        except discord.Forbidden:
-            pass
+        await self._send_as(message.channel, message.author, transformed)
 
 
 async def setup(bot: commands.Bot):
