@@ -166,58 +166,70 @@ async def help_command(ctx: Context):
     """Show categorized TerrierBot commands."""
     embed = discord.Embed(
         title="TerrierBot Commands",
-        description="Commands work with `=` prefix or `/` slash commands.",
+        description="Use the `=` prefix or `/` slash commands where available. Some commands need admin, moderator, or owner permissions.",
         color=discord.Color.red(),
     )
 
     embed.add_field(
-        name="Academic",
+        name="Campus & BU Info",
         value=(
-            "`=rmp` or `/rmp` `<firstname lastname|lastname>` - RateMyProfessors lookup for BU\n"
-            "`=class` or `/class` `<CASCH101|CAS CH 101|CH 101>` - BU Bulletin course info"
+            "`=class` or `/class` `<course>` - Look up BU Bulletin course information\n"
+            "`=club` or `/club` `<query>` - Search Terrier Central clubs\n"
+            "`=rmp` or `/rmp` `<name>` - Search RateMyProfessors for a BU instructor\n"
+            "`=search` or `/search` `<query>` - Search BU courses by school, department, or HUB units\n"
+            "`=mbta` or `/mbta` `<station>` - Check live MBTA Green Line ETAs"
         ),
         inline=False,
     )
 
     embed.add_field(
-        name="Information",
+        name="Community & Fun",
         value=(
-            "`=banner` or `/banner` - Banner submission info\n"
-            "`=boost` or `/boost` - Server booster perks\n"
-            "Anonymous feedback can be submitted via the button on the posted feedback embed"
+            "`=hello` or `/hello` - Say hello to the bot\n"
+            "`=love` or `/love` - Share some Terrier love\n"
+            "`=banner` or `/banner` - Learn how to submit a server banner idea\n"
+            "`=boost` or `/boost` - See server boost perks\n"
+            "`=pride` or `/pride` - Send the Pride message\n"
+            "`=starleaderboard` or `/starleaderboard` - Show the most-starred posts"
         ),
         inline=False,
     )
 
     embed.add_field(
-        name="Fun",
-        value=(
-            "`=hello` or `/hello` - Say hi\n"
-            "`=love` or `/love` - Terrier love\n"
-            "`=starleaderboard` or `/starleaderboard` - Star leaderboard"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="Other",
-        value=(
-            "`=end` or `/end` - Semester countdown message\n"
-            "`=test` or `/test` - Test bot response"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="Mod / Restricted",
+        name="Moderation & Feedback",
         value=(
             "Manage Server required:\n"
-            "`=positivity`, `/positivity status/enable/disable/interval/cooldown`\n"
-            "`=feedbacksetup` or `/feedbacksetup` - Post the anonymous feedback prompt\n\n"
-            "Owner only (prefix only, no slash):\n"
-            "`=disconnect`, `=delete`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`, `=sync`\n\n"
-            "Manage Server required (slash only):\n"
-            "`/starboard setchannel/threshold/enable/disable/status`"
+            "`=positivity` or `/positivity status/enable/disable/interval/cooldown` - Configure Positivity Tuesday\n"
+            "`=feedbacksetup` or `/feedbacksetup` - Post the anonymous feedback prompt\n"
+            "`/starboard setchannel/threshold/enable/disable/status` - Configure the starboard\n"
+            "`/pingrole` - Ping one of the server role options\n\n"
+            "Moderation tools:\n"
+            "`=warn` / `/warn` - Warn a member\n"
+            "`=warncount` / `/warncount` - List active warnings\n"
+            "`=warninfo` / `/warninfo` - Show a user's warning history\n"
+            "`=mywarns` / `/mywarns` - Show your own active warnings\n"
+            "`=warnremove` / `/warnremove` - Remove a warning"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="Utility",
+        value=(
+            "`=end` or `/end` - See how many days are left until the semester ends\n"
+            "`=lockin` or `/lockin` `<duration>` - Lock yourself out of server access to focus (cannot undo early)\n"
+            "`=lockinleft` or `/lockinleft` - Check time remaining on your lock-in\n"
+            "`=test` or `/test` - Confirm that the bot is responding\n"
+            "`=help` - Show this help message"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="Owner / Maintenance",
+        value=(
+            "Owner only (prefix commands):\n"
+            "`=disconnect`, `=delete`, `=sync`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`"
         ),
         inline=False,
     )
@@ -300,8 +312,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "lockin"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "lockin"]
 
 
 def _get_token() -> str:
