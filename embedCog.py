@@ -374,6 +374,262 @@ def _build_embedhousing_sequence() -> list[discord.Embed]:
     return [embed1, embed2, embed3, embed4, embed5]
 
 
+def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
+    # Navy -> crimson gradient across the 7 embeds
+    gradient = [0x1B2A4A, 0x342943, 0x4D273D, 0x662636, 0x80252F, 0x992329, 0xB22222]
+
+    RULES_CHANNEL = 1396542143803424768
+    MOD_IMPORTANT_CHANNEL = 1401924438341062798
+    MOD_FEET_CHANNEL = 1446304077213597807
+    OWO_DOOMER_CHANNEL = 1441925119202164886
+    CONFESSION_REVIEW_CHANNEL = 1441905934975635566
+    MOD_ROLE = 1402095379935395934
+    SERVER_OWNER = 1274047585098793034
+
+    embed1 = discord.Embed(
+        color=discord.Color(gradient[0]),
+        title="🛡️ Terrier Hub Moderator Handbook",
+        description=(
+            "Terrier Hub exists to create a welcoming space for the entire BU community to find "
+            "connection, seek support, and have fun.\n\n"
+            "**As moderators, we:**\n"
+            "• Enforce the rules fairly\n"
+            "• Lead by example\n"
+            "• Protect the community and its members\n"
+            "• Stay approachable, respectful, and impartial\n"
+            "• Communicate with the mod team\n"
+            "• Always ask for help when unsure"
+        ),
+    )
+    embed1.add_field(
+        name="Contents",
+        value=(
+            "1️⃣ Responsibilities & Moderation Approach\n"
+            "2️⃣ Punishments\n"
+            "3️⃣ The Rules (cited in `/warn`)\n"
+            "4️⃣ Policies & Moderator Tools\n"
+            "5️⃣ Communication, Voting & Appeals\n"
+            "6️⃣ Term Length & Mod Channels"
+        ),
+        inline=False,
+    )
+    embed1.set_footer(text="Last updated: July 2026")
+
+    embed2 = discord.Embed(
+        color=discord.Color(gradient[1]),
+        title="✅ Responsibilities & Moderation Approach",
+    )
+    embed2.add_field(
+        name="Responsibilities",
+        value=(
+            "• Assassinate scammers, bots, and spam quickly\n"
+            "• Keep conversations civil\n"
+            "• Respond to reports and pings\n"
+            "• Communicate ideas and concerns to the team\n"
+            "• Punish when rules are violated\n"
+            "• Help defuse conflicts before they escalate\n"
+            "• Foster a welcoming environment\n"
+            "• Suggest ideas to improve and grow the server"
+        ),
+        inline=False,
+    )
+    embed2.add_field(
+        name="Moderation Approach",
+        value=(
+            "We strive for fair, impartial, and merciful moderation.\n"
+            "• Assume good faith until proven otherwise\n"
+            "• Educate before punishing whenever possible\n"
+            "• Be consistent and unbiased\n"
+            "• Recognize your own biases\n"
+            "• Stay aware of your emotional state — step away and let someone else handle it if needed\n"
+            "• When in doubt, ask another moderator\n"
+            "• Take the least severe action to resolve a situation"
+        ),
+        inline=False,
+    )
+
+    embed3 = discord.Embed(
+        color=discord.Color(gradient[2]),
+        title="⚖️ Punishments",
+    )
+    embed3.add_field(
+        name="For Community Members",
+        value=(
+            "**Verbal Warning** — minor first offenses / accidental issues — no vote — public or in a ticket\n"
+            "**Delete Message** — harmful, inappropriate, or rule-breaking content — no vote\n"
+            "**Time Out** — user won't disengage / needs to cool off — no vote — Discord Timeout\n"
+            "**Warning** — clear rule violation / repeated behavior — majority vote — TerrierBot `/warn`\n"
+            "**Ban** — severe violations or excessive warnings — majority vote — Dyno `/ban`"
+        ),
+        inline=False,
+    )
+    embed3.add_field(
+        name="For Bots",
+        value=(
+            "Dyno `/ban`\n"
+            "If unsure whether an account is a bot, use Carl `/hardmute` and ask about their affiliation "
+            "in <#1498345257455194242>.\n"
+            "When in doubt, time out."
+        ),
+        inline=False,
+    )
+    embed3.add_field(
+        name="Warning Thresholds",
+        value=(
+            "**5 active warnings = ban.**\n"
+            "Warnings expire after **3 months** and no longer count toward the 5-warning limit."
+        ),
+        inline=False,
+    )
+
+    embed4 = discord.Embed(
+        color=discord.Color(gradient[3]),
+        title="📜 The Rules (cited in /warn)",
+        description=f"Full rules: <#{RULES_CHANNEL}>",
+    )
+    embed4.add_field(
+        name="1. Be Respectful",
+        value="Kindness & maturity. No hate speech/harassment/uninvited flirting. Use trigger warnings for sensitive topics.",
+        inline=False,
+    )
+    embed4.add_field(
+        name="2. Keep It Safe and Legal",
+        value="No illegal activity or academic misconduct, no encouraging unsafe behavior, no threats.",
+        inline=False,
+    )
+    embed4.add_field(
+        name="3. No Spam or Self-Promotion",
+        value="No unrelated advertising, no selling/promoting cheating services.",
+        inline=False,
+    )
+    embed4.add_field(
+        name="4. No NSFW/NSFL Content",
+        value="No porn, gore, or unwanted sexual comments. Jokes without graphic depictions are fine.",
+        inline=False,
+    )
+    embed4.add_field(
+        name="5. Respect Privacy",
+        value="No doxxing, sharing DMs, or personal info without consent.",
+        inline=False,
+    )
+    embed4.add_field(
+        name="6. Mods Have Final Say",
+        value="If a mod asks you to stop, stop.",
+        inline=False,
+    )
+
+    embed5 = discord.Embed(
+        color=discord.Color(gradient[4]),
+        title="📋 Policies & Moderator Tools",
+    )
+    embed5.add_field(
+        name="Teamwork",
+        value=(
+            "• Don't DM moderate\n"
+            "• Don't make major moderation decisions alone\n"
+            "• Ask questions if you're unsure\n"
+            "• Don't be afraid to make mistakes"
+        ),
+        inline=True,
+    )
+    embed5.add_field(
+        name="Professionalism",
+        value=(
+            "• Stay respectful even if the user isn't\n"
+            "• Don't argue publicly\n"
+            "• Keep moderator discussions private"
+        ),
+        inline=True,
+    )
+    embed5.add_field(
+        name="Server Practices",
+        value=(
+            f"• Encourage <@&{MOD_ROLE}> instead of pinging individuals\n"
+            "• Use Floof pingroles instead of manual role pings\n"
+            "• Avoid unnecessary @everyone/@here pings"
+        ),
+        inline=False,
+    )
+    embed5.add_field(
+        name="Moderator Tools",
+        value=(
+            "**Dyno** — Bans\n"
+            "**TerrierBot** — Warnings (`/warn`), boost notes\n"
+            "**Carl** — Logging\n"
+            "**Floof** — Starboard, tags, Minecraft info, ping roles"
+        ),
+        inline=False,
+    )
+
+    embed6 = discord.Embed(
+        color=discord.Color(gradient[5]),
+        title="🗣️ Communication, Voting & Appeals",
+    )
+    embed6.add_field(
+        name="Communication",
+        value=(
+            "• Communicate every moderation action in the mod channels\n"
+            "• Explain your reasoning\n"
+            "• Ask before making major decisions\n"
+            "• Tell the team if you accidentally make a mistake\n"
+            "• Don't silently undo another moderator's actions\n"
+            "• If you disagree with another moderator, discuss it!"
+        ),
+        inline=False,
+    )
+    embed6.add_field(
+        name="Voting",
+        value=(
+            f"Majority vote decides warnings and bans. Anyone can start one — ping <@&{MOD_ROLE}>, "
+            "state your case, and try not to make it too lengthy."
+        ),
+        inline=False,
+    )
+    embed6.add_field(
+        name="Appeals",
+        value=(
+            f"**Bans** — appeals go to <#{MOD_IMPORTANT_CHANNEL}> for the team to review together.\n"
+            "**Warnings** — appeals happen in a ticket."
+        ),
+        inline=False,
+    )
+    embed6.add_field(
+        name="Confession Bans",
+        value=(
+            f"Handled automatically as confessions come through <#{CONFESSION_REVIEW_CHANNEL}> for review — "
+            "no separate process needed."
+        ),
+        inline=False,
+    )
+
+    embed7 = discord.Embed(
+        color=discord.Color(gradient[6]),
+        title="🎓 Term Length & Mod Channels",
+    )
+    embed7.add_field(
+        name="Term Length",
+        value=(
+            "We're looking for mods to stay active in the community. If you feel unable to keep up with "
+            f"your duties, reach out to the server owner (<@{SERVER_OWNER}>) — they'll check in periodically "
+            "to see if you're interested in continuing.\n"
+            "1 year post-graduation, moderators can move into a Moderator Emeritus role, where they can "
+            "offer wisdom/insight but no longer vote or make decisions."
+        ),
+        inline=False,
+    )
+    embed7.add_field(
+        name="Mod Channels",
+        value=(
+            f"<#{MOD_IMPORTANT_CHANNEL}> — main moderation decision channel\n"
+            f"<#{MOD_FEET_CHANNEL}> — moderator unserious channel\n"
+            f"<#{OWO_DOOMER_CHANNEL}> — please ignore"
+        ),
+        inline=False,
+    )
+
+    return [embed1, embed2, embed3, embed4, embed5, embed6, embed7]
+
+
 class EmbedModal(discord.ui.Modal, title="Send Embed"):
     embed_title = discord.ui.TextInput(
         label="Title",
@@ -573,4 +829,15 @@ class EmbedCog(commands.Cog, name="Embed", description="Send rich embeds. Owner 
             pass
 
         for embed in _build_embedhousing_sequence():
+            await ctx.channel.send(embed=embed)
+
+    @commands.command(name="embedmodhandbook")
+    async def embedmodhandbook(self, ctx: Context):
+        """Delete trigger message and post the moderator handbook embed sequence."""
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+        for embed in _build_embedmodhandbook_sequence():
             await ctx.channel.send(embed=embed)
