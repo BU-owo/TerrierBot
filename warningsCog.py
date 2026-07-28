@@ -18,8 +18,6 @@ RULES = {
     6: "Mods Have Final Say",
 }
 
-# Swap this out for your actual mod role check if you'd rather gate on a role
-# instead of the manage_messages permission.
 def is_mod():
     return commands.has_permissions(manage_messages=True)
 
@@ -64,6 +62,7 @@ class WarningsCog(commands.Cog):
         rule="Rule being violated",
         reason="Brief description of the violation",
         expiry_months="Months until this warning expires (0-12, 0 = never expires)",
+        send_dm="Send the user a DM about this warning (default: Yes)",
     )
     @app_commands.choices(
         rule=[app_commands.Choice(name=f"{k}. {v}", value=k) for k, v in RULES.items()],
@@ -90,6 +89,7 @@ class WarningsCog(commands.Cog):
         rule: int,
         reason: str,
         expiry_months: int = 3,
+        send_dm: bool = True,
     ):
         if rule not in RULES:
             valid = ", ".join(f"{k} ({v})" for k, v in RULES.items())
@@ -119,25 +119,28 @@ class WarningsCog(commands.Cog):
 
         expiry_text = "Never" if expiry_months == 0 else f"{expiry_months} month(s)"
 
-        # DM the user (best-effort)
-        try:
-            dm_embed = discord.Embed(
-                title="You've received a warning",
-                color=discord.Color.orange(),
-            )
-            dm_embed.add_field(name="Rule", value=f"{rule}. {RULES[rule]}", inline=False)
-            dm_embed.add_field(name="Reason", value=reason, inline=False)
-            dm_embed.add_field(name="Expires", value=expiry_text, inline=False)
-            dm_embed.add_field(
-                name="Appeals",
-                value="Warnings can be appealed. To appeal, you must submit a ticket in <#1396542143803424768>.",
-                inline=False,
-            )
-            dm_embed.set_footer(text=f"Warning ID: {warn_id}")
-            await user.send(embed=dm_embed)
-            dm_status = "DM sent"
-        except discord.Forbidden:
-            dm_status = "Could not DM user (DMs closed)"
+        # DM the user (best-effort, only if send_dm is True)
+        if send_dm:
+            try:
+                dm_embed = discord.Embed(
+                    title="You've received a warning",
+                    color=discord.Color.orange(),
+                )
+                dm_embed.add_field(name="Rule", value=f"{rule}. {RULES[rule]}", inline=False)
+                dm_embed.add_field(name="Reason", value=reason, inline=False)
+                dm_embed.add_field(name="Expires", value=expiry_text, inline=False)
+                dm_embed.add_field(
+                    name="Appeals",
+                    value="Warnings can be appealed. To appeal, you must submit a ticket in <#1396542143803424768>.",
+                    inline=False,
+                )
+                dm_embed.set_footer(text=f"Warning ID: {warn_id}")
+                await user.send(embed=dm_embed)
+                dm_status = "DM sent"
+            except discord.Forbidden:
+                dm_status = "Could not DM user (DMs closed)"
+        else:
+            dm_status = "DM skipped"
 
         confirm_embed = discord.Embed(
             title=f"Warning #{warn_id} issued",
