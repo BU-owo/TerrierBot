@@ -406,7 +406,7 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
         value=(
             "1️⃣ Responsibilities & Moderation Approach\n"
             "2️⃣ Punishments\n"
-            "3️⃣ The Rules (cited in `/warn`)\n"
+            "3️⃣ The Rules\n"
             "4️⃣ Policies & Moderator Tools\n"
             "5️⃣ Communication, Voting & Appeals\n"
             "6️⃣ Term Length & Mod Channels"
@@ -453,14 +453,33 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
         title="⚖️ Punishments",
     )
     embed3.add_field(
-        name="For Community Members",
-        value=(
-            "**Verbal Warning** — minor first offenses / accidental issues — no vote — public or in a ticket\n"
-            "**Delete Message** — harmful, inappropriate, or rule-breaking content — no vote\n"
-            "**Time Out** — user won't disengage / needs to cool off — no vote — Discord Timeout\n"
-            "**Warning** — clear rule violation / repeated behavior — majority vote — TerrierBot `/warn`\n"
-            "**Ban** — severe violations or excessive warnings — majority vote — Dyno `/ban`"
-        ),
+name="For Community Members",
+value=(
+    "**Verbal Warning**\n"
+    "> **When:** Minor first offenses or accidental issues\n"
+    "> **Vote:** None\n"
+    "> **Method:** Publicly or in a ticket\n\n"
+
+    "**Delete Message**\n"
+    "> **When:** Harmful, inappropriate, or rule-breaking content\n"
+    "> **Vote:** None\n"
+    "> **Method:** Delete the message\n\n"
+
+    "**Time Out**\n"
+    "> **When:** User won't disengage or needs to cool off\n"
+    "> **Vote:** None\n"
+    "> **Method:** Discord Timeout\n\n"
+
+    "**Warning**\n"
+    "> **When:** Clear rule violations or repeated behavior\n"
+    "> **Vote:** Majority\n"
+    "> **Method:** TerrierBot `/warn`\n\n"
+
+    "**Ban**\n"
+    "> **When:** Severe violations or excessive warnings\n"
+    "> **Vote:** Majority\n"
+    "> **Method:** Dyno `/ban`"
+),
         inline=False,
     )
     embed3.add_field(
@@ -484,7 +503,7 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
 
     embed4 = discord.Embed(
         color=discord.Color(gradient[3]),
-        title="📜 The Rules (cited in /warn)",
+        title="📜 The Rules",
         description=f"Full rules: <#{RULES_CHANNEL}>",
     )
     embed4.add_field(
