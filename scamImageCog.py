@@ -223,8 +223,11 @@ class ScamImageCog(commands.Cog):
                     description=f"User: {member.mention} ({member.id})\nChannel: {message.channel.mention}",
                     color=discord.Color.red(),
                 )
+                # Don't ping the mod role if the offending user is themselves
+                # a scamcatcher/mod — still post the alert, just silently.
+                ping_content = "" if self._has_scamcatcher_role(member) else f"<@&{SCAMCATCHER_ROLE_ID}>"
                 await log_channel.send(
-                    content=f"<@&{SCAMCATCHER_ROLE_ID}>",
+                    content=ping_content,
                     embed=embed,
                     allowed_mentions=discord.AllowedMentions(roles=True),
                 )
