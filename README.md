@@ -1,191 +1,114 @@
 # TerrierBot
-TerrierBot is the bot for Terrier Hub (Boston University Discord Server)
-https://discord.gg/bostonuniversity
+
+TerrierBot is the Discord bot for the Terrier Hub community at Boston University. It combines useful campus tools with server fun, moderation helpers, and a few community-management features that are easy to use from either the `=` prefix or `/` slash command system.
+
+## What the bot can do
+
+TerrierBot currently supports:
+
+- BU course and department lookups via `class` and `search`
+- BU club discovery via `club`
+- RateMyProfessors lookups via `rmp`
+- Live MBTA Green Line ETA checks via `mbta`
+- Community features such as `hello`, `love`, `banner`, `boost`, and `pride`
+- Anonymous feedback and moderation helpers such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
+- A starboard and Positivity Tuesday automation for server management
 
 ## Setup
 
-To setup TerrierBot:
-1. Put the bot token into a file called `token.txt`
-2. Create a python virtual environment (`python3 -m venv ven`)
-3. Enter the virtual environment (`source ven/bin/activate` on bash or zsh systems, `ven\Scripts\activate.bat` on windows cmd, check [https://docs.python.org/3/library/venv.html] for more details)
-4. Install the required packages (`pip install -r requirements.txt`)
-
-You only need to do this setup once.
-
-## Running
-
-To run TerrierBot:
-1. Make sure you're in the python virtual environment (see step 3 of setup)
-2. Run with `python bot.py`
-
-## Positivity Tuesday
-
-TerrierBot includes a positivity feature that can post this message at a configurable cadence:
-
-"Happy Positivity Tuesday! You have been selected to make a positive comment toward a member of the server."
-
-Use these commands in a server (requires Manage Server permission):
-
-- `=positivity` shows current status and interval
-- `=positivity enable [x]` enables the feature, optionally setting the interval to every x messages
-- `=positivity disable` disables the feature
-- `=positivity interval <x>` updates the interval to every x messages
-MyBU Student (PeopleSoft) and serves it through slash commands.  
-Uses Playwright for browser-based SSO + Duo login, SQLite for caching, and
-APScheduler to re-scrape every 60 minutes and post change alerts.
-
-### Folder structure (course feature files)
-
-```
-TerrierBot/
-├── bot.py               ← main entry point (loads all cogs incl. course)
-├── courseCog.py         ← slash commands + APScheduler
-├── scraper.py           ← Playwright scraper with session.json handling
-├── database.py          ← SQLite schema, CRUD, change detection
-├── .env                 ← your secrets (gitignored — copy from .env.example)
-├── .env.example         ← configuration template
-├── session.json         ← saved BU SSO cookies (gitignored, auto-generated)
-└── courses.db           ← SQLite database (gitignored, auto-generated)
-```
-
----
-
-## Mac Setup
-
-### 1  Prerequisites
-
-Python 3.11 or newer is required.
+1. Put your Discord bot token in a file named `token.txt` in the project folder.
+2. Create and activate a Python virtual environment.
+3. Install the required packages:
 
 ```bash
-# check version
-python3 --version
-# install via Homebrew if needed
-brew install python@3.12
-```
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
 
-### 2  Virtual environment
-
-```bash
-cd /path/to/TerrierBot
-python3 -m venv ven
-source ven/bin/activate
-```
-
-### 3  Install dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-### 4  Install Playwright + Chromium
+4. Start the bot:
 
 ```bash
-playwright install chromium
-```
-
-This downloads a ~150 MB Chromium binary managed entirely by Playwright.
-
-### 5  Create a Discord bot
-
-1. Go to <https://discord.com/developers/applications> → **New Application**.
-2. **Bot** tab → **Add Bot** → copy the token.
-3. Enable **Server Members Intent** (needed for watch-DM delivery).
-4. **OAuth2 → URL Generator**: scopes `bot` + `applications.commands`,
-   permissions `Send Messages` + `Embed Links` → invite to your server.
-
-### 6  Configure `.env`
-
-```bash
-cp .env.example .env
-nano .env   # or open in your editor
-```
-
-| Variable | Description |
-|---|---|
-| `DISCORD_TOKEN` | Bot token from step 5 |
-| `ALERT_CHANNEL_ID` | Channel ID for change-alert embeds (right-click → Copy ID) |
-| `SEMESTER_CODE` | PeopleSoft term value for Fall 2026 — **see note below** |
-| `SEMESTER_LABEL` | Display label stored in DB (default: `Fall 2026`) |
-| `DEPARTMENTS` | Comma-separated subject codes, e.g. `CS,MA,EC,PY` |
-| `SCRAPE_INTERVAL_MINUTES` | Re-scrape cadence in minutes (default: `60`) |
-| `DEBUG_SCRAPER` | `true` to dump screenshots/HTML on parse errors |
-
-> **Finding `SEMESTER_CODE`:** On first run a real browser opens for SSO.
-> Once logged in, right-click the **Term** dropdown on the Class Search page,
-> choose Inspect, find the `<option value="...">` for *Fall 2026*, and paste
-> that value into `SEMESTER_CODE`.  Typical BU format: a 4-digit number.
-
-The bot still falls back to `token.txt` if `DISCORD_TOKEN` is not set in `.env`.
-
-### 7  Run the bot
-
-```bash
-source ven/bin/activate   # if not already active
 python bot.py
 ```
 
-**First run only** — a visible Chromium window opens:
+## Running the bot
 
-1. Sign in with your BU Kerberos ID and password.
-2. Complete Duo MFA.
-3. Wait until the Class Search page fully loads.  
-   TerrierBot detects this automatically and saves cookies to `session.json`.
+From the project folder:
 
-All subsequent runs are fully headless.
+```bash
+# Windows
+venv\Scripts\activate
+python bot.py
+```
 
----
+If you want slash commands to appear in a server, an owner can use the prefix command `=sync` once the bot is running in that guild.
 
-## Slash commands (course feature)
+## Command reference
+
+Most commands support the `=` prefix and many also support slash commands. Use the built-in `=help` command for a quick overview.
+
+### Campus and BU tools
 
 | Command | Description |
-|---|---|
-| `/courses department:CS` | All Fall 2026 sections for a department as rich embeds |
-| `/seats course:CS112` | Open / total seats for every section of a course |
-| `/watch course:CS112` | Subscribe to DM alerts when a course changes |
-| `/unwatch course:CS112` | Remove a watch subscription |
-| `/lastsynced` | Timestamp and stats from the last scrape |
+| --- | --- |
+| `=class` / `/class` | Look up BU Bulletin course information |
+| `=club` / `/club` | Search Terrier Central clubs |
+| `=rmp` / `/rmp` | Search RateMyProfessors for a BU instructor |
+| `=search` / `/search` | Search BU courses by school, department, or HUB units |
+| `=mbta` / `/mbta` | Check live MBTA Green Line ETAs |
 
-Each course embed shows: course number, title, instructor, days/time,
-building/room, units, and a visual seat bar (open / total).  
-Change alerts fire for **seats, instructor, schedule, or location** changes,
-broadcasting to `ALERT_CHANNEL_ID` and DMing all watchers.
+### Community and fun
 
----
+| Command | Description |
+| --- | --- |
+| `=hello` / `/hello` | Say hello to the bot |
+| `=love` / `/love` | Share some Terrier love |
+| `=banner` / `/banner` | Learn about banner submissions |
+| `=boost` / `/boost` | See server boost perks |
+| `=pride` / `/pride` | Send a Pride message |
+| `=starleaderboard` / `/starleaderboard` | Show the most-starred posts |
 
-## Troubleshooting selectors
+### Moderation, feedback, and management
 
-If BU updates PeopleSoft and scraping breaks, set `DEBUG_SCRAPER=true` in `.env`.
-The scraper will save `debug_<DEPT>.png` and `debug_<DEPT>.html` on parse errors.
-Open them, find the correct element IDs, and update the `_SEL` dict in `scraper.py`.
+| Command | Description |
+| --- | --- |
+| `=positivity` / `/positivity ...` | Configure Positivity Tuesday automation (Manage Server required) |
+| `=feedbacksetup` / `/feedbacksetup` | Post the anonymous feedback prompt |
+| `/starboard ...` | Configure the starboard (Manage Server required) |
+| `/pingrole` | Ping one of the community roles |
+| `=warn` / `/warn` | Warn a member |
+| `=warncount` / `/warncount` | List active warnings |
+| `=warninfo` / `/warninfo` | Show a user's warning history |
+| `=mywarns` / `/mywarns` | Show your own active warnings |
+| `=warnremove` / `/warnremove` | Remove a warning |
 
----
+### Utility and maintenance
 
-## Original Setup
+| Command | Description |
+| --- | --- |
+| `=end` / `/end` | See how many days remain until the semester ends |
+| `=test` / `/test` | Confirm that the bot is responding |
+| `=help` | Show the command overview |
+| `=sync` | Sync slash commands to the current server (owner only) |
 
-To setup TerrierBot (original / existing features):
-1. Put the bot token into a file called `token.txt`  
-   *(or use `DISCORD_TOKEN` in `.env` — preferred)*
-2. Create a python virtual environment (`python3 -m venv ven`)
-3. Enter the virtual environment (`source ven/bin/activate` on bash or zsh systems, `ven\Scripts\activate.bat` on windows cmd, check [https://docs.python.org/3/library/venv.html] for more details)
-4. Install the required packages (`pip install -r requirements.txt`)
+## Permissions and notes
 
-You only need to do this setup once.
+- Positivity Tuesday and the starboard require Manage Server permissions.
+- Warning commands require the ability to manage messages or otherwise fit the server’s moderation workflow.
+- Owner-only maintenance commands are available for bot upkeep and debugging.
 
-## Running
+## Project layout
 
-To run TerrierBot:
-1. Make sure you're in the python virtual environment (see step 3 of setup)
-2. Run with `python bot.py`
-
-## Positivity Tuesday
-
-TerrierBot includes a positivity feature that can post this message at a configurable cadence:
-
-"Happy Positivity Tuesday! You have been selected to make a positive comment toward a member of the server."
-
-Use these commands in a server (requires Manage Server permission):
-
-- `=positivity` shows current status and interval
-- `=positivity enable [x]` enables the feature, optionally setting the interval to every x messages
-- `=positivity disable` disables the feature
-- `=positivity interval <x>` updates the interval to every x messages
+```text
+TerrierBot/
+├── bot.py               # Main entry point and help command
+├── *.py                 # Individual cog modules for commands and features
+├── requirements.txt     # Python dependencies
+├── token.txt            # Discord bot token (not committed)
+└── terrierbot.shelve    # Small on-disk state store for bot settings
+```

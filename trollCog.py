@@ -38,9 +38,12 @@ CAT_REPLACEMENTS = [
 
 # Anything matching this stays completely untouched: URLs, custom Discord
 # emoji (<:name:id> / <a:name:id>), and unicode emoji.
+USER_MENTION_RE = re.compile(r"^<@!?\d+>$")
+
 PROTECTED_PATTERN = re.compile(
     r"https?://\S+"
     r"|<a?:\w+:\d+>"
+    r"|<@!?\d+>|<@&\d+>|<#\d+>"
     r"|[\U0001F1E6-\U0001F1FF\U0001F300-\U0001F5FF\U0001F600-\U0001F64F"
     r"\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF"
     r"\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F"
@@ -113,8 +116,18 @@ def owo_ify(text: str) -> str:
         words[i] = word
     result = " ".join(words)
 
-    # Restore protected tokens exactly as they were.
-    result = PLACEHOLDER_RE.sub(lambda m: tokens[int(m.group(1))], result)
+    # Restore protected tokens exactly as they were. User pings get a
+    # "-chan" suffix right after the mention, e.g. @Claude renders as
+    # "@Claude-chan". (Mentions are protected/placeholdered, so a message
+    # that starts with a ping also naturally skips the leading stutter,
+    # since the first char is the placeholder marker, not the "<".)
+    def _restore(m: re.Match) -> str:
+        token = tokens[int(m.group(1))]
+        if USER_MENTION_RE.match(token):
+            return f"{token}-chan"
+        return token
+
+    result = PLACEHOLDER_RE.sub(_restore, result)
 
     result = f"{result} {random.choice(EMOTICONS)}"
 
@@ -143,7 +156,13 @@ class TrollCog(commands.Cog):
         except discord.Forbidden:
             return None
 
-    async def _send_as(self, channel: discord.abc.Messageable, member: discord.abc.User, content: str) -> None:
+    async def _send_as(
+        self,
+        channel: discord.abc.Messageable,
+        member: discord.abc.User,
+        content: str,
+        reference: discord.MessageReference | discord.Message | None = None,
+    ) -> None:
         target_channel = channel
         thread_kwarg = discord.utils.MISSING
 
@@ -156,22 +175,51 @@ class TrollCog(commands.Cog):
             webhook = await self._get_webhook(target_channel)
 
         if webhook is not None:
+            webhook_kwargs = dict(
+                content=content,
+                username=member.display_name,
+                avatar_url=member.display_avatar.url,
+                thread=thread_kwarg,
+            )
+            if reference is not None:
+                webhook_kwargs["reference"] = reference
             try:
-                await webhook.send(
-                    content=content,
-                    username=member.display_name,
-                    avatar_url=member.display_avatar.url,
-                    thread=thread_kwarg,
-                )
+                await webhook.send(**webhook_kwargs)
                 return
+            except TypeError:
+                # Installed discord.py version's Webhook.send() doesn't
+                # support replies; retry without the reference.
+                webhook_kwargs.pop("reference", None)
+                try:
+                    await webhook.send(**webhook_kwargs)
+                    return
+                except discord.Forbidden:
+                    pass
             except discord.Forbidden:
                 pass
+            except discord.HTTPException:
+                # The referenced message may be gone; retry without it.
+                webhook_kwargs.pop("reference", None)
+                try:
+                    await webhook.send(**webhook_kwargs)
+                    return
+                except discord.Forbidden:
+                    pass
 
         # Fallback if webhook creation/send failed
+        fallback_text = f"**{member.display_name} says:** {content}"
         try:
-            await channel.send(f"**{member.display_name} says:** {content}")
+            if reference is not None:
+                await channel.send(fallback_text, reference=reference)
+            else:
+                await channel.send(fallback_text)
         except discord.Forbidden:
             pass
+        except discord.HTTPException:
+            try:
+                await channel.send(fallback_text)
+            except discord.Forbidden:
+                pass
 
     async def _troll_user_autocomplete(
         self, interaction: discord.Interaction, current: str
@@ -266,7 +314,7 @@ class TrollCog(commands.Cog):
             # Slash invocation: acknowledge quietly, the webhook message is the real output.
             await ctx.interaction.response.send_message("uwuified!", ephemeral=True)
 
-        await self._send_as(ctx.channel, ctx.author, transformed)
+        await self._send_as(ctx.channel, ctx.author, transformed, reference=ctx.message.reference)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -290,7 +338,7 @@ class TrollCog(commands.Cog):
         except (discord.Forbidden, discord.NotFound):
             pass
 
-        await self._send_as(message.channel, message.author, transformed)
+        await self._send_as(message.channel, message.author, transformed, reference=message.reference)
 
 
 async def setup(bot: commands.Bot):
