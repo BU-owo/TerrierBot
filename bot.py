@@ -217,8 +217,6 @@ async def help_command(ctx: Context):
         name="Utility",
         value=(
             "`=end` or `/end` - See how many days are left until the semester ends\n"
-            "`=lockin` or `/lockin` `<duration>` - Lock yourself out of server access to focus (cannot undo early)\n"
-            "`=lockinleft` or `/lockinleft` - Check time remaining on your lock-in\n"
             "`=test` or `/test` - Confirm that the bot is responding\n"
             "`=help` - Show this help message"
         ),
@@ -312,8 +310,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "lockin"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "lockin"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost"]
 
 
 def _get_token() -> str:

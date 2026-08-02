@@ -1,44 +1,64 @@
 # TerrierBot
 
-TerrierBot is the Discord bot for the Terrier Hub community at Boston University. It combines useful campus tools with server fun, moderation helpers, and a few community-management features that are easy to use from either the `=` prefix or `/` slash command system.
+TerrierBot is the Discord bot for the Terrier Hub community at Boston University. It combines campus-specific utilities, community tools, and moderation helpers into one bot that can be used with either the `=` prefix or the `/` slash-command system.
 
-## What the bot can do
+## What TerrierBot can do
 
 TerrierBot currently supports:
 
-- BU course and department lookups via `class` and `search`
-- BU club discovery via `club`
-- RateMyProfessors lookups via `rmp`
-- Live MBTA Green Line ETA checks via `mbta`
+- BU course and department lookups through the `class` and `search` features
+- BU club discovery through `club`
+- RateMyProfessors lookups through `rmp`
+- Live MBTA Green Line ETA checks through `mbta`
 - Community features such as `hello`, `love`, `banner`, `boost`, and `pride`
-- Anonymous feedback and moderation helpers such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
-- A starboard and Positivity Tuesday automation for server management
+- Anonymous feedback and moderation tools such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
+- Server management features such as the starboard, Positivity Tuesday automation, and ping roles
 
-## Setup
+## Requirements
 
-1. Put your Discord bot token in a file named `token.txt` in the project folder.
-2. Create and activate a Python virtual environment.
-3. Install the required packages:
+Before running TerrierBot, make sure you have:
+
+- Python 3.11+ recommended
+- A Discord bot application created in the Discord developer portal
+- A bot token available either from a `token.txt` file or the `DISCORD_TOKEN` environment variable
+- The necessary bot permissions and intents enabled for your server
+
+## Installation
+
+1. Clone or download this repository.
+2. Open a terminal in the project folder.
+3. Create and activate a virtual environment:
 
 ```bash
 python -m venv venv
+
 # Windows
 venv\Scripts\activate
+
 # macOS / Linux
 source venv/bin/activate
+```
 
+4. Install the required dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
-4. Start the bot:
+## Discord bot setup
 
-```bash
-python bot.py
-```
+1. Go to the Discord developer portal and create a new application.
+2. Open the Bot tab and create a bot user.
+3. Copy the bot token and store it in one of these places:
+   - `token.txt` in the project root, or
+   - the environment variable `DISCORD_TOKEN`
+4. In the Bot settings, enable the intents needed by the bot, including Server Members Intent and Message Content Intent.
+5. Generate an invite URL under OAuth2 > URL Generator with the bot scope and the permissions your server needs.
+6. Invite the bot to the target server.
 
 ## Running the bot
 
-From the project folder:
+From the project folder, start the bot with:
 
 ```bash
 # Windows
@@ -46,11 +66,17 @@ venv\Scripts\activate
 python bot.py
 ```
 
-If you want slash commands to appear in a server, an owner can use the prefix command `=sync` once the bot is running in that guild.
+```bash
+# macOS / Linux
+source venv/bin/activate
+python bot.py
+```
+
+If you want slash commands to appear in a guild, an owner can run `=sync` once the bot is connected to that server.
 
 ## Command reference
 
-Most commands support the `=` prefix and many also support slash commands. Use the built-in `=help` command for a quick overview.
+Most commands support the `=` prefix, and many also support slash commands. The built-in `=help` command provides a quick overview inside Discord.
 
 ### Campus and BU tools
 
@@ -71,6 +97,7 @@ Most commands support the `=` prefix and many also support slash commands. Use t
 | `=banner` / `/banner` | Learn about banner submissions |
 | `=boost` / `/boost` | See server boost perks |
 | `=pride` / `/pride` | Send a Pride message |
+| `=roleboost` / `/roleboost` | Give a booster a role tied to their booster status (booster-role required) |
 | `=starleaderboard` / `/starleaderboard` | Show the most-starred posts |
 
 ### Moderation, feedback, and management
@@ -95,12 +122,21 @@ Most commands support the `=` prefix and many also support slash commands. Use t
 | `=test` / `/test` | Confirm that the bot is responding |
 | `=help` | Show the command overview |
 | `=sync` | Sync slash commands to the current server (owner only) |
+| `=cog load` / `=cog reload` / `=cog unload` / `=cog list` | Manage cogs during development or maintenance (owner only) |
 
 ## Permissions and notes
 
 - Positivity Tuesday and the starboard require Manage Server permissions.
-- Warning commands require the ability to manage messages or otherwise fit the server’s moderation workflow.
+- Warning commands require moderation access that fits your server’s workflow.
 - Owner-only maintenance commands are available for bot upkeep and debugging.
+- The bot stores small pieces of state in `terrierbot.shelve` and reads the token from `token.txt` or `DISCORD_TOKEN` when it starts.
+
+## Troubleshooting
+
+- If the bot does not start, confirm that your token is present and that the file is readable.
+- If slash commands do not appear, run `=sync` while the bot is connected to the server.
+- If a feature does not work as expected, verify that the bot has the required permissions in the relevant channel or server.
+- If you are developing or reloading cogs, use the owner-only cog commands to test changes without restarting the whole bot.
 
 ## Project layout
 
