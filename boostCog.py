@@ -45,3 +45,4 @@ class BoostCog(commands.Cog, name="Boost", description="Server boost rewards and
     @app_commands.command(name="boost", description="See what perks you get for boosting the server!")
     async def boost_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message(self.BOOST_TEXT)
+
