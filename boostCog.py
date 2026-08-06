@@ -64,3 +64,6 @@ Support the server by boosting it and become a member of the **Board of Trustees
     )
     async def boost_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message(self.BOOST_TEXT)
+
+
+        
