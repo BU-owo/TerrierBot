@@ -72,7 +72,7 @@ source venv/bin/activate
 python bot.py
 ```
 
-If you want slash commands to appear in a guild, an owner can run `=sync` once the bot is connected to that server.
+Slash commands now sync automatically on startup for joined guilds. If needed, an owner can still run `=sync` as a manual fallback.
 
 ## Command reference
 
@@ -134,7 +134,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 ## Troubleshooting
 
 - If the bot does not start, confirm that your token is present and that the file is readable.
-- If slash commands do not appear, run `=sync` while the bot is connected to the server.
+- If slash commands do not appear after a restart, run `=sync` while the bot is connected to the server.
 - If a feature does not work as expected, verify that the bot has the required permissions in the relevant channel or server.
 - If you are developing or reloading cogs, use the owner-only cog commands to test changes without restarting the whole bot.
 

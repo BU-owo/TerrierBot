@@ -24,9 +24,33 @@ class TerrierBot(commands.Bot):
 
         self.prefixes : dict[int, str] = {}
         self._first_ready : bool = True
+        self._did_startup_sync : bool = False
         with shelve.open("terrierbot.shelve") as sh:
             if "prefixes" in sh:
                 self.prefixes = sh["prefixes"]
+
+    async def _sync_app_commands_to_joined_guilds(self) -> None:
+        """Copy global app commands into each joined guild for fast availability."""
+        total_synced = 0
+        for guild in self.guilds:
+            try:
+                self.tree.copy_global_to(guild=guild)
+                synced = await self.tree.sync(guild=guild)
+                total_synced += len(synced)
+                logging.info(
+                    "Synced %d app command(s) to guild %s (%d)",
+                    len(synced),
+                    guild.name,
+                    guild.id,
+                )
+            except Exception:
+                logging.exception(
+                    "Failed to sync app commands for guild %s (%d)",
+                    guild.name,
+                    guild.id,
+                )
+
+        logging.info("Startup app command sync complete across %d guild(s), %d command(s) synced.", len(self.guilds), total_synced)
 
     async def on_ready(self):
         # We know this to be true and this satisfies the type checker
@@ -36,6 +60,11 @@ class TerrierBot(commands.Bot):
         logging.info(self.user.name)
         logging.info(self.user.id)
         logging.info('------')
+
+        # One-time startup sync so slash commands are available without manual =sync.
+        if not self._did_startup_sync:
+            self._did_startup_sync = True
+            await self._sync_app_commands_to_joined_guilds()
 
         if self._first_ready:
             self._first_ready = False
