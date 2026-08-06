@@ -1,48 +1,66 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+
 from bot import TerrierBot, Context
 
-async def setup(bot : TerrierBot):
+
+async def setup(bot: TerrierBot):
     await bot.add_cog(BoostCog(bot))
 
-class BoostCog(commands.Cog, name="Boost", description="Server boost rewards and announcements."):
-    def __init__(self, bot : TerrierBot):
-        self.bot : TerrierBot = bot
-        print("Boost Cog Ready")        
+
+class BoostCog(
+    commands.Cog,
+    name="Boost",
+    description="Board of Trustees perks and server boost announcements.",
+):
+    def __init__(self, bot: TerrierBot):
+        self.bot: TerrierBot = bot
+        print("Boost Cog Ready")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author == self.bot.user:
             return
-        # you can do stuff here when someone sends a message
+
         if message.type == discord.MessageType.premium_guild_subscription:
             await message.channel.send(
-                f"""🎉 **Thank you for boosting, {message.author.mention}!**
+                f"""🎉 **Congratulations, {message.author.mention}!**
 
-            **Booster perks:**
-            • Custom name color (holographic, solid, or gradient)  
-            • Custom PNG or emoji next to your name (rule-compliant)  
-            • One server emote added (rule-compliant)
+You have officially joined the **Board of Trustees** by boosting the server.
 
-            *Message a mod to claim your rewards!*
-            """
+**Board of Trustees Benefits:**
+
+• Custom name color (holographic, solid, or gradient)  
+• Custom PNG or emoji next to your name (rule-compliant)  
+• One custom server emote added (rule-compliant)
+
+*Please message a moderator to claim your trustee benefits. Thank you for supporting the server!*
+"""
             )
 
-    BOOST_TEXT = """# **Why should I boost? Booster Perks!**
+    BOOST_TEXT = """# **Join the Board of Trustees**
+
+Support the server by boosting it and become a member of the **Board of Trustees**.
+
+**Trustee Benefits:**
 
 • Custom name color (holographic, solid, or gradient)
-• Custom PNG or emoji next to your name (rule-compliant)
-• One server emote added (rule-compliant)
 
-*Boost the server and message a mod to get your customizations! Thank you!!!!*"""
+• Custom PNG or emoji next to your name (rule-compliant)
+
+• One custom server emote added (rule-compliant)
+
+*Boost the server and message a moderator to claim your trustee benefits. Thank you for your support!*"""
 
     @commands.command()
     async def boost(self, ctx: Context):
-        """See what perks you get for boosting the server!"""
+        """See the perks of joining the Board of Trustees!"""
         _ = await ctx.send(self.BOOST_TEXT)
 
-    @app_commands.command(name="boost", description="See what perks you get for boosting the server!")
+    @app_commands.command(
+        name="boost",
+        description="See the perks of joining the Board of Trustees!",
+    )
     async def boost_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message(self.BOOST_TEXT)
-
