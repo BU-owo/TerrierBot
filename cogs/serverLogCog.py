@@ -24,6 +24,29 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
         except discord.HTTPException:
             pass
 
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        before_ids = {role.id for role in before.roles}
+        after_ids = {role.id for role in after.roles}
+        added_roles = [role for role in after.roles if role.id not in before_ids and role.name != "@everyone"]
+        removed_roles = [role for role in before.roles if role.id not in after_ids and role.name != "@everyone"]
+        if not added_roles and not removed_roles:
+            return
+
+        lines: list[str] = []
+        if added_roles:
+            lines.append("**Added:** " + ", ".join(role.mention for role in added_roles))
+        if removed_roles:
+            lines.append("**Removed:** " + ", ".join(role.mention for role in removed_roles))
+
+        embed = discord.Embed(
+            title="🎭 Member roles updated",
+            description=f"{after.mention} (`{after.id}`)\n" + "\n".join(lines),
+            color=LogColors.SERVER,
+            timestamp=discord.utils.utcnow(),
+        )
+        await self._send(embed)
+
     # ── Channels ──────────────────────────────────────────────────────────────
 
     @commands.Cog.listener()
