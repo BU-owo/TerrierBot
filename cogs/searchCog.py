@@ -12,7 +12,7 @@ from bot import TerrierBot, Context
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-CSV_PATH = os.path.join(os.path.dirname(__file__), "bu_courses_all.csv")
+CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "bu_courses_all.csv")
 
 PAGE_SIZE = 25      # Discord select max options
 

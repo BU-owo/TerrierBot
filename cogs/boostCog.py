@@ -40,17 +40,11 @@ You have officially joined the **Board of Trustees** by boosting the server.
             )
 
     BOOST_TEXT = """# **Join the Board of Trustees**
-
 Support the server by boosting it and become a member of the **Board of Trustees**.
-
 **Trustee Benefits:**
-
 • Custom name color (holographic, solid, or gradient)
-
 • Custom PNG or emoji next to your name (rule-compliant)
-
 • One custom server emote added (rule-compliant)
-
 *Boost the server and message a moderator to claim your trustee benefits. Thank you for your support!*"""
 
     @commands.command()

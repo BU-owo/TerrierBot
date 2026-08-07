@@ -308,28 +308,31 @@ async def cog(ctx : Context):
 @cog.command(name="load")
 async def loadCog(ctx : Context, cogName : str):
     """Load a cog by name, like: =cog load members."""
-    await bot.load_extension(cogName if cogName.endswith("Cog") else cogName + "Cog")
+    full = (cogName if cogName.endswith("Cog") else cogName + "Cog")
+    await bot.load_extension("cogs." + full)
     logging.info("Loaded Cog \"{}\"".format(cogName))
     _ = await ctx.send("Loaded Cog \"{}\"".format(cogName))
 
 @cog.command(name="unload")
 async def unloadCog(ctx : Context, cogName : str):
     """Unload a cog by name, like: =cog unload members."""
-    await bot.unload_extension(cogName if cogName.endswith("Cog") else cogName + "Cog")
+    full = (cogName if cogName.endswith("Cog") else cogName + "Cog")
+    await bot.unload_extension("cogs." + full)
     logging.info("Unloaded Cog \"{}\"".format(cogName))
     _ = await ctx.send("Unloaded Cog \"{}\"".format(cogName))
 
 @cog.command(name="reload")
 async def reloadCog(ctx : Context, cogName : str):
     """Reload a cog by name, like: =cog reload members."""
-    await bot.reload_extension(cogName if cogName.endswith("Cog") else cogName + "Cog")
+    full = (cogName if cogName.endswith("Cog") else cogName + "Cog")
+    await bot.reload_extension("cogs." + full)
     logging.info("Reloaded Cog \"{}\"".format(cogName))
     _ = await ctx.send("Reloaded Cog \"{}\"".format(cogName))
 
 @cog.command(name="list")
 async def listCogs(ctx : Context):
     """Show loaded and unloaded cogs."""
-    loadedCogs = list(map(lambda x: x.split("Cog")[0], bot.extensions.keys()))
+    loadedCogs = list(map(lambda x: x.removeprefix("cogs.").split("Cog")[0], bot.extensions.keys()))
     _ = await ctx.send(
         "**Loaded Cogs:**\n{}\n**Unloaded Cogs:**\n{}".format(
             "\n".join(loadedCogs), "\n".join([x for x in cogList if x not in loadedCogs])
@@ -354,7 +357,7 @@ def _get_token() -> str:
 async def main():
     async with bot:
         for cog in defaultCogs:
-            await bot.load_extension(cog + "Cog")
+            await bot.load_extension("cogs." + cog + "Cog")
         await bot.start(_get_token())
 
 def run_web_server(stop_event: threading.Event) -> None:

@@ -32,7 +32,7 @@ SCAMCATCHER_ROLE_ID = 1402095379935395934
 SPAM_CHANNEL_THRESHOLD = 3   # distinct channels within the window to trigger spam alert
 SPAM_WINDOW_SECONDS = 60     # rolling window for cross-channel spam detection
 
-_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 _HASHES_FILE = os.path.join(_DATA_DIR, "scam_hashes.json")
 
 

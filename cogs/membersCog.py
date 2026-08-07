@@ -18,7 +18,7 @@ class MembersCog(commands.Cog, name="Members", description="Member exports and m
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
         self.prune_role_id = 1474070492548956170
-        self.category_roles_csv_path = "Category Roles - Copy of Sheet1.csv"
+        self.category_roles_csv_path = "data/Category Roles - Copy of Sheet1.csv"
         print("Members Cog Ready")
 
     def _load_category_role_map(self) -> tuple[list[str], dict[str, set[str]]]:

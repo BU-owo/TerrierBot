@@ -10,7 +10,7 @@ from bot import TerrierBot, Context
 BANNER_CHANNELS = [1402962052812898404, 1403922809012355172]
 SHELVE_KEY = "banner_last_sent"
 INTERVAL_DAYS = 7
-SHELVE_PATH = str(Path(__file__).resolve().parent / "terrierbot.shelve")
+SHELVE_PATH = str(Path(__file__).resolve().parent.parent / "terrierbot.shelve")
 
 BANNER_MESSAGE = (
     "## **Your photo or gif can be our server banner!**\n"

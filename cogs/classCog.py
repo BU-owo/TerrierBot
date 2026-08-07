@@ -19,10 +19,10 @@ from bot import TerrierBot, Context
 
 _FALL_TERM = "2268"
 _CSV_PATHS = [
-    Path("BU_R0032B_SR_CLASS_SCHD_DOWNLD.csv"),
-    Path("Fall2026Courses.csv"),
+    Path("data/BU_R0032B_SR_CLASS_SCHD_DOWNLD.csv"),
+    Path("data/Fall2026Courses.csv"),
 ]
-_COURSE_INDEX_CSV_PATH = Path("bu_courses_all.csv")
+_COURSE_INDEX_CSV_PATH = Path("data/bu_courses_all.csv")
 
 # { (subject_area, catalog_nbr) : [raw CSV rows] }
 _fall_schedule: dict[tuple[str, str], list[dict[str, str]]] = {}
