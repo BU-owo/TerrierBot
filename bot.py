@@ -6,6 +6,7 @@ import threading
 import subprocess
 import sys
 import traceback
+from pathlib import Path
 from flask import Flask
 from werkzeug.serving import make_server
 import discord
@@ -19,6 +20,14 @@ from datetime import datetime, timedelta, timezone
 logging.basicConfig(level=logging.INFO)
 
 ERROR_CHANNEL_ID = 1441925119202164886
+STATUS_ROLE_ID = 1402095379935395934
+ALERT_COOLDOWN_SECONDS = 10 * 60
+STARTUP_FAILURE_WINDOW_SECONDS = 5 * 60
+STARTUP_FAILURE_THRESHOLD = 5
+STARTUP_SUPPRESSION_CATEGORY_PREFIX = "startup"
+STARTUP_FAILURE_CATEGORIES = {"startup", "startup:cog_load"}
+SHELVE_FILE = "terrierbot.shelve"
+RECENT_ERROR_LIMIT = 15
 
 
 def _safe_read_token_file() -> str | None:
@@ -56,7 +65,13 @@ class TerrierBot(commands.Bot):
         self._first_ready : bool = True
         self._did_startup_sync : bool = False
         self._commit_hash: str = _get_git_commit_hash()
+        self._started_at: datetime = datetime.now(timezone.utc)
         self._pending_error_reports: list[str] = []
+        self._recent_errors: list[dict[str, str]] = []
+        self._alert_state: dict[str, dict[str, int]] = {}
+        self._startup_failure_timestamps: list[int] = []
+        self._startup_alerts_suppressed: bool = False
+        self._startup_loop_alert_sent: bool = False
         self._secrets_to_redact: set[str] = set()
         env_token = os.environ.get("DISCORD_TOKEN")
         if env_token:
@@ -64,9 +79,86 @@ class TerrierBot(commands.Bot):
         file_token = _safe_read_token_file()
         if file_token:
             self._secrets_to_redact.add(file_token)
-        with shelve.open("terrierbot.shelve") as sh:
+        with shelve.open(SHELVE_FILE) as sh:
             if "prefixes" in sh:
                 self.prefixes = sh["prefixes"]
+            self._alert_state = sh.get("error_alert_state", {})
+            self._startup_failure_timestamps = sh.get("startup_failure_timestamps", [])
+            self._startup_alerts_suppressed = sh.get("startup_alerts_suppressed", False)
+            self._startup_loop_alert_sent = sh.get("startup_loop_alert_sent", False)
+
+    def _save_monitoring_state(self) -> None:
+        with shelve.open(SHELVE_FILE) as sh:
+            sh["error_alert_state"] = self._alert_state
+            sh["startup_failure_timestamps"] = self._startup_failure_timestamps
+            sh["startup_alerts_suppressed"] = self._startup_alerts_suppressed
+            sh["startup_loop_alert_sent"] = self._startup_loop_alert_sent
+
+    def _error_signature(self, *, category: str, affected: str, error: BaseException) -> str:
+        exc_name = type(error).__name__
+        exc_msg = self._redact_secrets(str(error))
+        tb = traceback.extract_tb(error.__traceback__)
+        if tb:
+            last = tb[-1]
+            location = f"{Path(last.filename).name}:{last.lineno}:{last.name}"
+        else:
+            location = "unknown"
+        return f"{category}|{affected}|{exc_name}|{exc_msg}|{location}"
+
+    def _now_ts(self) -> int:
+        return int(datetime.now(timezone.utc).timestamp())
+
+    def _prune_startup_failures(self, now_ts: int) -> None:
+        cutoff = now_ts - STARTUP_FAILURE_WINDOW_SECONDS
+        self._startup_failure_timestamps = [ts for ts in self._startup_failure_timestamps if ts >= cutoff]
+
+    def _register_startup_failure(self) -> tuple[bool, int]:
+        now_ts = self._now_ts()
+        self._prune_startup_failures(now_ts)
+        self._startup_failure_timestamps.append(now_ts)
+
+        if len(self._startup_failure_timestamps) > STARTUP_FAILURE_THRESHOLD:
+            self._startup_alerts_suppressed = True
+
+        should_send_loop_alert = self._startup_alerts_suppressed and not self._startup_loop_alert_sent
+        if should_send_loop_alert:
+            self._startup_loop_alert_sent = True
+
+        self._save_monitoring_state()
+        return should_send_loop_alert, len(self._startup_failure_timestamps)
+
+    def _resolve_startup_loop_if_needed(self) -> bool:
+        if not self._startup_alerts_suppressed and not self._startup_failure_timestamps:
+            return False
+
+        self._startup_failure_timestamps = []
+        self._startup_alerts_suppressed = False
+        self._startup_loop_alert_sent = False
+        self._save_monitoring_state()
+        return True
+
+    def _record_recent_error(self, *, category: str, affected: str, error: BaseException) -> None:
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "category": category,
+            "affected": affected,
+            "error": self._redact_secrets(f"{type(error).__name__}: {error}"),
+        }
+        self._recent_errors.append(entry)
+        if len(self._recent_errors) > RECENT_ERROR_LIMIT:
+            self._recent_errors = self._recent_errors[-RECENT_ERROR_LIMIT:]
+
+    def _uptime_string(self) -> str:
+        delta = datetime.now(timezone.utc) - self._started_at
+        total = int(delta.total_seconds())
+        days, rem = divmod(total, 86400)
+        hours, rem = divmod(rem, 3600)
+        mins, secs = divmod(rem, 60)
+        if days:
+            return f"{days}d {hours}h {mins}m {secs}s"
+        if hours:
+            return f"{hours}h {mins}m {secs}s"
+        return f"{mins}m {secs}s"
 
     def _redact_secrets(self, text: str) -> str:
         redacted = text
@@ -77,19 +169,34 @@ class TerrierBot(commands.Bot):
         redacted = re.sub(r"[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{20,}", "[REDACTED]", redacted)
         return redacted
 
-    def _build_error_report(self, *, category: str, affected: str, error: BaseException, tb_text: str) -> str:
+    def _build_error_report(
+        self,
+        *,
+        category: str,
+        affected: str,
+        error: BaseException,
+        tb_text: str,
+        repeat_count: int,
+        high_priority: bool,
+    ) -> str:
         timestamp = datetime.now(timezone.utc).isoformat()
         safe_error = self._redact_secrets(f"{type(error).__name__}: {error}")
         safe_tb = self._redact_secrets(tb_text)
         if len(safe_tb) > 1400:
             safe_tb = safe_tb[:1400] + "\n... <traceback truncated>"
 
+        priority_label = "HIGH PRIORITY" if high_priority else "Error"
+        repeat_line = ""
+        if repeat_count > 1:
+            repeat_line = f"TerrierBot has crashed {repeat_count} times with this same error since the last alert.\n"
+
         return (
-            "🚨 TerrierBot Error\n"
+            f"🚨 TerrierBot {priority_label}\n"
             f"Timestamp (UTC): {timestamp}\n"
             f"Category: {category}\n"
             f"Affected: {affected}\n"
             f"Git commit: {self._commit_hash}\n"
+            f"{repeat_line}"
             f"Error: {safe_error}\n"
             f"Traceback:\n```py\n{safe_tb}\n```"
         )
@@ -113,9 +220,73 @@ class TerrierBot(commands.Bot):
             self._pending_error_reports.append(original_report)
 
     async def report_exception(self, *, category: str, affected: str, error: BaseException) -> None:
+        now_ts = self._now_ts()
+        self._record_recent_error(category=category, affected=affected, error=error)
+        logging.error(
+            "%s | %s | %s",
+            category,
+            affected,
+            self._redact_secrets(str(error)),
+            exc_info=(type(error), error, error.__traceback__),
+        )
+        if category in STARTUP_FAILURE_CATEGORIES:
+            send_loop_alert, fail_count = self._register_startup_failure()
+            if self._startup_alerts_suppressed and not send_loop_alert:
+                logging.warning(
+                    "Suppressed startup alert due to crash loop mode (%d startup failures in %d seconds)",
+                    fail_count,
+                    STARTUP_FAILURE_WINDOW_SECONDS,
+                )
+                return
+
+            if send_loop_alert:
+                loop_error = RuntimeError(
+                    f"TerrierBot failed to start more than {STARTUP_FAILURE_THRESHOLD} times within 5 minutes. "
+                    "Normal crash alerts are now suppressed until startup succeeds."
+                )
+                loop_tb = "Startup crash loop detector triggered."
+                loop_report = self._build_error_report(
+                    category="startup:crash_loop",
+                    affected=affected,
+                    error=loop_error,
+                    tb_text=loop_tb,
+                    repeat_count=fail_count,
+                    high_priority=True,
+                )
+                logging.critical("Startup crash loop detected: %d failures in window", fail_count)
+                await self._deliver_error_report(loop_report)
+                return
+
+        if self._startup_alerts_suppressed and category != "startup:resolved":
+            logging.warning("Suppressed alert during startup crash loop: %s | %s", category, affected)
+            return
+
+        signature = self._error_signature(category=category, affected=affected, error=error)
+        state = self._alert_state.get(signature, {"last_alert_ts": 0, "suppressed_count": 0})
+        last_alert_ts = int(state.get("last_alert_ts", 0))
+        suppressed_count = int(state.get("suppressed_count", 0))
+
+        if last_alert_ts and (now_ts - last_alert_ts) < ALERT_COOLDOWN_SECONDS:
+            state["suppressed_count"] = suppressed_count + 1
+            self._alert_state[signature] = state
+            self._save_monitoring_state()
+            logging.info("Alert cooldown active for signature; notification suppressed")
+            return
+
+        repeat_count = suppressed_count + 1 if last_alert_ts else 1
         tb_text = "".join(traceback.format_exception(type(error), error, error.__traceback__))
-        report = self._build_error_report(category=category, affected=affected, error=error, tb_text=tb_text)
-        logging.error("%s | %s | %s", category, affected, self._redact_secrets(str(error)))
+        report = self._build_error_report(
+            category=category,
+            affected=affected,
+            error=error,
+            tb_text=tb_text,
+            repeat_count=repeat_count,
+            high_priority=False,
+        )
+        state["last_alert_ts"] = now_ts
+        state["suppressed_count"] = 0
+        self._alert_state[signature] = state
+        self._save_monitoring_state()
         await self._deliver_error_report(report)
 
     async def _load_default_cogs(self) -> None:
@@ -174,6 +345,18 @@ class TerrierBot(commands.Bot):
     async def on_ready(self):
         # We know this to be true and this satisfies the type checker
         assert self.user is not None
+
+        if self._resolve_startup_loop_if_needed():
+            resolved_error = RuntimeError("Startup recovered; normal crash notifications resumed.")
+            resolved_report = self._build_error_report(
+                category="startup:resolved",
+                affected="bot_ready",
+                error=resolved_error,
+                tb_text="Startup completed and on_ready executed successfully.",
+                repeat_count=1,
+                high_priority=True,
+            )
+            await self._deliver_error_report(resolved_report)
 
         logging.info('Logged in as')
         logging.info(self.user.name)
@@ -317,6 +500,45 @@ async def on_app_command_error(
             await interaction.response.send_message(msg, ephemeral=True)
     except Exception:
         pass
+
+
+@bot.tree.command(name="status", description="Show TerrierBot runtime status.")
+async def status_command(interaction: discord.Interaction) -> None:
+    if not isinstance(interaction.user, discord.Member):
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        return
+
+    has_status_role = any(role.id == STATUS_ROLE_ID for role in interaction.user.roles)
+    if not has_status_role:
+        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)
+        return
+
+    loaded = sorted(name.removeprefix("cogs.").removesuffix("Cog") for name in bot.extensions.keys())
+    loaded_display = ", ".join(loaded) if loaded else "none"
+
+    recent_errors = bot._recent_errors[-5:]
+    if recent_errors:
+        recent_lines = [
+            f"[{entry['timestamp']}] {entry['category']} ({entry['affected']}): {entry['error']}"
+            for entry in reversed(recent_errors)
+        ]
+        recent_display = "\n".join(recent_lines)
+    else:
+        recent_display = "No recent errors in this runtime."
+
+    embed = discord.Embed(
+        title="TerrierBot Status",
+        color=discord.Color.blurple(),
+        timestamp=datetime.now(timezone.utc),
+    )
+    embed.add_field(name="Uptime", value=bot._uptime_string(), inline=False)
+    embed.add_field(name="Git Commit", value=bot._commit_hash, inline=True)
+    embed.add_field(name="Python", value=sys.version.split()[0], inline=True)
+    embed.add_field(name="Last Restart (UTC)", value=bot._started_at.isoformat(timespec="seconds"), inline=False)
+    embed.add_field(name="Loaded Cogs", value=loaded_display[:1024], inline=False)
+    embed.add_field(name="Recent Errors", value=(recent_display[:1021] + "...") if len(recent_display) > 1024 else recent_display, inline=False)
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 #============================================
