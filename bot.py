@@ -294,6 +294,7 @@ async def delete(ctx : Context):
 
 SENDABLE_CHANNEL = (discord.TextChannel, discord.VoiceChannel, discord.StageChannel, discord.Thread, discord.GroupChannel, discord.DMChannel)
 
+
 #============================================
 #Cog Management
 #============================================
