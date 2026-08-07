@@ -1,7 +1,11 @@
 from __future__ import annotations
 from typing import Any, Callable, override
 import os
+import re
 import threading
+import subprocess
+import sys
+import traceback
 from flask import Flask
 from werkzeug.serving import make_server
 import discord
@@ -14,6 +18,32 @@ from datetime import datetime, timedelta, timezone
 
 logging.basicConfig(level=logging.INFO)
 
+ERROR_CHANNEL_ID = 1441925119202164886
+
+
+def _safe_read_token_file() -> str | None:
+    try:
+        with open("token.txt") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def _get_git_commit_hash() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return "unknown"
+
+    if result.returncode != 0:
+        return "unknown"
+    return result.stdout.strip() or "unknown"
+
 
 type Context = commands.Context[TerrierBot]
 
@@ -25,9 +55,93 @@ class TerrierBot(commands.Bot):
         self.prefixes : dict[int, str] = {}
         self._first_ready : bool = True
         self._did_startup_sync : bool = False
+        self._commit_hash: str = _get_git_commit_hash()
+        self._pending_error_reports: list[str] = []
+        self._secrets_to_redact: set[str] = set()
+        env_token = os.environ.get("DISCORD_TOKEN")
+        if env_token:
+            self._secrets_to_redact.add(env_token)
+        file_token = _safe_read_token_file()
+        if file_token:
+            self._secrets_to_redact.add(file_token)
         with shelve.open("terrierbot.shelve") as sh:
             if "prefixes" in sh:
                 self.prefixes = sh["prefixes"]
+
+    def _redact_secrets(self, text: str) -> str:
+        redacted = text
+        for secret in self._secrets_to_redact:
+            redacted = redacted.replace(secret, "[REDACTED]")
+
+        redacted = re.sub(r"mfa\.[A-Za-z0-9_-]{20,}", "[REDACTED]", redacted)
+        redacted = re.sub(r"[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{20,}", "[REDACTED]", redacted)
+        return redacted
+
+    def _build_error_report(self, *, category: str, affected: str, error: BaseException, tb_text: str) -> str:
+        timestamp = datetime.now(timezone.utc).isoformat()
+        safe_error = self._redact_secrets(f"{type(error).__name__}: {error}")
+        safe_tb = self._redact_secrets(tb_text)
+        if len(safe_tb) > 1400:
+            safe_tb = safe_tb[:1400] + "\n... <traceback truncated>"
+
+        return (
+            "🚨 TerrierBot Error\n"
+            f"Timestamp (UTC): {timestamp}\n"
+            f"Category: {category}\n"
+            f"Affected: {affected}\n"
+            f"Git commit: {self._commit_hash}\n"
+            f"Error: {safe_error}\n"
+            f"Traceback:\n```py\n{safe_tb}\n```"
+        )
+
+    async def _deliver_error_report(self, report: str) -> None:
+        original_report = report
+        try:
+            channel = self.get_channel(ERROR_CHANNEL_ID)
+            if channel is None:
+                channel = await self.fetch_channel(ERROR_CHANNEL_ID)
+
+            if not hasattr(channel, "send"):
+                raise TypeError(f"Channel {ERROR_CHANNEL_ID} is not sendable")
+
+            while report:
+                chunk = report[:1900]
+                report = report[1900:]
+                await channel.send(chunk)
+        except Exception:
+            logging.exception("Failed to send error report to Discord")
+            self._pending_error_reports.append(original_report)
+
+    async def report_exception(self, *, category: str, affected: str, error: BaseException) -> None:
+        tb_text = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+        report = self._build_error_report(category=category, affected=affected, error=error, tb_text=tb_text)
+        logging.error("%s | %s | %s", category, affected, self._redact_secrets(str(error)))
+        await self._deliver_error_report(report)
+
+    async def _load_default_cogs(self) -> None:
+        for cog in defaultCogs:
+            module_name = "cogs." + cog + "Cog"
+            try:
+                await self.load_extension(module_name)
+            except Exception as exc:
+                await self.report_exception(category="startup:cog_load", affected=module_name, error=exc)
+                raise
+
+    @override
+    async def setup_hook(self) -> None:
+        await self._load_default_cogs()
+
+    @override
+    async def on_error(self, event_method: str, *args: object, **kwargs: object) -> None:
+        _ = args
+        _ = kwargs
+        _exc_type, exc, _tb = sys.exc_info()
+        _ = _exc_type
+        _ = _tb
+        if exc is None:
+            logging.error("Unhandled event error in %s with no active exception", event_method)
+            return
+        await self.report_exception(category="event", affected=event_method, error=exc)
 
     async def _sync_app_commands_to_joined_guilds(self) -> None:
         """Copy global app commands into each joined guild for fast availability."""
@@ -43,11 +157,16 @@ class TerrierBot(commands.Bot):
                     guild.name,
                     guild.id,
                 )
-            except Exception:
+            except Exception as exc:
                 logging.exception(
                     "Failed to sync app commands for guild %s (%d)",
                     guild.name,
                     guild.id,
+                )
+                await self.report_exception(
+                    category="startup:command_sync",
+                    affected=f"guild:{guild.id}",
+                    error=exc,
                 )
 
         logging.info("Startup app command sync complete across %d guild(s), %d command(s) synced.", len(self.guilds), total_synced)
@@ -77,6 +196,12 @@ class TerrierBot(commands.Bot):
                     if isinstance(channel, discord.TextChannel):
                         await channel.send("Hello, I have restarted and am ready to help! 🐾")
 
+        if self._pending_error_reports:
+            pending = list(self._pending_error_reports)
+            self._pending_error_reports.clear()
+            for report in pending:
+                await self._deliver_error_report(report)
+
 
 
     #============================================
@@ -102,6 +227,7 @@ class TerrierBot(commands.Bot):
             _ = await ctx.send("Too many people running this command at a time")
             return
         if isinstance(error, commands.CommandInvokeError):
+            await self.report_exception(category="command", affected=ctx.command.qualified_name if ctx.command else "unknown", error=error.original)
             _ = await ctx.send(f"{type(error.original).__name__}: {error.original}")
             return
         if isinstance(error, commands.NotOwner):
@@ -133,6 +259,7 @@ class TerrierBot(commands.Bot):
             else:
                 location = ""
             logging.error(f"{type(error).__name__}: {error} on command \"{ctx.message.content}\" from \"{ctx.author.display_name}\" {location}")
+        await self.report_exception(category="command", affected=ctx.command.qualified_name if ctx.command else "unknown", error=error)
         _ = await ctx.send(f"Error - {type(error).__name__}: {error}")
 
 
@@ -177,6 +304,12 @@ async def on_app_command_error(
         else str(error)
     )
     logging.error("App command error: %s", error)
+    underlying_error: BaseException = error.original if isinstance(error, app_commands.CommandInvokeError) else error
+    await bot.report_exception(
+        category="app_command",
+        affected=interaction.command.qualified_name if interaction.command else "unknown",
+        error=underlying_error,
+    )
     try:
         if interaction.response.is_done():
             await interaction.followup.send(msg, ephemeral=True)
@@ -310,7 +443,12 @@ async def cog(ctx : Context):
 async def loadCog(ctx : Context, cogName : str):
     """Load a cog by name, like: =cog load members."""
     full = (cogName if cogName.endswith("Cog") else cogName + "Cog")
-    await bot.load_extension("cogs." + full)
+    module_name = "cogs." + full
+    try:
+        await bot.load_extension(module_name)
+    except Exception as exc:
+        await bot.report_exception(category="cog_load", affected=module_name, error=exc)
+        raise
     logging.info("Loaded Cog \"{}\"".format(cogName))
     _ = await ctx.send("Loaded Cog \"{}\"".format(cogName))
 
@@ -318,7 +456,12 @@ async def loadCog(ctx : Context, cogName : str):
 async def unloadCog(ctx : Context, cogName : str):
     """Unload a cog by name, like: =cog unload members."""
     full = (cogName if cogName.endswith("Cog") else cogName + "Cog")
-    await bot.unload_extension("cogs." + full)
+    module_name = "cogs." + full
+    try:
+        await bot.unload_extension(module_name)
+    except Exception as exc:
+        await bot.report_exception(category="cog_unload", affected=module_name, error=exc)
+        raise
     logging.info("Unloaded Cog \"{}\"".format(cogName))
     _ = await ctx.send("Unloaded Cog \"{}\"".format(cogName))
 
@@ -326,7 +469,12 @@ async def unloadCog(ctx : Context, cogName : str):
 async def reloadCog(ctx : Context, cogName : str):
     """Reload a cog by name, like: =cog reload members."""
     full = (cogName if cogName.endswith("Cog") else cogName + "Cog")
-    await bot.reload_extension("cogs." + full)
+    module_name = "cogs." + full
+    try:
+        await bot.reload_extension(module_name)
+    except Exception as exc:
+        await bot.report_exception(category="cog_reload", affected=module_name, error=exc)
+        raise
     logging.info("Reloaded Cog \"{}\"".format(cogName))
     _ = await ctx.send("Reloaded Cog \"{}\"".format(cogName))
 
@@ -357,8 +505,6 @@ def _get_token() -> str:
 
 async def main():
     async with bot:
-        for cog in defaultCogs:
-            await bot.load_extension("cogs." + cog + "Cog")
         await bot.start(_get_token())
 
 def run_web_server(stop_event: threading.Event) -> None:
@@ -377,14 +523,48 @@ def run_web_server(stop_event: threading.Event) -> None:
 
 
 async def run_services() -> None:
+    loop = asyncio.get_running_loop()
+
+    def _loop_exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str, object]) -> None:
+        err = context.get("exception")
+        if isinstance(err, BaseException):
+            loop.create_task(bot.report_exception(category="asyncio", affected="event_loop", error=err))
+            return
+
+        msg = str(context.get("message", "Unknown asyncio exception"))
+        loop.create_task(
+            bot.report_exception(
+                category="asyncio",
+                affected="event_loop",
+                error=RuntimeError(msg),
+            )
+        )
+
+    loop.set_exception_handler(_loop_exception_handler)
+
     stop_event = threading.Event()
     web_task = asyncio.create_task(asyncio.to_thread(run_web_server, stop_event))
     try:
         await main()
+    except Exception as exc:
+        await bot.report_exception(category="startup", affected="run_services", error=exc)
+        raise
     finally:
         stop_event.set()
         await web_task
 
 
 if __name__ == "__main__":
+    def _global_excepthook(exc_type: type[BaseException], exc_value: BaseException, exc_tb: object) -> None:
+        logging.critical("Uncaught top-level exception", exc_info=(exc_type, exc_value, exc_tb))
+
+    def _thread_excepthook(args: threading.ExceptHookArgs) -> None:
+        logging.critical(
+            "Uncaught thread exception in %s",
+            args.thread.name if args.thread else "unknown",
+            exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+        )
+
+    sys.excepthook = _global_excepthook
+    threading.excepthook = _thread_excepthook
     asyncio.run(run_services())
