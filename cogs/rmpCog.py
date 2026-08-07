@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import TerrierBot, Context
-from classCog import _parse_course_query
+from .classCog import _parse_course_query
 
 RMP_GRAPHQL_URL = "https://www.ratemyprofessors.com/graphql"
 BU_DISPLAY_NAME = "Boston University"
