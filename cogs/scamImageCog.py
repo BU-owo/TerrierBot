@@ -10,6 +10,8 @@ from discord.ext import commands
 from PIL import Image
 import imagehash
 
+from logConfig import LogChannels, suppress_message_log
+
 log = logging.getLogger(__name__)
 
 # Fallback constant — only used for one-time migration if data/scam_hashes.json is absent.
@@ -26,7 +28,7 @@ KNOWN_SCAM_HASHES = [
 HASH_THRESHOLD = 10
 
 TIMEOUT_MINUTES = 60
-MOD_LOG_CHANNEL_ID = 1441888579147141170  # #message-logs — all scam alerts and confirmation prompts
+MOD_LOG_CHANNEL_ID = LogChannels.MOD
 SCAMCATCHER_ROLE_ID = 1402095379935395934
 
 SPAM_CHANNEL_THRESHOLD = 3   # distinct channels within the window to trigger spam alert
@@ -190,6 +192,7 @@ class ScamImageCog(commands.Cog):
 
     async def _handle_scam(self, message: discord.Message):
         try:
+            suppress_message_log(message.id)
             await message.delete()
         except discord.HTTPException:
             pass
@@ -353,6 +356,7 @@ class ScamImageCog(commands.Cog):
                             pass
 
                     try:
+                        suppress_message_log(msg.id)
                         await msg.delete()
                         deleted_in_channel += 1
                     except (discord.HTTPException, discord.Forbidden):
