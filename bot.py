@@ -7,7 +7,7 @@ import subprocess
 import sys
 import traceback
 from pathlib import Path
-from flask import Flask
+from flask import Flask, jsonify
 from werkzeug.serving import make_server
 import discord
 from discord import app_commands
@@ -734,7 +734,8 @@ def run_web_server(stop_event: threading.Event) -> None:
 
     @app.route("/")
     def index():
-        return "OK", 200
+        ready = bot.is_ready()
+        return jsonify(latency=bot.latency), (200 if ready else 503)
 
     port = int(os.environ.get("PORT", 8080))
     server = make_server("0.0.0.0", port, app)
