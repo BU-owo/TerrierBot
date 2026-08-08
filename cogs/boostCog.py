@@ -4,6 +4,7 @@ from discord.ext import commands
 from bot import TerrierBot, Context
 
 
+
 async def setup(bot: TerrierBot):
     await bot.add_cog(BoostCog(bot))
 
