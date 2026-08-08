@@ -10,7 +10,7 @@ from discord.ext import commands
 from PIL import Image
 import imagehash
 
-from logConfig import LogChannels, suppress_message_log
+from .logConfig import LogChannels, suppress_message_log
 
 log = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from logConfig import LogChannels, LogColors, get_log_channel
+from .logConfig import LogChannels, LogColors, get_log_channel
 
 
 async def setup(bot: TerrierBot):
