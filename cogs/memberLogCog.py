@@ -43,6 +43,8 @@ class MemberLogCog(commands.Cog, name="MemberLog", description="Logs nickname, u
     async def on_user_update(self, before: discord.User, after: discord.User):
         # on_user_update fires globally (not guild-scoped) — only log for
         # guilds this bot actually shares with the user.
+        if after.bot:
+            return
         if before.name == after.name and before.display_avatar.key == after.display_avatar.key:
             return
 
@@ -67,9 +69,8 @@ class MemberLogCog(commands.Cog, name="MemberLog", description="Logs nickname, u
                 embed.add_field(name="Username after", value=after.name, inline=True)
 
             if before.display_avatar.key != after.display_avatar.key:
-                embed.set_thumbnail(url=before.display_avatar.url)
-                embed.set_image(url=after.display_avatar.url)
-                embed.add_field(name="Avatar", value="Changed — old (thumbnail) → new (below)", inline=False)
+                embed.set_thumbnail(url=before.display_avatar.with_size(128).url)
+                embed.set_image(url=after.display_avatar.with_size(128).url)
 
             try:
                 await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())

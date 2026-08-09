@@ -31,7 +31,7 @@ class JoinLeaveCog(commands.Cog, name="JoinLeave", description="Logs member join
         embed.add_field(name="User", value=f"{member.mention} ({member.id})", inline=False)
         embed.add_field(
             name="Account created",
-            value=f"<t:{int(member.created_at.timestamp())}:R>",
+            value=f"<t:{int(member.created_at.timestamp())}:F> (<t:{int(member.created_at.timestamp())}:R>)",
             inline=True,
         )
         if account_age.days < 7:

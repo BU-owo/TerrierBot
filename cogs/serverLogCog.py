@@ -42,10 +42,17 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
         embed = discord.Embed(
             title="🎭 Member roles updated",
             description=f"{after.mention} (`{after.id}`)\n" + "\n".join(lines),
-            color=LogColors.SERVER,
+            color=LogColors.MEMBER,
             timestamp=discord.utils.utcnow(),
         )
-        await self._send(embed)
+
+        channel = get_log_channel(self.bot, LogChannels.MEMBER)
+        if channel is None:
+            return
+        try:
+            await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            pass
 
     # ── Channels ──────────────────────────────────────────────────────────────
 
