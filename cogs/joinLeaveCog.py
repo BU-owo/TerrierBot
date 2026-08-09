@@ -22,21 +22,21 @@ class JoinLeaveCog(commands.Cog, name="JoinLeave", description="Logs member join
             return
 
         account_age = discord.utils.utcnow() - member.created_at
+        lines = [
+            f"{member.mention} (`{member.id}`)",
+            f"**Account created:** <t:{int(member.created_at.timestamp())}:F> (<t:{int(member.created_at.timestamp())}:R>)",
+            f"**Member count:** {member.guild.member_count}",
+        ]
+        if account_age.days < 7:
+            lines.append(f"⚠️ **New account:** {account_age.days} day(s) old")
+
         embed = discord.Embed(
             title="📥 Member joined",
+            description="\n".join(lines),
             color=LogColors.JOIN,
             timestamp=discord.utils.utcnow(),
         )
         embed.set_thumbnail(url=member.display_avatar.url)
-        embed.add_field(name="User", value=f"{member.mention} ({member.id})", inline=False)
-        embed.add_field(
-            name="Account created",
-            value=f"<t:{int(member.created_at.timestamp())}:F> (<t:{int(member.created_at.timestamp())}:R>)",
-            inline=True,
-        )
-        if account_age.days < 7:
-            embed.add_field(name="⚠️ New account", value=f"{account_age.days} day(s) old", inline=True)
-        embed.add_field(name="Member count", value=str(member.guild.member_count), inline=True)
 
         try:
             await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
@@ -49,27 +49,27 @@ class JoinLeaveCog(commands.Cog, name="JoinLeave", description="Logs member join
         if channel is None:
             return
 
-        embed = discord.Embed(
-            title="📤 Member left",
-            color=LogColors.LEAVE,
-            timestamp=discord.utils.utcnow(),
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.add_field(name="User", value=f"{member} ({member.id})", inline=False)
+        lines = [f"{member} (`{member.id}`)"]
 
         if member.joined_at is not None:
             time_in_server = discord.utils.utcnow() - member.joined_at
-            embed.add_field(name="Time in server", value=f"{time_in_server.days} day(s)", inline=True)
+            lines.append(f"**Time in server:** {time_in_server.days} day(s)")
 
         roles = [r.mention for r in member.roles if r.name != "@everyone"]
         if roles:
             joined_roles = ", ".join(roles)
-            embed.add_field(
-                name="Roles",
-                value=joined_roles if len(joined_roles) <= 1024 else f"{len(roles)} role(s)",
-                inline=False,
+            lines.append(
+                "**Roles:** " + (joined_roles if len(joined_roles) <= 1024 else f"{len(roles)} role(s)")
             )
-        embed.add_field(name="Member count", value=str(member.guild.member_count), inline=True)
+        lines.append(f"**Member count:** {member.guild.member_count}")
+
+        embed = discord.Embed(
+            title="📤 Member left",
+            description="\n".join(lines),
+            color=LogColors.LEAVE,
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
 
         try:
             await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())

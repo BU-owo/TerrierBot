@@ -28,25 +28,23 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
             # channel itself — skip to avoid a feedback loop.
             return
 
+        content = message.content or "*(no text content)*"
+        if len(content) > 900:
+            content = content[:897] + "..."
+
+        lines = [
+            f"{message.author.mention} (`{message.author.id}`) in {message.channel.mention}",
+            content,
+        ]
+        if message.attachments:
+            lines.append("**Attachments:** " + ", ".join(a.filename for a in message.attachments))
+
         embed = discord.Embed(
             title="🗑️ Message deleted",
+            description="\n".join(lines),
             color=LogColors.MESSAGE,
             timestamp=discord.utils.utcnow(),
         )
-        embed.add_field(name="Author", value=f"{message.author.mention} ({message.author.id})", inline=False)
-        embed.add_field(name="Channel", value=message.channel.mention, inline=True)
-
-        content = message.content or "*(no text content)*"
-        if len(content) > 1024:
-            content = content[:1021] + "..."
-        embed.add_field(name="Content", value=content, inline=False)
-
-        if message.attachments:
-            embed.add_field(
-                name="Attachments",
-                value="\n".join(a.filename for a in message.attachments),
-                inline=False,
-            )
 
         try:
             await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())

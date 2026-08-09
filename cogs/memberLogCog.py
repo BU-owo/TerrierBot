@@ -26,13 +26,15 @@ class MemberLogCog(commands.Cog, name="MemberLog", description="Logs nickname, u
 
         embed = discord.Embed(
             title="✏️ Nickname changed",
+            description=(
+                f"{after.mention} (`{after.id}`)\n"
+                f"**Before:** {before.nick or '*(none)*'}\n"
+                f"**After:** {after.nick or '*(none)*'}"
+            ),
             color=LogColors.MEMBER,
             timestamp=discord.utils.utcnow(),
         )
         embed.set_thumbnail(url=after.display_avatar.url)
-        embed.add_field(name="User", value=f"{after.mention} ({after.id})", inline=False)
-        embed.add_field(name="Before", value=before.nick or "*(none)*", inline=True)
-        embed.add_field(name="After", value=after.nick or "*(none)*", inline=True)
 
         try:
             await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
@@ -57,16 +59,18 @@ class MemberLogCog(commands.Cog, name="MemberLog", description="Logs nickname, u
             if channel is None:
                 continue
 
+            lines = [f"{after.mention} (`{after.id}`)"]
+            if before.name != after.name:
+                lines.append(f"**Username before:** {before.name}\n**Username after:** {after.name}")
+            if before.display_avatar.key != after.display_avatar.key:
+                lines.append("**Avatar changed** (old → new below)")
+
             embed = discord.Embed(
                 title="🪪 Username/avatar changed",
+                description="\n".join(lines),
                 color=LogColors.MEMBER,
                 timestamp=discord.utils.utcnow(),
             )
-            embed.add_field(name="User", value=f"{after.mention} ({after.id})", inline=False)
-
-            if before.name != after.name:
-                embed.add_field(name="Username before", value=before.name, inline=True)
-                embed.add_field(name="Username after", value=after.name, inline=True)
 
             if before.display_avatar.key != after.display_avatar.key:
                 embed.set_thumbnail(url=before.display_avatar.with_size(128).url)
