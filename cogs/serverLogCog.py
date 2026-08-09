@@ -78,11 +78,82 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
-        if before.name == after.name:
+        if before.name != after.name:
+            embed = discord.Embed(
+                title="✏️ Channel renamed",
+                description=f"{after.mention}\n**Before:** `{before.name}`\n**After:** `{after.name}`",
+                color=LogColors.SERVER,
+                timestamp=discord.utils.utcnow(),
+            )
+            await self._send(embed)
+
+        if before.overwrites != after.overwrites:
+            await self._log_permission_update(before, after)
+
+    @staticmethod
+    def _overwrite_key(target: discord.Role | discord.Member) -> tuple[str, int]:
+        return ("role", target.id) if isinstance(target, discord.Role) else ("member", target.id)
+
+    @staticmethod
+    def _fmt_perm_value(value: bool | None) -> str:
+        if value is True:
+            return "✅"
+        if value is False:
+            return "❌"
+        return "⬜"  # inherited/unset
+
+    def _fmt_overwrite(self, overwrite: discord.PermissionOverwrite) -> str:
+        parts = [f"`{perm}` {self._fmt_perm_value(value)}" for perm, value in overwrite if value is not None]
+        return ", ".join(parts) if parts else "*(no explicit perms)*"
+
+    def _fmt_overwrite_diff(
+        self, before_ow: discord.PermissionOverwrite, after_ow: discord.PermissionOverwrite
+    ) -> str:
+        before_vals = dict(before_ow)
+        after_vals = dict(after_ow)
+        changed = [
+            f"`{perm}` {self._fmt_perm_value(before_vals[perm])}→{self._fmt_perm_value(after_vals[perm])}"
+            for perm in before_vals
+            if before_vals[perm] != after_vals[perm]
+        ]
+        return ", ".join(changed)
+
+    async def _log_permission_update(
+        self, before: discord.abc.GuildChannel, after: discord.abc.GuildChannel
+    ) -> None:
+        before_map = {self._overwrite_key(t): (t, ow) for t, ow in before.overwrites.items()}
+        after_map = {self._overwrite_key(t): (t, ow) for t, ow in after.overwrites.items()}
+
+        lines: list[str] = []
+        for key in before_map.keys() | after_map.keys():
+            before_entry = before_map.get(key)
+            after_entry = after_map.get(key)
+
+            if before_entry is None and after_entry is not None:
+                target, ow = after_entry
+                lines.append(f"➕ **{target.mention}:** {self._fmt_overwrite(ow)}")
+            elif after_entry is None and before_entry is not None:
+                target, _ = before_entry
+                lines.append(f"➖ **{target.mention}:** overrides removed")
+            else:
+                target, before_ow = before_entry  # type: ignore[misc]
+                _, after_ow = after_entry  # type: ignore[misc]
+                if before_ow == after_ow:
+                    continue
+                diff = self._fmt_overwrite_diff(before_ow, after_ow)
+                if diff:
+                    lines.append(f"✏️ **{target.mention}:** {diff}")
+
+        if not lines:
             return
+
+        description = f"{after.mention}\n" + "\n".join(lines)
+        if len(description) > 4000:
+            description = description[:3997] + "..."
+
         embed = discord.Embed(
-            title="✏️ Channel renamed",
-            description=f"{after.mention}\n**Before:** `{before.name}`\n**After:** `{after.name}`",
+            title="🔒 Channel permissions updated",
+            description=description,
             color=LogColors.SERVER,
             timestamp=discord.utils.utcnow(),
         )
