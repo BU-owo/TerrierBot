@@ -13,8 +13,8 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 
-ENGAGE_SEARCH_URL = "https://terriercentral.bu.edu/api/discovery/search/organizations"
-ENGAGE_BASE_URL = "https://terriercentral.bu.edu"
+ENGAGE_SEARCH_URL = "https://bu.campuslabs.com/engage/api/discovery/search/organizations"
+ENGAGE_BASE_URL = "https://bu.campuslabs.com/engage"
 
 RESULTS_PER_PAGE = 20
 
