@@ -80,8 +80,8 @@ jobs:
             echo "Reloading $cog..."
             HTTP_CODE=$(curl -s -o /tmp/reload_resp.txt -w "%{http_code}" -X POST \
               -H "X-Reload-Secret: ${{ secrets.RELOAD_SECRET }}" \
-              "http://localhost:8080/reload/$cog")
-            cat /tmp/reload_resp.txt
+              "http://127.0.0.1:8080/reload/$cog" || echo "000")
+            cat /tmp/reload_resp.txt 2>/dev/null || true
             echo ""
             if [ "$HTTP_CODE" != "200" ]; then
               echo "Reload failed for $cog (HTTP $HTTP_CODE) — falling back to full restart"
