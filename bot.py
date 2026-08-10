@@ -725,17 +725,50 @@ def _get_token() -> str:
         return f.read().strip()
 
 
+def _get_reload_secret() -> str | None:
+    secret = os.environ.get("RELOAD_SECRET")
+    if secret:
+        return secret
+    try:
+        with open("reload_secret.txt") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
 async def main():
     async with bot:
         await bot.start(_get_token())
 
-def run_web_server(stop_event: threading.Event) -> None:
+def run_web_server(stop_event: threading.Event, bot_loop: asyncio.AbstractEventLoop) -> None:
     app = Flask(__name__)
+    reload_secret = _get_reload_secret()
 
     @app.route("/")
     def index():
         ready = bot.is_ready()
         return jsonify(latency=bot.latency), (200 if ready else 503)
+
+    @app.route("/reload/<cog_name>", methods=["POST"])
+    def reload_cog(cog_name: str):
+        from flask import request
+        if not reload_secret or request.headers.get("X-Reload-Secret") != reload_secret:
+            return "Unauthorized", 401
+
+        full = cog_name if cog_name.endswith("Cog") else cog_name + "Cog"
+        module_name = "cogs." + full
+        if module_name not in bot.extensions:
+            return f"Cog {module_name} not currently loaded", 404
+
+        future = asyncio.run_coroutine_threadsafe(bot.reload_extension(module_name), bot_loop)
+        try:
+            future.result(timeout=15)
+        except Exception as e:
+            logging.error(f"Reload of {module_name} failed: {e}")
+            return f"Reload failed: {e}", 500
+
+        logging.info(f"Hot-reloaded cog {module_name} via deploy webhook")
+        return f"Reloaded {module_name}", 200
 
     port = int(os.environ.get("PORT", 8080))
     server = make_server("0.0.0.0", port, app)
@@ -766,7 +799,7 @@ async def run_services() -> None:
     loop.set_exception_handler(_loop_exception_handler)
 
     stop_event = threading.Event()
-    web_task = asyncio.create_task(asyncio.to_thread(run_web_server, stop_event))
+    web_task = asyncio.create_task(asyncio.to_thread(run_web_server, stop_event, loop))
     try:
         await main()
     except Exception as exc:
