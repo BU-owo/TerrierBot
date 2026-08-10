@@ -29,3 +29,5 @@ class HelloCog(commands.Cog, name="Hello", description="Greeting commands."):
         await interaction.response.send_message(f"Hello {interaction.user.display_name}! I am TerrierBot!")
 
 
+
+
