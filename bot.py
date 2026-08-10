@@ -516,6 +516,10 @@ async def status_command(interaction: discord.Interaction) -> None:
         await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)
         return
 
+    # Defer immediately — _fetch_uptime_ratios() below makes an external API call
+    # that can take longer than Discord's 3-second initial-response window.
+    await interaction.response.defer(ephemeral=True)
+
     loaded = sorted(name.removeprefix("cogs.").removesuffix("Cog") for name in bot.extensions.keys())
     loaded_display = ", ".join(loaded) if loaded else "none"
 
@@ -552,7 +556,7 @@ async def status_command(interaction: discord.Interaction) -> None:
     embed.add_field(name="Loaded Cogs", value=loaded_display[:1024], inline=False)
     embed.add_field(name="Recent Errors", value=(recent_display[:1021] + "...") if len(recent_display) > 1024 else recent_display, inline=False)
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 #============================================
@@ -774,7 +778,7 @@ async def _fetch_uptime_ratios() -> dict[str, str] | None:
     }
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(UPTIMEROBOT_API_URL, data=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            async with session.post(UPTIMEROBOT_API_URL, data=payload, timeout=aiohttp.ClientTimeout(total=5)) as resp:
                 if resp.status != 200:
                     return None
                 data = await resp.json()
