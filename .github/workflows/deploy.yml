@@ -43,6 +43,8 @@ jobs:
           pip install -r requirements.txt
 
       - name: Restart PM2 Process
+        env:
+          RUNNER_TRACKING_ID: "0"
         run: |
           cd /home/ubuntu/TerrierBot
           export PATH=$PATH:/home/ubuntu/.npm-global/bin
