@@ -42,7 +42,55 @@ jobs:
           source .venv/bin/activate
           pip install -r requirements.txt
 
+      - name: Determine deploy strategy
+        id: strategy
+        run: |
+          cd /home/ubuntu/TerrierBot
+          CHANGED=$(git diff --name-only ${{ steps.pull.outputs.old_head }} ${{ steps.pull.outputs.new_head }})
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # Full restart required if anything outside cogs/*Cog.py changed
+          # (bot.py, cogs/logConfig.py, requirements.txt, new files, non-.py files, etc.)
+          NEEDS_RESTART=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            if [[ "$f" == "cogs/"*"Cog.py" ]]; then
+              continue
+            fi
+            NEEDS_RESTART=true
+            break
+          done <<< "$CHANGED"
+
+          if [ "$NEEDS_RESTART" = "true" ]; then
+            echo "mode=restart" >> "$GITHUB_OUTPUT"
+          else
+            COGS=$(echo "$CHANGED" | sed -E 's#cogs/(.*)Cog\.py#\1#')
+            echo "cogs<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$COGS" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "mode=reload" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Hot-reload changed cogs
+        if: steps.strategy.outputs.mode == 'reload'
+        run: |
+          while IFS= read -r cog; do
+            [ -z "$cog" ] && continue
+            echo "Reloading $cog..."
+            HTTP_CODE=$(curl -s -o /tmp/reload_resp.txt -w "%{http_code}" -X POST \
+              -H "X-Reload-Secret: ${{ secrets.RELOAD_SECRET }}" \
+              "http://localhost:8080/reload/$cog")
+            cat /tmp/reload_resp.txt
+            echo ""
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "Reload failed for $cog (HTTP $HTTP_CODE) — falling back to full restart"
+              exit 1
+            fi
+          done <<< "${{ steps.strategy.outputs.cogs }}"
+
       - name: Restart PM2 Process
+        if: steps.strategy.outputs.mode == 'restart' || failure()
         env:
           RUNNER_TRACKING_ID: "0"
         run: |
