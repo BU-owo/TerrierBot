@@ -27,3 +27,7 @@ class HelloCog(commands.Cog, name="Hello", description="Greeting commands."):
     @app_commands.command(name="hello", description="Say hi and have TerrierBot greet you back!")
     async def hello_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message(f"Hello {interaction.user.display_name}! I am TerrierBot!")
+
+
+
+        
