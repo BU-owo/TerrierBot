@@ -14,6 +14,7 @@ from discord import app_commands
 from discord.ext import commands
 import logging
 import asyncio
+import aiohttp
 import shelve
 from datetime import datetime, timedelta, timezone
 
@@ -27,6 +28,8 @@ STARTUP_FAILURE_THRESHOLD = 5
 STARTUP_SUPPRESSION_CATEGORY_PREFIX = "startup"
 STARTUP_FAILURE_CATEGORIES = {"startup", "startup:cog_load"}
 SHELVE_FILE = "terrierbot.shelve"
+UPTIMEROBOT_API_URL = "https://api.uptimerobot.com/v2/getMonitors"
+UPTIMEROBOT_MONITOR_URL_FRAGMENT = "158.101.102.156:8080"  # used to pick the right monitor out of the account
 RECENT_ERROR_LIMIT = 15
 
 
@@ -526,12 +529,23 @@ async def status_command(interaction: discord.Interaction) -> None:
     else:
         recent_display = "No recent errors in this runtime."
 
+    uptime_ratios = await _fetch_uptime_ratios()
+    if uptime_ratios:
+        uptime_display = (
+            f"24h: {uptime_ratios['24h']}%  •  "
+            f"7d: {uptime_ratios['7d']}%  •  "
+            f"30d: {uptime_ratios['30d']}%"
+        )
+    else:
+        uptime_display = "Unavailable"
+
     embed = discord.Embed(
         title="TerrierBot Status",
         color=discord.Color.blurple(),
         timestamp=datetime.now(timezone.utc),
     )
-    embed.add_field(name="Uptime", value=bot._uptime_string(), inline=False)
+    embed.add_field(name="Uptime (this run)", value=bot._uptime_string(), inline=False)
+    embed.add_field(name="Uptime % (UptimeRobot)", value=uptime_display, inline=False)
     embed.add_field(name="Git Commit", value=bot._commit_hash, inline=True)
     embed.add_field(name="Python", value=sys.version.split()[0], inline=True)
     embed.add_field(name="Last Restart (UTC)", value=bot._started_at.isoformat(timespec="seconds"), inline=False)
@@ -734,6 +748,60 @@ def _get_reload_secret() -> str | None:
             return f.read().strip()
     except OSError:
         return None
+
+
+def _get_uptimerobot_key() -> str | None:
+    key = os.environ.get("UPTIMEROBOT_API_KEY")
+    if key:
+        return key
+    try:
+        with open("uptimerobot_key.txt") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+async def _fetch_uptime_ratios() -> dict[str, str] | None:
+    """Returns {'24h': '99.98', '7d': '99.50', '30d': '98.00'} or None on any failure."""
+    api_key = _get_uptimerobot_key()
+    if not api_key:
+        return None
+
+    payload = {
+        "api_key": api_key,
+        "format": "json",
+        "custom_uptime_ratios": "1-7-30",
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(UPTIMEROBOT_API_URL, data=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
+    except Exception:
+        logging.exception("Failed to fetch UptimeRobot data")
+        return None
+
+    if data.get("stat") != "ok":
+        return None
+
+    monitors = data.get("monitors", [])
+    target = None
+    for m in monitors:
+        if UPTIMEROBOT_MONITOR_URL_FRAGMENT in m.get("url", ""):
+            target = m
+            break
+    if target is None and monitors:
+        target = monitors[0]  # fall back to first monitor if URL match fails
+    if target is None:
+        return None
+
+    ratios = target.get("custom_uptime_ratio", "")
+    parts = ratios.split("-")
+    if len(parts) != 3:
+        return None
+
+    return {"24h": parts[0], "7d": parts[1], "30d": parts[2]}
 
 
 async def main():
