@@ -155,7 +155,7 @@ class ScamImageCog(commands.Cog):
                 return True
         return False
 
-    # ── Automatic on_message listener (unchanged) ─────────────────────────────
+    # ── Automatic on_message listener ──────────────────────────────────────────
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -170,7 +170,23 @@ class ScamImageCog(commands.Cog):
                 continue
 
             has_image = True
-            image_bytes = await attachment.read()
+            try:
+                image_bytes = await attachment.read()
+            except discord.NotFound:
+                # Attachment/message was deleted (or the CDN link expired) before we
+                # could read it — nothing to scan, just skip this attachment.
+                log.debug(
+                    "Skipped vanished attachment on message %s (author %s): asset not found",
+                    message.id, message.author.id,
+                )
+                continue
+            except discord.HTTPException:
+                log.warning(
+                    "Failed to read attachment on message %s (author %s) due to a Discord API error",
+                    message.id, message.author.id,
+                )
+                continue
+
             if await self._hash_matches(image_bytes):
                 await self._handle_scam(message)
                 return  # only need to act once per message
@@ -487,4 +503,3 @@ class ScamImageCog(commands.Cog):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ScamImageCog(bot))
-    
