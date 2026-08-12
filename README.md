@@ -13,6 +13,7 @@ TerrierBot currently supports:
 - Community features such as `hello`, `love`, `banner`, `boost`, and `pride`
 - Anonymous feedback and moderation tools such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
 - Server management features such as the starboard, Positivity Tuesday automation, and ping roles
+- Self-service role removal through `leavepolitics`
 
 ## Requirements
 
@@ -121,6 +122,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=end` / `/end` | See how many days remain until the semester ends |
 | `=test` / `/test` | Confirm that the bot is responding |
 | `=help` | Show the command overview |
+| `=leavepolitics` / `/leavepolitics` | Leave the Politics role/channel (re-apply needed to rejoin) |
 | `=sync` | Sync slash commands to the current server (owner only) |
 | `=cog load` / `=cog reload` / `=cog unload` / `=cog list` | Manage cogs during development or maintenance (owner only) |
 

@@ -620,7 +620,8 @@ async def help_command(ctx: Context):
         value=(
             "`=end` or `/end` - See how many days are left until the semester ends\n"
             "`=test` or `/test` - Confirm that the bot is responding\n"
-            "`=help` - Show this help message"
+            "`=help` - Show this help message\n"
+            "`=leavepolitics` or `/leavepolitics` - Leave the Politics role/channel"
         ),
         inline=False,
     )
@@ -731,8 +732,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics"]
 
 
 def _get_token() -> str:
