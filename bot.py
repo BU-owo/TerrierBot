@@ -610,7 +610,8 @@ async def help_command(ctx: Context):
             "`=warncount` / `/warncount` - List active warnings\n"
             "`=warninfo` / `/warninfo` - Show a user's warning history\n"
             "`=mywarns` / `/mywarns` - Show your own active warnings\n"
-            "`=warnremove` / `/warnremove` - Remove a warning"
+            "`=warnremove` / `/warnremove` - Remove a warning\n"
+            "`=joinpolitics` or `/joinpolitics` - Post the #politics application (mod only)"
         ),
         inline=False,
     )
@@ -732,8 +733,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics"]
 
 
 def _get_token() -> str:
