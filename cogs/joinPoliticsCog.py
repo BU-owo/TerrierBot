@@ -35,9 +35,6 @@ DISAGREE_VALUE = "disagree"
 UNDERSTAND_VALUE = "understand"
 NOT_UNDERSTAND_VALUE = "not_understand"
 
-RADIO_SELECTED = "🔘"
-RADIO_UNSELECTED = "⚪"
-
 APPROVE_TEMPLATE = re.compile(r"joinpoliticscog:approve:(?P<user_id>[0-9]+)")
 DENY_TEMPLATE = re.compile(r"joinpoliticscog:deny:(?P<user_id>[0-9]+)")
 
@@ -50,16 +47,6 @@ async def setup(bot: TerrierBot):
     bot.add_dynamic_items(PoliticsApproveButton, PoliticsDenyButton)
     bot.add_view(PoliticsApplicationStartView())
     await bot.add_cog(JoinPoliticsCog(bot))
-
-
-def _build_application_form_embed() -> discord.Embed:
-    embed = discord.Embed(
-        description="# Politics Channel Application\nAnswer both questions below, then submit.",
-        color=discord.Color.blurple(),
-    )
-    embed.add_field(name="Politics Channel Conduct Code", value=CONDUCT_TEXT, inline=False)
-    embed.add_field(name="Punishments", value=PUNISHMENTS_TEXT, inline=False)
-    return embed
 
 
 async def _post_application_for_review(applicant: discord.Member) -> None:
@@ -93,108 +80,51 @@ async def _post_application_for_review(applicant: discord.Member) -> None:
         log.exception("joinPoliticsCog: failed to post application review message")
 
 
-# ── Application form (radio-style buttons) ──────────────────────────────────
+# ── Application modal (native radio-button questions) ───────────────────────
 
-class ApplicationFormView(discord.ui.View):
+class PoliticsApplicationModal(discord.ui.Modal, title="Politics Channel Application"):
+    conduct_text = discord.ui.TextDisplay(CONDUCT_TEXT)
+    conduct_field = discord.ui.Label(
+        text="Politics Channel Conduct Code",
+        component=discord.ui.RadioGroup(
+            options=[
+                discord.RadioGroupOption(label="I agree", value=AGREE_VALUE),
+                discord.RadioGroupOption(label="I do not agree", value=DISAGREE_VALUE),
+            ],
+        ),
+    )
+    punishments_text = discord.ui.TextDisplay(PUNISHMENTS_TEXT)
+    punishments_field = discord.ui.Label(
+        text="Punishments",
+        component=discord.ui.RadioGroup(
+            options=[
+                discord.RadioGroupOption(label="I understand", value=UNDERSTAND_VALUE),
+                discord.RadioGroupOption(label="I do not understand", value=NOT_UNDERSTAND_VALUE),
+            ],
+        ),
+    )
+
     def __init__(self, applicant: discord.Member) -> None:
-        super().__init__(timeout=300)
+        super().__init__()
         self.applicant = applicant
-        self.conduct_answer: str | None = None
-        self.punishments_answer: str | None = None
 
-        self.agree_button = discord.ui.Button(
-            label=f"{RADIO_UNSELECTED} I agree", style=discord.ButtonStyle.secondary, row=0
-        )
-        self.disagree_button = discord.ui.Button(
-            label=f"{RADIO_UNSELECTED} I do not agree", style=discord.ButtonStyle.secondary, row=0
-        )
-        self.understand_button = discord.ui.Button(
-            label=f"{RADIO_UNSELECTED} I understand", style=discord.ButtonStyle.secondary, row=1
-        )
-        self.not_understand_button = discord.ui.Button(
-            label=f"{RADIO_UNSELECTED} I do not understand", style=discord.ButtonStyle.secondary, row=1
-        )
-        self.submit_button = discord.ui.Button(
-            label="Submit Application", style=discord.ButtonStyle.success, row=2, disabled=True
-        )
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        conduct_radio = self.conduct_field.component
+        punishments_radio = self.punishments_field.component
+        assert isinstance(conduct_radio, discord.ui.RadioGroup)
+        assert isinstance(punishments_radio, discord.ui.RadioGroup)
 
-        self.agree_button.callback = self._answer_callback("conduct", AGREE_VALUE)
-        self.disagree_button.callback = self._answer_callback("conduct", DISAGREE_VALUE)
-        self.understand_button.callback = self._answer_callback("punishments", UNDERSTAND_VALUE)
-        self.not_understand_button.callback = self._answer_callback("punishments", NOT_UNDERSTAND_VALUE)
-        self.submit_button.callback = self._submit
-
-        for item in (
-            self.agree_button,
-            self.disagree_button,
-            self.understand_button,
-            self.not_understand_button,
-            self.submit_button,
-        ):
-            self.add_item(item)
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id != self.applicant.id:
-            await interaction.response.send_message("This isn't your application to fill out.", ephemeral=True)
-            return False
-        return True
-
-    async def on_timeout(self) -> None:
-        for item in self.children:
-            item.disabled = True  # type: ignore[attr-defined]
-
-    def _answer_callback(self, question: str, value: str):
-        async def _callback(interaction: discord.Interaction) -> None:
-            if question == "conduct":
-                self.conduct_answer = value
-                self.agree_button.style = (
-                    discord.ButtonStyle.primary if value == AGREE_VALUE else discord.ButtonStyle.secondary
-                )
-                self.agree_button.label = f"{RADIO_SELECTED if value == AGREE_VALUE else RADIO_UNSELECTED} I agree"
-                self.disagree_button.style = (
-                    discord.ButtonStyle.primary if value == DISAGREE_VALUE else discord.ButtonStyle.secondary
-                )
-                self.disagree_button.label = (
-                    f"{RADIO_SELECTED if value == DISAGREE_VALUE else RADIO_UNSELECTED} I do not agree"
-                )
-            else:
-                self.punishments_answer = value
-                self.understand_button.style = (
-                    discord.ButtonStyle.primary if value == UNDERSTAND_VALUE else discord.ButtonStyle.secondary
-                )
-                self.understand_button.label = (
-                    f"{RADIO_SELECTED if value == UNDERSTAND_VALUE else RADIO_UNSELECTED} I understand"
-                )
-                self.not_understand_button.style = (
-                    discord.ButtonStyle.primary if value == NOT_UNDERSTAND_VALUE else discord.ButtonStyle.secondary
-                )
-                self.not_understand_button.label = (
-                    f"{RADIO_SELECTED if value == NOT_UNDERSTAND_VALUE else RADIO_UNSELECTED} I do not understand"
-                )
-
-            self.submit_button.disabled = not (self.conduct_answer and self.punishments_answer)
-            await interaction.response.edit_message(view=self)
-
-        return _callback
-
-    async def _submit(self, interaction: discord.Interaction) -> None:
-        for item in self.children:
-            item.disabled = True  # type: ignore[attr-defined]
-        self.stop()
-
-        if self.conduct_answer != AGREE_VALUE or self.punishments_answer != UNDERSTAND_VALUE:
-            await interaction.response.edit_message(
-                content=(
-                    "You must agree to the Conduct Code and acknowledge the Punishments policy to "
-                    "submit an application. Feel free to start over any time."
-                ),
-                view=self,
+        if conduct_radio.value != AGREE_VALUE or punishments_radio.value != UNDERSTAND_VALUE:
+            await interaction.response.send_message(
+                "You must agree to the Conduct Code and acknowledge the Punishments policy to "
+                "submit an application. Feel free to start over any time.",
+                ephemeral=True,
             )
             return
 
-        await interaction.response.edit_message(
-            content="Thank you for your submission. The moderators will promptly review your application.",
-            view=self,
+        await interaction.response.send_message(
+            "Thank you for your submission. The moderators will promptly review your application.",
+            ephemeral=True,
         )
         await _post_application_for_review(self.applicant)
 
@@ -238,11 +168,7 @@ class PoliticsApplicationStartView(discord.ui.View):
                 )
                 return
 
-        await interaction.response.send_message(
-            embed=_build_application_form_embed(),
-            view=ApplicationFormView(member),
-            ephemeral=True,
-        )
+        await interaction.response.send_modal(PoliticsApplicationModal(member))
 
 
 # ── Approve / Deny buttons (dynamic, survive restarts) ─────────────────────
@@ -359,7 +285,5 @@ class JoinPoliticsCog(commands.Cog, name="JoinPolitics", description="Politics c
             ),
             color=discord.Color.blurple(),
         )
-        embed.add_field(name="Politics Channel Conduct Code", value=CONDUCT_TEXT, inline=False)
-        embed.add_field(name="Punishments", value=PUNISHMENTS_TEXT, inline=False)
 
         await ctx.send(embed=embed, view=PoliticsApplicationStartView())
