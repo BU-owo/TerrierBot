@@ -152,7 +152,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         )
         embed.add_field(
             name="Status",
-            value=f"Voting closed — see results in <#{MODVOTE_RESULTS_CHANNEL_ID}>.",
+            value="Voting closed — see the results posted below.",
             inline=False,
         )
         embed.set_footer(text=f"Vote ID: {vote['vote_id']}")
@@ -187,12 +187,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         self._save()
         await self._post_results(vote)
 
-    async def _post_results(self, vote: dict) -> None:
-        channel = self.bot.get_channel(MODVOTE_RESULTS_CHANNEL_ID)
-        if channel is None:
-            log.warning("modvoteCog: results channel %s not found/visible", MODVOTE_RESULTS_CHANNEL_ID)
-            return
-
+    def _build_results_embed(self, vote: dict) -> discord.Embed:
         options = vote["options"]
         counts = self._compute_counts(vote)
         total = sum(counts)
@@ -227,11 +222,32 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             outcome = "Quorum not reached — result does not count."
         embed.add_field(name="Outcome", value=outcome, inline=False)
         embed.set_footer(text=f"Vote ID: {vote['vote_id']}")
+        return embed
 
-        try:
-            await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
-        except discord.HTTPException:
-            log.warning("modvoteCog: failed to post results for vote %s", vote["vote_id"])
+    async def _post_results(self, vote: dict) -> None:
+        embed = self._build_results_embed(vote)
+
+        # Mod-logs is for record-keeping, not where mods actually read results —
+        # always post there, but also post the same results back in the channel
+        # the vote was run in so mods see them without hunting through logs.
+        log_channel = self.bot.get_channel(MODVOTE_RESULTS_CHANNEL_ID)
+        if log_channel is not None:
+            try:
+                await log_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+            except discord.HTTPException:
+                log.warning("modvoteCog: failed to post results for vote %s", vote["vote_id"])
+        else:
+            log.warning("modvoteCog: results channel %s not found/visible", MODVOTE_RESULTS_CHANNEL_ID)
+
+        if vote["channel_id"] != MODVOTE_RESULTS_CHANNEL_ID:
+            origin_channel = self.bot.get_channel(vote["channel_id"])
+            if origin_channel is not None:
+                try:
+                    await origin_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+                except discord.HTTPException:
+                    log.warning(
+                        "modvoteCog: failed to post results in origin channel for vote %s", vote["vote_id"]
+                    )
 
     @tasks.loop(seconds=CHECK_INTERVAL_SECONDS)
     async def check_expired(self) -> None:
