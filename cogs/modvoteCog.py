@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 MOD_ROLE_ID = 1402095379935395934
 MODVOTE_RESULTS_CHANNEL_ID = LogChannels.MOD
 
-MAX_OPTIONS = 10  # options + the "show tally" button must stay under Discord's 25-component cap
+MAX_OPTIONS = 10  # buttons must stay under Discord's 25-component cap
 CHECK_INTERVAL_SECONDS = 45
 
 _DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
@@ -61,26 +61,11 @@ class ModVoteOptionButton(discord.ui.Button):
         await self.cog.handle_vote_click(interaction, self.vote_id, self.option_index)
 
 
-class ModVoteTallyButton(discord.ui.Button):
-    def __init__(self, cog: "ModVoteCog", vote_id: str):
-        super().__init__(
-            label="Show current tally",
-            style=discord.ButtonStyle.secondary,
-            custom_id=f"modvote:{vote_id}:tally",
-        )
-        self.cog = cog
-        self.vote_id = vote_id
-
-    async def callback(self, interaction: discord.Interaction) -> None:
-        await self.cog.handle_tally_click(interaction, self.vote_id)
-
-
 class ModVoteView(discord.ui.View):
     def __init__(self, cog: "ModVoteCog", vote_id: str, options: list[str]):
         super().__init__(timeout=None)
         for i, opt in enumerate(options):
             self.add_item(ModVoteOptionButton(cog, vote_id, i, opt))
-        self.add_item(ModVoteTallyButton(cog, vote_id))
 
 
 # ── Cog ───────────────────────────────────────────────────────────────────────
@@ -139,40 +124,39 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             return f"{member.display_name} ({member.id})"
         return f"Unknown Member ({vote['target_id']})"
 
-    def _build_vote_embed(self, vote: dict, closed: bool = False) -> discord.Embed:
-        options = vote["options"]
-        counts = self._compute_counts(vote)
-        total = sum(counts)
-
-        option_lines = "\n".join(
-            f"**{opt}** — {counts[i]} vote(s)" for i, opt in enumerate(options)
-        )
+    def _build_open_vote_embed(self, vote: dict) -> discord.Embed:
+        # While a vote is open, only the total count is ever shown — never a
+        # per-option breakdown. The breakdown is revealed once, in the
+        # results embed posted to the results channel when the vote closes.
+        option_lines = "\n".join(f"• {opt}" for opt in vote["options"])
+        total = len(vote["votes"])
 
         embed = discord.Embed(
-            title="🗳️ Mod Vote (Closed)" if closed else "🗳️ Mod Vote",
+            title="🗳️ Mod Vote",
             description=f"Target: {self._target_display(vote)}",
-            color=discord.Color.dark_grey() if closed else discord.Color.orange(),
+            color=discord.Color.orange(),
         )
         embed.add_field(name="Options", value=option_lines or "—", inline=False)
-        embed.add_field(name="Votes so far", value=f"{total} vote(s) so far", inline=True)
+        embed.add_field(name="Votes cast", value=f"{total} votes cast so far", inline=True)
         embed.add_field(name="Quorum required", value=str(vote["quorum"]), inline=True)
-        if closed:
-            embed.add_field(name="Status", value="Closed", inline=True)
-        else:
-            embed.add_field(name="Closes", value=f"<t:{vote['close_ts']}:R>", inline=True)
+        embed.add_field(name="Closes", value=f"<t:{vote['close_ts']}:R>", inline=True)
         embed.set_footer(text=f"Vote ID: {vote['vote_id']}")
         return embed
 
-    async def _unpin_if_pinned(self, channel: discord.abc.Messageable, message_id: int) -> None:
-        try:
-            msg = await channel.fetch_message(message_id)  # type: ignore[attr-defined]
-        except (discord.NotFound, discord.HTTPException):
-            return
-        if msg.pinned:
-            try:
-                await msg.unpin(reason="modvote sticky message replaced/closed")
-            except discord.HTTPException:
-                pass
+    def _build_closed_sticky_embed(self, vote: dict) -> discord.Embed:
+        # No counts here either — just a pointer to the results embed.
+        embed = discord.Embed(
+            title="🗳️ Mod Vote (Closed)",
+            description=f"Target: {self._target_display(vote)}",
+            color=discord.Color.dark_grey(),
+        )
+        embed.add_field(
+            name="Status",
+            value=f"Voting closed — see results in <#{MODVOTE_RESULTS_CHANNEL_ID}>.",
+            inline=False,
+        )
+        embed.set_footer(text=f"Vote ID: {vote['vote_id']}")
+        return embed
 
     # ── Vote lifecycle ────────────────────────────────────────────────────────
 
@@ -191,13 +175,8 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             except (discord.NotFound, discord.HTTPException):
                 msg = None
             if msg is not None:
-                if msg.pinned:
-                    try:
-                        await msg.unpin(reason="modvote closed")
-                    except discord.HTTPException:
-                        pass
                 try:
-                    await msg.edit(embed=self._build_vote_embed(vote, closed=True), view=None)
+                    await msg.edit(embed=self._build_closed_sticky_embed(vote), view=None)
                 except discord.HTTPException:
                     pass
 
@@ -284,33 +263,13 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         self._save()
 
         try:
-            await interaction.response.edit_message(embed=self._build_vote_embed(vote))
+            await interaction.response.edit_message(embed=self._build_open_vote_embed(vote))
         except discord.HTTPException:
             pass
 
         option_label = vote["options"][option_index]
         try:
             await interaction.followup.send(f"Your vote has been recorded: {option_label}.", ephemeral=True)
-        except discord.HTTPException:
-            pass
-
-    async def handle_tally_click(self, interaction: discord.Interaction, vote_id: str) -> None:
-        if not _has_mod_role(interaction.user):
-            await interaction.response.send_message("You don't have permission to vote.", ephemeral=True)
-            return
-
-        vote = self.data["votes"].get(vote_id)
-        if vote is None:
-            await interaction.response.send_message("This vote has closed.", ephemeral=True)
-            return
-
-        counts = self._compute_counts(vote)
-        total = sum(counts)
-        lines = "\n".join(f"**{opt}** — {counts[i]} vote(s)" for i, opt in enumerate(vote["options"]))
-        try:
-            await interaction.response.send_message(
-                f"Current tally ({total} vote(s) so far):\n{lines}", ephemeral=True
-            )
         except discord.HTTPException:
             pass
 
@@ -388,7 +347,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         view = ModVoteView(self, vote_id, parsed_options)
         try:
             msg = await channel.send(
-                embed=self._build_vote_embed(vote),
+                embed=self._build_open_vote_embed(vote),
                 view=view,
                 allowed_mentions=discord.AllowedMentions.none(),
             )
@@ -399,11 +358,6 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
 
         vote["message_id"] = msg.id
         self.bot.add_view(view, message_id=msg.id)
-
-        try:
-            await msg.pin(reason="modvote start")
-        except discord.HTTPException:
-            pass
 
         self.data["sticky_by_channel"][ch_key] = vote_id
         self._save()
