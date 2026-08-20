@@ -6,4 +6,5 @@ __pycache__/
 token.txt
 pyrightconfig.json
 data/scam_hashes.json
+data/modvotes.json
 .DS_Store

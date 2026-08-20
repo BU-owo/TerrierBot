@@ -14,6 +14,7 @@ TerrierBot currently supports:
 - Anonymous feedback and moderation tools such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
 - Server management features such as the starboard, Positivity Tuesday automation, and ping roles
 - Self-service role removal through `leavepolitics`, and a mod-reviewed application flow for the #politics channel through `joinpolitics`
+- Anonymous mod-only disciplinary votes with quorum and a time limit through `modvote`
 
 ## Requirements
 
@@ -115,6 +116,8 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=mywarns` / `/mywarns` | Show your own active warnings |
 | `=warnremove` / `/warnremove` | Remove a warning |
 | `=joinpolitics` / `/joinpolitics` | Post the #politics channel application (Politics mod role required) |
+| `/modvote start` | Start an anonymous timed vote on disciplining a member, with custom options and a quorum (mod role required) |
+| `/modvote close` | Manually close an open modvote early and post results (mod role required) |
 
 ### Utility and maintenance
 
