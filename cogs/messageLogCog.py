@@ -6,6 +6,12 @@ from discord.ext import commands
 from bot import TerrierBot
 from .logConfig import LogChannels, LogColors, get_log_channel, is_suppressed
 
+# How recent an audit log entry must be to count as "this deletion" — Discord
+# only creates a message_delete audit entry when someone deletes another
+# user's message (never for self-deletes), so a fresh match means a mod/bot
+# did it.
+_AUDIT_LOOKUP_WINDOW_SECONDS = 10
+
 
 async def setup(bot: TerrierBot):
     await bot.add_cog(MessageLogCog(bot))
@@ -14,6 +20,25 @@ async def setup(bot: TerrierBot):
 class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted messages."):
     def __init__(self, bot: TerrierBot):
         self.bot = bot
+
+    async def _find_deleter(
+        self, guild: discord.Guild, channel_id: int, author_id: int
+    ) -> discord.Member | discord.User | None:
+        """Best-effort lookup of who deleted a message via the audit log.
+        Returns None if it was likely a self-delete, or the log can't be read."""
+        try:
+            async for entry in guild.audit_logs(limit=5, action=discord.AuditLogAction.message_delete):
+                if entry.target is None or entry.target.id != author_id:
+                    continue
+                if entry.extra.channel.id != channel_id:
+                    continue
+                age = (discord.utils.utcnow() - entry.created_at).total_seconds()
+                if age > _AUDIT_LOOKUP_WINDOW_SECONDS:
+                    continue
+                return entry.user
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+        return None
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent):
@@ -36,6 +61,9 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
             # channel itself — skip to avoid a feedback loop.
             return
 
+        deleter: discord.Member | discord.User | None = None
+        guild = self.bot.get_guild(payload.guild_id)
+
         if message is not None:
             content = message.content or "*(no text content)*"
             if len(content) > 900:
@@ -46,6 +74,11 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
             ]
             if message.attachments:
                 lines.append("**Attachments:** " + ", ".join(a.filename for a in message.attachments))
+
+            if guild is not None:
+                deleter = await self._find_deleter(guild, payload.channel_id, message.author.id)
+            if deleter is not None and deleter.id != message.author.id:
+                lines.append(f"-# 🔨 Deleted by {deleter.mention}")
         else:
             source_channel = self.bot.get_channel(payload.channel_id)
             location = source_channel.mention if source_channel else f"<#{payload.channel_id}>"
@@ -57,7 +90,7 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
         embed = discord.Embed(
             title="🗑️ Message deleted",
             description="\n".join(lines),
-            color=LogColors.MESSAGE,
+            color=LogColors.MOD_DELETE if deleter is not None else LogColors.MESSAGE,
             timestamp=discord.utils.utcnow(),
         )
 

@@ -24,6 +24,7 @@ class LogColors:
     SERVER = discord.Color.gold()
     MOD = discord.Color.dark_red()
     MESSAGE = discord.Color.dark_grey()
+    MOD_DELETE = discord.Color.orange()
 
 
 def get_log_channel(bot: discord.Client, channel_id: int) -> discord.TextChannel | None:
