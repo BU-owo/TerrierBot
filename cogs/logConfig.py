@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from datetime import timedelta
 
 import discord
 
@@ -13,6 +14,11 @@ class LogChannels:
     SERVER = 1441888428735070400
     MOD = 1441889164898341098
     MESSAGE = 1441888579147141170
+
+
+# Mod role ID — several cogs previously redefined this constant locally with
+# the same value; import it from here instead of re-declaring it.
+MOD_ROLE_ID = 1402095379935395934
 
 
 class LogColors:
@@ -34,6 +40,34 @@ def get_log_channel(bot: discord.Client, channel_id: int) -> discord.TextChannel
     if isinstance(channel, discord.TextChannel):
         return channel
     return None
+
+
+def format_duration(delta: timedelta) -> str:
+    """Human-readable duration (e.g. "3 hours 15 minutes", "2 days"),
+    granular enough to still be meaningful for spans under a day."""
+    total_seconds = int(delta.total_seconds())
+    if total_seconds <= 0:
+        return "0 minutes"
+    days, rem = divmod(total_seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, seconds = divmod(rem, 60)
+    parts: list[str] = []
+    if days:
+        parts.append(f"{days} day{'s' if days != 1 else ''}")
+    if hours:
+        parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
+    if minutes:
+        parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+    if not parts and seconds:
+        parts.append(f"{seconds} second{'s' if seconds != 1 else ''}")
+    return " ".join(parts) if parts else "less than a minute"
+
+
+def user_line(user: discord.abc.User) -> str:
+    """Mention + plain username as literal text, so the name stays legible
+    even after the account leaves the server or is deleted and the client
+    can no longer resolve the mention."""
+    return f"{user.mention} — **{user}** (`{user.id}`)"
 
 
 # ── Cross-cog deletion suppression ───────────────────────────────────────────

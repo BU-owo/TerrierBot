@@ -68,31 +68,46 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
             content = message.content or "*(no text content)*"
             if len(content) > 900:
                 content = content[:897] + "..."
-            lines = [
-                f"{message.author.mention} (`{message.author.id}`) in {message.channel.mention}",
-                content,
-            ]
-            if message.attachments:
-                lines.append("**Attachments:** " + ", ".join(a.filename for a in message.attachments))
+
+            source_channel_mention = message.channel.mention
 
             if guild is not None:
                 deleter = await self._find_deleter(guild, payload.channel_id, message.author.id)
+
+            description_lines = [
+                f"**Message deleted in {source_channel_mention}**",
+                "",
+                content,
+            ]
+            if message.attachments:
+                description_lines.append(
+                    "**Attachments:** " + ", ".join(a.filename for a in message.attachments)
+                )
             if deleter is not None and deleter.id != message.author.id:
-                lines.append(f"-# 🔨 Deleted by {deleter.mention}")
+                description_lines.append(f"-# 🔨 Deleted by {deleter.mention}")
+
+            embed = discord.Embed(
+                description=f"{message.author.mention}\n" + "\n".join(description_lines),
+                color=LogColors.MOD_DELETE if deleter is not None else LogColors.MESSAGE,
+                timestamp=discord.utils.utcnow(),
+            )
+            embed.set_author(
+                name=str(message.author),
+                icon_url=message.author.display_avatar.url,
+            )
+            embed.set_footer(text=f"User ID: {message.author.id} • Message ID: {payload.message_id}")
         else:
             source_channel = self.bot.get_channel(payload.channel_id)
             location = source_channel.mention if source_channel else f"<#{payload.channel_id}>"
-            lines = [
-                f"Uncached message deleted in {location}",
-                f"*(not seen by the bot before deletion — author/content unavailable, ID `{payload.message_id}`)*",
-            ]
-
-        embed = discord.Embed(
-            title="🗑️ Message deleted",
-            description="\n".join(lines),
-            color=LogColors.MOD_DELETE if deleter is not None else LogColors.MESSAGE,
-            timestamp=discord.utils.utcnow(),
-        )
+            embed = discord.Embed(
+                description=(
+                    f"**Message deleted in {location}**\n\n"
+                    f"*(not seen by the bot before deletion — author/content unavailable)*"
+                ),
+                color=LogColors.MESSAGE,
+                timestamp=discord.utils.utcnow(),
+            )
+            embed.set_footer(text=f"Message ID: {payload.message_id}")
 
         try:
             await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())

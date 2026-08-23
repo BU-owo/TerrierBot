@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, get_log_channel
+from .logConfig import LogChannels, LogColors, format_duration, get_log_channel, user_line
 
 # How long to wait before checking the audit log, so the entry has time to
 # propagate, and how old an entry is allowed to be to still count as a match.
@@ -65,7 +65,7 @@ class ModLogCog(
 
     @staticmethod
     def _mod_reason_lines(entry: discord.AuditLogEntry | None) -> str:
-        moderator = entry.user.mention if entry and entry.user else "*Unknown*"
+        moderator = user_line(entry.user) if entry and entry.user else "*Unknown*"
         reason = entry.reason if entry and entry.reason else "*No reason provided*"
         return f"**Moderator:** {moderator}\n**Reason:** {reason}"
 
@@ -80,7 +80,7 @@ class ModLogCog(
         embed = discord.Embed(
             title="👢 Member kicked",
             description=(
-                f"{member.mention} (`{member.id}`)\n" + self._mod_reason_lines(entry)
+                user_line(member) + "\n" + self._mod_reason_lines(entry)
             ),
             color=LogColors.MOD,
             timestamp=discord.utils.utcnow(),
@@ -96,7 +96,7 @@ class ModLogCog(
 
         embed = discord.Embed(
             title="🔨 Member banned",
-            description=f"{user.mention} (`{user.id}`)\n" + self._mod_reason_lines(entry),
+            description=user_line(user) + "\n" + self._mod_reason_lines(entry),
             color=LogColors.MOD,
             timestamp=discord.utils.utcnow(),
         )
@@ -109,7 +109,7 @@ class ModLogCog(
 
         embed = discord.Embed(
             title="🔓 Member unbanned",
-            description=f"{user.mention} (`{user.id}`)\n" + self._mod_reason_lines(entry),
+            description=user_line(user) + "\n" + self._mod_reason_lines(entry),
             color=LogColors.MOD,
             timestamp=discord.utils.utcnow(),
         )
@@ -134,14 +134,16 @@ class ModLogCog(
         if is_active:
             title = "🔇 Member timed out" if not was_active else "🔇 Timeout updated"
             until = after.timed_out_until
+            duration = format_duration(until - now)
             description = (
-                f"{after.mention} (`{after.id}`)\n"
+                user_line(after) + "\n"
+                f"**Duration:** {duration}\n"
                 f"**Until:** <t:{int(until.timestamp())}:F> (<t:{int(until.timestamp())}:R>)\n"
                 + self._mod_reason_lines(entry)
             )
         elif was_active:
             title = "🔊 Timeout removed"
-            description = f"{after.mention} (`{after.id}`)\n" + self._mod_reason_lines(entry)
+            description = user_line(after) + "\n" + self._mod_reason_lines(entry)
         else:
             return  # e.g. transitioning between two already-expired timestamps
 

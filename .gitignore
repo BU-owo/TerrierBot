@@ -7,4 +7,5 @@ token.txt
 pyrightconfig.json
 data/scam_hashes.json
 data/modvotes.json
+data/tempbans.json
 .DS_Store

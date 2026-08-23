@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, get_log_channel
+from .logConfig import LogChannels, LogColors, format_duration, get_log_channel, user_line
 
 
 async def setup(bot: TerrierBot):
@@ -23,7 +23,7 @@ class JoinLeaveCog(commands.Cog, name="JoinLeave", description="Logs member join
 
         account_age = discord.utils.utcnow() - member.created_at
         lines = [
-            f"{member.mention} (`{member.id}`)",
+            user_line(member),
             f"**Account created:** <t:{int(member.created_at.timestamp())}:F> (<t:{int(member.created_at.timestamp())}:R>)",
             f"**Member count:** {member.guild.member_count}",
         ]
@@ -53,7 +53,7 @@ class JoinLeaveCog(commands.Cog, name="JoinLeave", description="Logs member join
 
         if member.joined_at is not None:
             time_in_server = discord.utils.utcnow() - member.joined_at
-            lines.append(f"**Time in server:** {time_in_server.days} day(s)")
+            lines.append(f"**Time in server:** {format_duration(time_in_server)}")
 
         roles = [r.mention for r in member.roles if r.name != "@everyone"]
         if roles:
