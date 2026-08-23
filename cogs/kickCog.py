@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from .caseLogCog import record_case
-from .logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
+from .logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, suppress_mod_log, user_line
 
 
 async def setup(bot: TerrierBot):
@@ -116,6 +116,10 @@ class KickCog(
         except discord.HTTPException as exc:
             await ctx.send(f"Failed to kick that member: {exc}", ephemeral=True)
             return
+
+        # The kick above triggers on_member_remove; suppress ModLogCog's
+        # duplicate before posting our own (richer) embed for it below.
+        suppress_mod_log(member.id, "kick")
 
         dm_note = "" if dm_delivered else " (DM could not be delivered)"
         await ctx.send(

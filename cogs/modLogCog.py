@@ -7,7 +7,14 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, format_duration, get_log_channel, user_line
+from .logConfig import (
+    LogChannels,
+    LogColors,
+    format_duration,
+    get_log_channel,
+    is_mod_log_suppressed,
+    user_line,
+)
 
 # How long to wait before checking the audit log, so the entry has time to
 # propagate, and how old an entry is allowed to be to still count as a match.
@@ -73,6 +80,9 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
+        if is_mod_log_suppressed(member.id, "kick"):
+            return  # KickCog already posted its own (richer) embed for this
+
         entry = await self._find_audit_entry(member.guild, discord.AuditLogAction.kick, member.id)
         if entry is None:
             return  # not a kick (plain leave) — JoinLeaveCog already covers that
@@ -92,6 +102,9 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: discord.User):
+        if is_mod_log_suppressed(user.id, "ban"):
+            return  # BanCog already posted its own (richer) embed for this
+
         entry = await self._find_audit_entry(guild, discord.AuditLogAction.ban, user.id)
 
         embed = discord.Embed(
@@ -105,6 +118,9 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild: discord.Guild, user: discord.User):
+        if is_mod_log_suppressed(user.id, "unban"):
+            return  # BanCog already posted its own (richer) embed for this
+
         entry = await self._find_audit_entry(guild, discord.AuditLogAction.unban, user.id)
 
         embed = discord.Embed(
@@ -127,6 +143,16 @@ class ModLogCog(
         was_active = before.timed_out_until is not None and before.timed_out_until > now
         is_active = after.timed_out_until is not None and after.timed_out_until > now
 
+        if is_active:
+            action = "timeout"
+        elif was_active:
+            action = "untimeout"
+        else:
+            return  # e.g. transitioning between two already-expired timestamps
+
+        if is_mod_log_suppressed(after.id, action):
+            return  # TimeoutCog already posted its own (richer) embed for this
+
         entry = await self._find_audit_entry(
             after.guild, discord.AuditLogAction.member_update, after.id, changed_attr="timed_out_until"
         )
@@ -141,11 +167,9 @@ class ModLogCog(
                 f"**Until:** <t:{int(until.timestamp())}:F> (<t:{int(until.timestamp())}:R>)\n"
                 + self._mod_reason_lines(entry)
             )
-        elif was_active:
+        else:
             title = "🔊 Timeout removed"
             description = user_line(after) + "\n" + self._mod_reason_lines(entry)
-        else:
-            return  # e.g. transitioning between two already-expired timestamps
 
         embed = discord.Embed(
             title=title,

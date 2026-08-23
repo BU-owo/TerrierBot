@@ -10,7 +10,15 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from .caseLogCog import record_case
-from .logConfig import LogChannels, LogColors, MOD_ROLE_ID, format_duration, get_log_channel, user_line
+from .logConfig import (
+    LogChannels,
+    LogColors,
+    MOD_ROLE_ID,
+    format_duration,
+    get_log_channel,
+    suppress_mod_log,
+    user_line,
+)
 
 _DURATION_RE = re.compile(r"^(\d+)\s*([smhd])$", re.IGNORECASE)
 _UNIT_SECONDS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
@@ -143,6 +151,10 @@ class TimeoutCog(
             await ctx.send(f"Failed to time out that member: {exc}", ephemeral=True)
             return
 
+        # The timeout above triggers on_member_update; suppress ModLogCog's
+        # duplicate before posting our own (richer) embed for it below.
+        suppress_mod_log(member.id, "timeout")
+
         await ctx.send(
             f"Timed out {member.mention} for {duration_display}{clamp_note}. Reason: {reason_text}",
             ephemeral=True,
@@ -209,6 +221,10 @@ class TimeoutCog(
         except discord.HTTPException as exc:
             await ctx.send(f"Failed to clear that member's timeout: {exc}", ephemeral=True)
             return
+
+        # The timeout clear above triggers on_member_update; suppress
+        # ModLogCog's duplicate before posting our own embed for it below.
+        suppress_mod_log(member.id, "untimeout")
 
         await ctx.send(f"Cleared {member.mention}'s timeout. Reason: {reason_text}", ephemeral=True)
 

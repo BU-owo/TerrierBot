@@ -12,7 +12,15 @@ from discord.ext import commands, tasks
 
 from bot import Context, TerrierBot
 from .caseLogCog import record_case
-from .logConfig import LogChannels, LogColors, MOD_ROLE_ID, format_duration, get_log_channel, user_line
+from .logConfig import (
+    LogChannels,
+    LogColors,
+    MOD_ROLE_ID,
+    format_duration,
+    get_log_channel,
+    suppress_mod_log,
+    user_line,
+)
 
 _MENTION_RE = re.compile(r"^<@!?(\d+)>$")
 
@@ -252,6 +260,10 @@ class BanCog(
             del self.tempbans[key]
             self.save_tempbans()
 
+            # The unban above triggers on_member_unban; suppress ModLogCog's
+            # duplicate before posting our own (richer) embed for it below.
+            suppress_mod_log(record["user_id"], "unban")
+
             await self._log_auto_unban(
                 guild=guild,
                 user_id=record["user_id"],
@@ -453,6 +465,10 @@ class BanCog(
             await ctx.send(f"Failed to ban that member: {exc}", ephemeral=True)
             return
 
+        # The ban above triggers on_member_ban; suppress ModLogCog's
+        # duplicate before posting our own (richer) embed for it below.
+        suppress_mod_log(target_id, "ban")
+
         if unban_at is not None:
             self._add_tempban(guild_id=guild.id, user_id=target_id, unban_at=unban_at, reason=reason_text)
 
@@ -521,6 +537,10 @@ class BanCog(
         except discord.HTTPException as exc:
             await ctx.send(f"Failed to unban that user: {exc}", ephemeral=True)
             return
+
+        # The unban above triggers on_member_unban; suppress ModLogCog's
+        # duplicate before posting our own (richer) embed for it below.
+        suppress_mod_log(parsed_id, "unban")
 
         self._remove_tempban(guild_id=guild.id, user_id=parsed_id)
 

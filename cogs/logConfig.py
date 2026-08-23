@@ -98,3 +98,37 @@ def is_suppressed(message_id: int) -> bool:
     if ts is None:
         return False
     return (now - ts) <= _SUPPRESS_TTL_SECONDS
+
+
+# ── Cross-cog mod-log suppression ────────────────────────────────────────────
+# kickCog/timeoutCog/banCog each post their own (richer) embed to the mod-log
+# channel right after performing an action, but that action — guild.kick(),
+# member.timeout(), guild.ban()/unban() — also fires the matching gateway
+# event that ModLogCog listens on, so without this it would post a second,
+# duplicate, plainer entry for the same action. Call suppress_mod_log(...)
+# right after the action call succeeds and before posting your own embed; the
+# same pattern as suppress_message_log/is_suppressed above, just keyed on
+# (user_id, action) instead of a message ID.
+
+_suppressed_mod_log: dict[tuple[int, str], float] = {}
+_MOD_LOG_SUPPRESS_TTL_SECONDS = 30  # generous window to cover audit-log propagation delay
+
+
+def suppress_mod_log(user_id: int, action: str) -> None:
+    """Mark a (user_id, action) pair so ModLogCog skips logging it. `action`
+    is one of "kick", "timeout", "untimeout", "ban", "unban"."""
+    _suppressed_mod_log[(user_id, action)] = time.monotonic()
+
+
+def is_mod_log_suppressed(user_id: int, action: str) -> bool:
+    """Check (and consume) a suppression flag for (user_id, action). Also
+    opportunistically prunes stale entries so this dict can't grow unbounded."""
+    now = time.monotonic()
+    stale = [key for key, ts in _suppressed_mod_log.items() if now - ts > _MOD_LOG_SUPPRESS_TTL_SECONDS]
+    for key in stale:
+        _suppressed_mod_log.pop(key, None)
+
+    ts = _suppressed_mod_log.pop((user_id, action), None)
+    if ts is None:
+        return False
+    return (now - ts) <= _MOD_LOG_SUPPRESS_TTL_SECONDS
