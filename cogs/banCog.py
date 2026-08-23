@@ -425,6 +425,12 @@ class BanCog(
             )
             return
 
+        # All checks passed — defer now. The DM send + guild.ban() below are
+        # two sequential network calls, which combined can outrun Discord's
+        # 3-second interaction ack window and make ctx.send() below fail with
+        # a 404 Unknown interaction even though the ban itself went through.
+        await ctx.defer(ephemeral=True)
+
         reason_text = reason or "No reason provided"
         unban_at = discord.utils.utcnow().timestamp() + duration_seconds if duration_seconds else None
 
@@ -519,6 +525,12 @@ class BanCog(
         if parsed_id is None:
             await ctx.send(f"Couldn't parse `{user_id}` as a user ID.", ephemeral=True)
             return
+
+        # All checks passed — defer now. fetch_ban() + guild.unban() below are
+        # two sequential network calls, which combined can outrun Discord's
+        # 3-second interaction ack window and make ctx.send() below fail with
+        # a 404 Unknown interaction even though the unban itself went through.
+        await ctx.defer(ephemeral=True)
 
         reason_text = reason or "No reason provided"
         target = discord.Object(id=parsed_id)

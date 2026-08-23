@@ -135,6 +135,13 @@ class TimeoutCog(
             )
             return
 
+        # All checks passed — defer now. member.timeout() below is a single
+        # network call, but discord.py transparently sleeps through any
+        # rate-limit backoff on it, which can outrun Discord's 3-second
+        # interaction ack window and make ctx.send() below fail with a 404
+        # Unknown interaction even though the timeout itself went through.
+        await ctx.defer(ephemeral=True)
+
         reason_text = reason or "No reason provided"
         duration_display = format_duration(timedelta(seconds=seconds))
         clamp_note = " (clamped to Discord's 28-day max)" if clamped else ""
@@ -210,6 +217,11 @@ class TimeoutCog(
         if member.timed_out_until is None or member.timed_out_until <= now:
             await ctx.send(f"{member.mention} isn't currently timed out.", ephemeral=True)
             return
+
+        # All checks passed — defer now, for the same reason as =timeout:
+        # member.timeout() below is a single call, but rate-limit backoff on
+        # it can still outrun the 3-second interaction ack window.
+        await ctx.defer(ephemeral=True)
 
         reason_text = reason or "No reason provided"
 

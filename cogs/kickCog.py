@@ -86,6 +86,12 @@ class KickCog(
             )
             return
 
+        # All checks passed — defer now. The DM send + guild.kick() below are
+        # two sequential network calls, which combined can outrun Discord's
+        # 3-second interaction ack window and make ctx.send() below fail with
+        # a 404 Unknown interaction even though the kick itself went through.
+        await ctx.defer(ephemeral=True)
+
         reason_text = reason or "No reason provided"
 
         # DM must be attempted before the kick — the bot may lose the ability

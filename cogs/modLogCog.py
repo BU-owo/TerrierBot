@@ -80,12 +80,16 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
-        if is_mod_log_suppressed(member.id, "kick"):
-            return  # KickCog already posted its own (richer) embed for this
-
         entry = await self._find_audit_entry(member.guild, discord.AuditLogAction.kick, member.id)
         if entry is None:
             return  # not a kick (plain leave) — JoinLeaveCog already covers that
+
+        # Checked here, after _find_audit_entry's ~1s delay, not at the top of
+        # the listener: the gateway event this listener reacts to can be
+        # dispatched before KickCog's REST call (guild.kick()) even returns,
+        # racing ahead of its suppress_mod_log() call if checked too early.
+        if is_mod_log_suppressed(member.id, "kick"):
+            return  # KickCog already posted its own (richer) embed for this
 
         embed = discord.Embed(
             title="👢 Member kicked",
@@ -102,10 +106,12 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: discord.User):
+        entry = await self._find_audit_entry(guild, discord.AuditLogAction.ban, user.id)
+
+        # Checked here, after the delay above, not at the top — see the
+        # matching comment in on_member_remove for why.
         if is_mod_log_suppressed(user.id, "ban"):
             return  # BanCog already posted its own (richer) embed for this
-
-        entry = await self._find_audit_entry(guild, discord.AuditLogAction.ban, user.id)
 
         embed = discord.Embed(
             title="🔨 Member banned",
@@ -118,10 +124,12 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild: discord.Guild, user: discord.User):
+        entry = await self._find_audit_entry(guild, discord.AuditLogAction.unban, user.id)
+
+        # Checked here, after the delay above, not at the top — see the
+        # matching comment in on_member_remove for why.
         if is_mod_log_suppressed(user.id, "unban"):
             return  # BanCog already posted its own (richer) embed for this
-
-        entry = await self._find_audit_entry(guild, discord.AuditLogAction.unban, user.id)
 
         embed = discord.Embed(
             title="🔓 Member unbanned",
@@ -150,12 +158,16 @@ class ModLogCog(
         else:
             return  # e.g. transitioning between two already-expired timestamps
 
-        if is_mod_log_suppressed(after.id, action):
-            return  # TimeoutCog already posted its own (richer) embed for this
-
         entry = await self._find_audit_entry(
             after.guild, discord.AuditLogAction.member_update, after.id, changed_attr="timed_out_until"
         )
+
+        # Checked here, after the delay above, not before it: this listener's
+        # gateway event can be dispatched before TimeoutCog's REST call
+        # (member.timeout()) even returns, racing ahead of its
+        # suppress_mod_log() call if checked immediately on dispatch.
+        if is_mod_log_suppressed(after.id, action):
+            return  # TimeoutCog already posted its own (richer) embed for this
 
         if is_active:
             title = "🔇 Member timed out" if not was_active else "🔇 Timeout updated"
