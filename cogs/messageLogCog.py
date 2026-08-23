@@ -12,6 +12,12 @@ from .logConfig import LogChannels, LogColors, get_log_channel, get_purger, is_s
 # did it.
 _AUDIT_LOOKUP_WINDOW_SECONDS = 10
 
+# Bulk-delete content preview limits — keep well under Discord's 4096-char
+# embed description cap even in the worst case (long author names, every
+# listed message hitting the per-line truncation).
+_BULK_CONTENT_MAX_LEN = 150
+_BULK_MAX_LISTED_MESSAGES = 15
+
 
 async def setup(bot: TerrierBot):
     await bot.add_cog(MessageLogCog(bot))
@@ -122,6 +128,7 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
         cached_by_id = {m.id: m for m in payload.cached_messages}
         total = 0
         uncached_count = 0
+        content_messages: list[discord.Message] = []
         for mid in payload.message_ids:
             if is_suppressed(mid):
                 continue
@@ -131,8 +138,15 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
             total += 1
             if cached is None:
                 uncached_count += 1
+            else:
+                content_messages.append(cached)
         if total == 0:
             return
+
+        # payload.message_ids is an unordered set, so cached messages are
+        # collected in no particular order above — sort chronologically
+        # (snowflake IDs are monotonic) before displaying them.
+        content_messages.sort(key=lambda m: m.id)
 
         channel = get_log_channel(self.bot, LogChannels.MESSAGE)
         if channel is None:
@@ -153,6 +167,23 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
             description = f"{total} message(s) deleted in {location}"
             if uncached_count:
                 description += f" ({uncached_count} uncached)"
+
+        content_lines: list[str] = []
+        for message in content_messages[:_BULK_MAX_LISTED_MESSAGES]:
+            content = message.content.replace("\n", " ") if message.content else "*(no text content)*"
+            if len(content) > _BULK_CONTENT_MAX_LEN:
+                content = content[: _BULK_CONTENT_MAX_LEN - 1].rstrip() + "…"
+            content_lines.append(f"**{message.author}:** {content}")
+
+        remaining_cached = len(content_messages) - len(content_lines)
+        if remaining_cached > 0:
+            content_lines.append(f"...and {remaining_cached} more")
+
+        if uncached_count:
+            content_lines.append(f"+ {uncached_count} uncached message(s) — content unavailable")
+
+        if content_lines:
+            description += "\n\n" + "\n".join(content_lines)
 
         embed = discord.Embed(
             title="🗑️ Bulk message delete",
