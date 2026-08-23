@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, get_log_channel, is_suppressed
+from .logConfig import LogChannels, LogColors, get_log_channel, get_purger, is_suppressed
 
 # How recent an audit log entry must be to count as "this deletion" — Discord
 # only creates a message_delete audit entry when someone deletes another
@@ -141,9 +141,18 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
         source_channel = self.bot.get_channel(payload.channel_id)
         location = source_channel.mention if source_channel else f"<#{payload.channel_id}>"
 
-        description = f"{total} message(s) deleted in {location}"
-        if uncached_count:
-            description += f" ({uncached_count} uncached)"
+        # If every message in this batch was purged by the same mod (=purge),
+        # attribute it instead of logging a generic bulk delete. Falls back
+        # to the generic line if attribution is missing or mixed (e.g. a
+        # purge overlapping with an unrelated deletion in the same batch).
+        purger_ids = {get_purger(mid) for mid in payload.message_ids}
+        if len(purger_ids) == 1 and None not in purger_ids:
+            (deleter_id,) = purger_ids
+            description = f"{total} message(s) purged by <@{deleter_id}> in {location}"
+        else:
+            description = f"{total} message(s) deleted in {location}"
+            if uncached_count:
+                description += f" ({uncached_count} uncached)"
 
         embed = discord.Embed(
             title="🗑️ Bulk message delete",

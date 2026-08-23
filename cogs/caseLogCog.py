@@ -26,13 +26,15 @@ _WARNINGS_DB_PATH = os.path.join(DB_DIR, "warnings.db")
 _PAGE_SIZE = 15
 
 CASE_LABELS = {
-    "kick": "👢 Kick",
-    "timeout": "🔇 Timeout",
-    "untimeout": "🔊 Timeout cleared",
-    "ban": "🔨 Ban",
-    "unban": "🔓 Unban",
-    "warn": "⚠️ Warn",
+    "kick": ("👢", "Kick"),
+    "timeout": ("🔇", "Timeout"),
+    "untimeout": ("🔊", "Timeout cleared"),
+    "ban": ("🔨", "Ban"),
+    "unban": ("🔓", "Unban"),
+    "warn": ("⚠️", "Warn"),
 }
+_UNKNOWN_CASE_EMOJI = "•"
+_REASON_MAX_LEN = 60
 
 _MENTION_RE = re.compile(r"^<@!?(\d+)>$")
 
@@ -162,12 +164,21 @@ def _resolve_target(guild: discord.Guild, raw: str) -> tuple[int, discord.Member
 
 
 def _format_entry(entry: dict) -> str:
-    label = CASE_LABELS.get(entry["type"], entry["type"].title())
+    emoji, type_text = CASE_LABELS.get(entry["type"], (_UNKNOWN_CASE_EMOJI, entry["type"].title()))
     ts = int(entry["timestamp"].timestamp())
-    line = f"**{label}** — <t:{ts}:R> — Mod: <@{entry['moderator_id']}>\n{entry['reason']}"
+
+    reason = entry["reason"]
+    if len(reason) > _REASON_MAX_LEN:
+        reason = reason[: _REASON_MAX_LEN - 1].rstrip() + "…"
+
+    duration_suffix = ""
     if entry["duration_seconds"]:
-        line += f"\nDuration: {format_duration(timedelta(seconds=entry['duration_seconds']))}"
-    return line
+        duration_suffix = f" ({format_duration(timedelta(seconds=entry['duration_seconds']))})"
+
+    return (
+        f"{emoji} **{type_text}** — <t:{ts}:R> by <@{entry['moderator_id']}> — "
+        f"{reason}{duration_suffix}"
+    )
 
 
 async def setup(bot: TerrierBot):
@@ -217,18 +228,17 @@ class _ModLogsView(discord.ui.View):
         end = min(start + _PAGE_SIZE, total)
         page_entries = self.entries[start:end]
 
+        if page_entries:
+            lines = "\n".join(_format_entry(entry) for entry in page_entries)
+            description = f"{self.target_line}\n\n{lines}"
+        else:
+            description = f"{self.target_line}\n\nNo warns, kicks, timeouts, or bans on record."
+
         embed = discord.Embed(
             title="📋 Moderation case log",
-            description=self.target_line,
+            description=description,
             color=LogColors.MOD,
         )
-        if not page_entries:
-            embed.add_field(
-                name="No history", value="No warns, kicks, timeouts, or bans on record.", inline=False
-            )
-        else:
-            for entry in page_entries:
-                embed.add_field(name="​", value=_format_entry(entry), inline=False)
         embed.set_footer(
             text=f"{total} total entr{'y' if total == 1 else 'ies'} — showing {start + 1}-{end}"
             if total

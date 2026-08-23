@@ -132,3 +132,44 @@ def is_mod_log_suppressed(user_id: int, action: str) -> bool:
     if ts is None:
         return False
     return (now - ts) <= _MOD_LOG_SUPPRESS_TTL_SECONDS
+
+
+# ── Cross-cog purge attribution ──────────────────────────────────────────────
+# PurgeCog's =purge bulk-deletes via TextChannel.purge(), which fires the same
+# on_raw_bulk_message_delete event as any other bulk delete. Unlike
+# suppress_message_log above, a purge should still show up in #message-logs —
+# just attributed to the mod who ran it instead of logged as a generic,
+# unattributed bulk delete. Call register_purge(...) right after the purge
+# call succeeds, with the message IDs it actually deleted.
+
+_purge_registry: dict[int, tuple[int, float]] = {}
+_PURGE_TTL_SECONDS = 30  # generous window to cover any delay before on_raw_bulk_message_delete fires
+
+
+def register_purge(message_ids: list[int], deleter_id: int, channel_id: int) -> None:
+    """Record that `deleter_id` purged these message IDs from `channel_id`,
+    so MessageLogCog can attribute the resulting bulk-delete log entry.
+    `channel_id` isn't needed for the lookup (message IDs are already unique)
+    but is accepted for a clearer call site."""
+    _ = channel_id
+    now = time.monotonic()
+    for message_id in message_ids:
+        _purge_registry[message_id] = (deleter_id, now)
+
+
+def get_purger(message_id: int) -> int | None:
+    """Check (and consume) purge attribution for a message ID — returns the
+    deleter's user ID if it was part of a registered purge, else None. Also
+    opportunistically prunes stale entries so this dict can't grow unbounded."""
+    now = time.monotonic()
+    stale = [mid for mid, (_, ts) in _purge_registry.items() if now - ts > _PURGE_TTL_SECONDS]
+    for mid in stale:
+        _purge_registry.pop(mid, None)
+
+    entry = _purge_registry.pop(message_id, None)
+    if entry is None:
+        return None
+    deleter_id, ts = entry
+    if (now - ts) > _PURGE_TTL_SECONDS:
+        return None
+    return deleter_id
