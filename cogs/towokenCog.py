@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import shelve
 import time
+from typing import Literal
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from bot import TerrierBot, Context
+from .logConfig import MOD_ROLE_ID
+
+_SHELVE_FILE = "terrierbot.shelve"
+_SHELVE_KEY = "towoken_enabled"
 
 TOWOKEN_THRESHOLD = 12
 TOWOKEN_COOLDOWN_SECONDS = 10 * 60
@@ -32,9 +38,22 @@ class TowokenCog(commands.Cog, name="Towoken", description="Silly towoken usage 
         self.bot = bot
         self._usage_counts: dict[int, int] = {}
         self._last_notice_at: dict[int, float] = {}
+        with shelve.open(_SHELVE_FILE) as sh:
+            self.enabled: bool = sh.get(_SHELVE_KEY, True)
         print("Towoken Cog Ready")
 
+    def _save_state(self) -> None:
+        with shelve.open(_SHELVE_FILE) as sh:
+            sh[_SHELVE_KEY] = self.enabled
+
+    @staticmethod
+    def _is_mod(user: discord.abc.User) -> bool:
+        return isinstance(user, discord.Member) and any(r.id == MOD_ROLE_ID for r in user.roles)
+
     async def _maybe_send_towoken_notice(self, channel: discord.abc.Messageable, user_id: int) -> None:
+        if not self.enabled:
+            return
+
         now = time.time()
         last_notice = self._last_notice_at.get(user_id, 0.0)
         if now - last_notice < TOWOKEN_COOLDOWN_SECONDS:
@@ -58,6 +77,8 @@ class TowokenCog(commands.Cog, name="Towoken", description="Silly towoken usage 
             return
         if ctx.author.id in TOWOKEN_EXEMPT_USER_IDS:
             return
+        if self._is_mod(ctx.author):
+            return
         await self._maybe_send_towoken_notice(ctx.channel, ctx.author.id)
 
     @commands.Cog.listener()
@@ -69,4 +90,23 @@ class TowokenCog(commands.Cog, name="Towoken", description="Silly towoken usage 
             return
         if interaction.user.id in TOWOKEN_EXEMPT_USER_IDS:
             return
+        if self._is_mod(interaction.user):
+            return
         await self._maybe_send_towoken_notice(interaction.channel, interaction.user.id)
+
+    # ── =towoken ─────────────────────────────────────────────────────────────
+
+    @commands.hybrid_command(
+        name="towoken", description="Enable or disable the towoken limit notice (mod only)."
+    )
+    @app_commands.describe(state="enable or disable")
+    async def towoken(self, ctx: Context, state: Literal["enable", "disable"]):
+        if not self._is_mod(ctx.author):
+            await ctx.send("You don't have permission to use this command.", ephemeral=True)
+            return
+
+        self.enabled = state == "enable"
+        self._save_state()
+        await ctx.send(
+            f"Towoken notice is now {'enabled' if self.enabled else 'disabled'}.", ephemeral=True
+        )
