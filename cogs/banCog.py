@@ -234,6 +234,31 @@ class BanCog(
             interaction.data,
         )
 
+    # DEBUG — remove after testing. Sends the appeal DM/button to whoever
+    # runs it, without banning them, to isolate whether silent appeal-button
+    # failures are specific to banned users (no shared guild with the bot)
+    # or a broader dynamic-item dispatch bug.
+    @commands.command(name="testappeal")
+    @commands.is_owner()
+    async def testappeal(self, ctx: Context):
+        """DEBUG: sends the appeal DM/button to the command author WITHOUT
+        banning them, to test if DM component interactions work for accounts
+        that still share a guild with the bot."""
+        guild = ctx.guild
+        if guild is None:
+            await ctx.send("Run this in a server.")
+            return
+        embed = discord.Embed(
+            title="TEST — not a real ban",
+            description="This is a diagnostic test of the appeal button. No ban occurred.",
+            color=discord.Color.blurple(),
+        )
+        try:
+            await ctx.author.send(embed=embed, view=_build_appeal_view(guild.id, ctx.author.id))
+            await ctx.send("Test appeal DM sent — check your DMs.", ephemeral=True)
+        except (discord.Forbidden, discord.HTTPException) as exc:
+            await ctx.send(f"Couldn't DM you: {exc}", ephemeral=True)
+
     # ── Shared helpers ───────────────────────────────────────────────────────
 
     @staticmethod
