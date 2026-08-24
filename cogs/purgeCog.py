@@ -71,7 +71,7 @@ class PurgeCog(
         # Prefix invocations post a "=purge <amount>" message of their own —
         # exclude it from the amount-limited purge below so the count the mod
         # asked for matches actual content deleted, then clean it up separately.
-        check = None
+        check = lambda m: True  # noqa: E731
         if ctx.interaction is None:
             invoking_id = ctx.message.id
             check = lambda m: m.id != invoking_id  # noqa: E731
