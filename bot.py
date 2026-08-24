@@ -745,8 +745,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm"]
 
 
 def _get_token() -> str:
