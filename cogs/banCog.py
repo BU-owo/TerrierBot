@@ -87,90 +87,67 @@ async def setup(bot: TerrierBot):
     await bot.add_cog(BanCog(bot))
 
 
-# ── Persistent appeal button ─────────────────────────────────────────────────
-# The custom_id encodes the banned user's id and guild id per-ban
-# (ban_appeal:{guild_id}:{user_id}), so a single fixed-custom_id registration
-# via bot.add_view() (as FeedbackCog does for its one static button) can't
-# handle it — that only matches the exact id it was registered with. A
-# DynamicItem instead matches ANY custom_id against a regex template, which
-# is what actually lets a brand-new button (created for a ban that happens
-# after a restart) still be routed correctly. Registered once, in the cog's
-# __init__, via bot.add_dynamic_items().
+# ── Cog ───────────────────────────────────────────────────────────────────────
 
-class AppealButton(
-    discord.ui.DynamicItem[discord.ui.Button],
-    template=r"ban_appeal:(?P<guild_id>\d+):(?P<user_id>\d+)",
+class BanCog(
+    commands.Cog,
+    name="Ban",
+    description="Bans/unbans a member, with a DM reply-to-appeal flow for banned users.",
 ):
-    def __init__(self, guild_id: int, user_id: int):
-        super().__init__(
-            discord.ui.Button(
-                label="Appeal this ban",
-                style=discord.ButtonStyle.primary,
-                custom_id=f"ban_appeal:{guild_id}:{user_id}",
-            )
-        )
-        self.guild_id = guild_id
-        self.user_id = user_id
+    def __init__(self, bot: TerrierBot):
+        self.bot = bot
+        self.tempbans: dict[str, dict] = self.load_tempbans()
+        self._tempban_check.start()
 
-    @classmethod
-    async def from_custom_id(
-        cls, interaction: discord.Interaction, item: discord.ui.Item, match: re.Match[str], /
-    ) -> "AppealButton":
-        return cls(int(match["guild_id"]), int(match["user_id"]))
+    def cog_unload(self) -> None:
+        self._tempban_check.cancel()
 
-    async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_modal(_AppealModal(self.guild_id, self.user_id))
+    # ── Ban appeals ──────────────────────────────────────────────────────────
+    # A banned user no longer shares a guild with the bot, and Discord
+    # silently drops component interactions (buttons/modals) from a DM back
+    # to a bot the sender doesn't share a guild with — confirmed via
+    # diagnostic logging, not fixable on our end. Plain messages and message
+    # events still work fine post-ban, so appeals are collected as an
+    # ordinary DM reply instead of a button/modal.
 
-
-def _build_appeal_view(guild_id: int, user_id: int) -> discord.ui.View:
-    view = discord.ui.View(timeout=None)
-    view.add_item(AppealButton(guild_id, user_id))
-    return view
-
-
-class _AppealModal(discord.ui.Modal, title="Ban Appeal"):
-    reason_input = discord.ui.TextInput(
-        label="Why should we reconsider?",
-        style=discord.TextStyle.paragraph,
-        required=True,
-        max_length=1000,
-    )
-
-    def __init__(self, guild_id: int, user_id: int):
-        super().__init__()
-        self.guild_id = guild_id
-        self.user_id = user_id
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        # Defer + followup rather than a single send_message, since the
-        # fetch_ban lookup + log-channel send below can outrun the 3s window.
-        await interaction.response.defer(ephemeral=True, thinking=True)
-
-        bot = interaction.client
-        guild = bot.get_guild(self.guild_id)
-
-        original_reason: str | None = None
-        if guild is not None:
+    async def _find_ban(self, user_id: int) -> tuple[discord.Guild | None, discord.BanEntry | None]:
+        """Find a guild the bot is in where `user_id` is currently banned.
+        Confirms a DM is an actual appeal before treating it as one — without
+        this, every random DM the bot receives would get forwarded to the
+        mod log as if it were one."""
+        target = discord.Object(id=user_id)
+        for guild in self.bot.guilds:
             try:
-                ban_entry = await guild.fetch_ban(discord.Object(id=self.user_id))
-                original_reason = ban_entry.reason
-            except (discord.NotFound, discord.HTTPException):
-                pass
+                ban_entry = await guild.fetch_ban(target)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                continue
+            return guild, ban_entry
+        return None, None
 
-        log_channel = get_log_channel(bot, LogChannels.MOD)
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message) -> None:
+        if message.author.bot:
+            return
+        if not isinstance(message.channel, discord.DMChannel):
+            return
+
+        _guild, ban_entry = await self._find_ban(message.author.id)
+        if ban_entry is None:
+            return  # not currently banned anywhere the bot can see — not an appeal
+
+        log_channel = get_log_channel(self.bot, LogChannels.MOD)
         if log_channel is None:
-            await interaction.followup.send(
-                "Couldn't deliver your appeal right now — please contact a moderator another way.",
-                ephemeral=True,
+            await message.channel.send(
+                "Couldn't deliver your appeal right now — please contact a moderator another way."
             )
             return
 
         embed = discord.Embed(
             title="📨 Ban appeal received",
             description=(
-                f"**Appealing user:** {interaction.user} (`{interaction.user.id}`)\n"
-                f"**Original ban reason:** {original_reason or '*Unknown — could not be looked up*'}\n\n"
-                f"**Appeal:**\n{self.reason_input.value}"
+                f"**Appealing user:** {message.author} (`{message.author.id}`)\n"
+                f"**Original ban reason:** {ban_entry.reason or '*Unknown — could not be looked up*'}\n\n"
+                f"**Appeal:**\n{message.content or '*No text content*'}"
             ),
             color=LogColors.MOD,
             timestamp=discord.utils.utcnow(),
@@ -182,82 +159,12 @@ class _AppealModal(discord.ui.Modal, title="Ban Appeal"):
                 allowed_mentions=discord.AllowedMentions(roles=True, users=False, everyone=False),
             )
         except discord.HTTPException:
-            await interaction.followup.send(
-                "Something went wrong sending your appeal — please try again later or contact a moderator another way.",
-                ephemeral=True,
+            await message.channel.send(
+                "Something went wrong sending your appeal — please try again later or contact a moderator another way."
             )
             return
 
-        # Button is intentionally left enabled — appellants may submit again.
-        await interaction.followup.send(
-            "Your appeal has been sent to the moderators. Thank you.",
-            ephemeral=True,
-        )
-
-
-# ── Cog ───────────────────────────────────────────────────────────────────────
-
-class BanCog(
-    commands.Cog,
-    name="Ban",
-    description="Bans/unbans a member, with a DM appeal button for the banned user.",
-):
-    def __init__(self, bot: TerrierBot):
-        self.bot = bot
-        # TEMP DIAGNOSTIC — remove once the appeal-button dispatch bug is
-        # confirmed/fixed. Lets us check pm2 log history for this line
-        # appearing more than once since the last full process restart,
-        # which would mean add_dynamic_items(AppealButton) below ran more
-        # than once (e.g. via the /reload/<cog_name> hot-reload webhook)
-        # without a matching remove_dynamic_items on the old registration.
-        logging.info("BanCog.__init__ called (instance id=%s) — registering AppealButton", id(self))
-        self.bot.add_dynamic_items(AppealButton)
-        self.tempbans: dict[str, dict] = self.load_tempbans()
-        self._tempban_check.start()
-
-    def cog_unload(self) -> None:
-        self._tempban_check.cancel()
-
-    # TEMP DIAGNOSTIC — remove once the appeal-button dispatch bug is
-    # confirmed/fixed. Fires for every interaction the bot receives
-    # (component clicks, slash commands, modals, everything), alongside
-    # discord.py's normal dispatch — purely observational, doesn't consume
-    # or short-circuit anything. Confirms whether an appeal-button click is
-    # reaching the process at all before discord.py's own dynamic-item
-    # routing (which can fail silently — see investigation notes) gets it.
-    @commands.Cog.listener()
-    async def on_interaction(self, interaction: discord.Interaction):
-        logging.info(
-            "RAW INTERACTION: type=%s custom_id=%s data=%s",
-            interaction.type,
-            getattr(interaction, "custom_id", None),
-            interaction.data,
-        )
-
-    # DEBUG — remove after testing. Sends the appeal DM/button to whoever
-    # runs it, without banning them, to isolate whether silent appeal-button
-    # failures are specific to banned users (no shared guild with the bot)
-    # or a broader dynamic-item dispatch bug.
-    @commands.command(name="testappeal")
-    @commands.is_owner()
-    async def testappeal(self, ctx: Context):
-        """DEBUG: sends the appeal DM/button to the command author WITHOUT
-        banning them, to test if DM component interactions work for accounts
-        that still share a guild with the bot."""
-        guild = ctx.guild
-        if guild is None:
-            await ctx.send("Run this in a server.")
-            return
-        embed = discord.Embed(
-            title="TEST — not a real ban",
-            description="This is a diagnostic test of the appeal button. No ban occurred.",
-            color=discord.Color.blurple(),
-        )
-        try:
-            await ctx.author.send(embed=embed, view=_build_appeal_view(guild.id, ctx.author.id))
-            await ctx.send("Test appeal DM sent — check your DMs.", ephemeral=True)
-        except (discord.Forbidden, discord.HTTPException) as exc:
-            await ctx.send(f"Couldn't DM you: {exc}", ephemeral=True)
+        await message.channel.send("Your appeal has been sent to the moderators. Thank you.")
 
     # ── Shared helpers ───────────────────────────────────────────────────────
 
@@ -504,7 +411,11 @@ class BanCog(
         ]
         if unban_at is not None:
             dm_lines += ["", f"This ban is temporary — you'll be auto-unbanned <t:{int(unban_at)}:R>."]
-        dm_lines += ["", "If you believe this was a mistake, you can appeal below."]
+        dm_lines += [
+            "",
+            "If you believe this was a mistake, reply directly to this message with your "
+            "appeal and it will be sent to the moderators.",
+        ]
         dm_embed = discord.Embed(
             title="You have been banned",
             description="\n".join(dm_lines),
@@ -512,7 +423,7 @@ class BanCog(
             timestamp=discord.utils.utcnow(),
         )
         try:
-            await member.send(embed=dm_embed, view=_build_appeal_view(guild.id, member.id))
+            await member.send(embed=dm_embed)
         except (discord.Forbidden, discord.HTTPException):
             dm_delivered = False
 
