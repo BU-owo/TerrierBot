@@ -204,12 +204,35 @@ class BanCog(
 ):
     def __init__(self, bot: TerrierBot):
         self.bot = bot
+        # TEMP DIAGNOSTIC — remove once the appeal-button dispatch bug is
+        # confirmed/fixed. Lets us check pm2 log history for this line
+        # appearing more than once since the last full process restart,
+        # which would mean add_dynamic_items(AppealButton) below ran more
+        # than once (e.g. via the /reload/<cog_name> hot-reload webhook)
+        # without a matching remove_dynamic_items on the old registration.
+        logging.info("BanCog.__init__ called (instance id=%s) — registering AppealButton", id(self))
         self.bot.add_dynamic_items(AppealButton)
         self.tempbans: dict[str, dict] = self.load_tempbans()
         self._tempban_check.start()
 
     def cog_unload(self) -> None:
         self._tempban_check.cancel()
+
+    # TEMP DIAGNOSTIC — remove once the appeal-button dispatch bug is
+    # confirmed/fixed. Fires for every interaction the bot receives
+    # (component clicks, slash commands, modals, everything), alongside
+    # discord.py's normal dispatch — purely observational, doesn't consume
+    # or short-circuit anything. Confirms whether an appeal-button click is
+    # reaching the process at all before discord.py's own dynamic-item
+    # routing (which can fail silently — see investigation notes) gets it.
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        logging.info(
+            "RAW INTERACTION: type=%s custom_id=%s data=%s",
+            interaction.type,
+            getattr(interaction, "custom_id", None),
+            interaction.data,
+        )
 
     # ── Shared helpers ───────────────────────────────────────────────────────
 
