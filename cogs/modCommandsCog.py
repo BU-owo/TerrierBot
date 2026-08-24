@@ -35,12 +35,12 @@ _FIELDS = [
     (
         "🔨 Ban / Unban",
         "`=ban <member> [duration] [reason]` / `=unban <user_id> [reason]`",
-        "For serious or repeated violations; add a duration for a temp ban, omit it for permanent. Unban reverses it by ID. Requires vote.",
+        "For serious or repeated violations; add a duration (e.g. `2h`) right after the member for a temp ban, omit it for permanent — everything else is just the reason, no special phrasing needed. Unban reverses it by ID. Requires vote.",
     ),
     (
         "🧹 Purge",
-        "`=purge <amount>` (1-100)",
-        "Bulk-deletes recent messages in the current channel.",
+        "`=purge <amount>` (1-100) / `=purgeafter [target]`",
+        "Purge bulk-deletes recent messages. Purgeafter deletes everything after a target message (reply to it, or pass its ID/link) in the current channel, capped at 200.",
     ),
     (
         "🔒 Lockdown / Unlock",

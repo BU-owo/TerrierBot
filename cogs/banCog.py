@@ -55,6 +55,25 @@ def _parse_duration_seconds(duration_str: str) -> int | None:
     return seconds if seconds > 0 else None
 
 
+class _DurationArg(commands.Converter[str]):
+    """Validates a =ban duration token, raising instead of accepting any
+    string. `duration` is Optional in the =ban signature below, so when this
+    raises, discord.py's built-in Optional-converter fallback rewinds the
+    text-command parser to the un-consumed word instead of erroring — that
+    word then flows into `reason` as ordinary text. Without this raise (e.g.
+    if `duration` were typed as plain `str`), the identity conversion always
+    "succeeds", so the first word after the member would always get eaten as
+    a duration attempt even when it's actually the start of the reason.
+    Slash invocations aren't affected — duration is already its own input
+    box there, so a bad value still raises normally.
+    """
+
+    async def convert(self, ctx: Context, argument: str) -> str:
+        if _parse_duration_seconds(argument) is None:
+            raise commands.BadArgument(f"Couldn't parse `{argument}` as a duration. {_DURATION_FORMAT_HELP}")
+        return argument
+
+
 # ── Temp-ban persistence ─────────────────────────────────────────────────────
 # Temp-bans need fast, guild-scoped lookups on every tick of the background
 # expiry loop, which the case log's append-only `cases` table isn't shaped
@@ -384,14 +403,14 @@ class BanCog(
     @commands.hybrid_command(name="ban", description="Ban a member from the server.")
     @app_commands.describe(
         member="The member to ban",
-        duration="Optional: e.g. 30m, 2h, 1d — omit for a permanent ban",
-        reason="Reason for the ban",
+        duration="Optional: e.g. 30m, 2h, 1d — omit for a permanent ban. Prefix: must be the first word to count.",
+        reason="Reason for the ban (prefix: just type it normally, no special phrasing needed)",
     )
     async def ban(
         self,
         ctx: Context,
         member: discord.Member,
-        duration: str | None = None,
+        duration: _DurationArg | None = None,
         *,
         reason: str | None = None,
     ):
@@ -402,15 +421,9 @@ class BanCog(
             await ctx.send("This command can only be used in a server.", ephemeral=True)
             return
 
-        duration_seconds: int | None = None
-        if duration is not None:
-            duration_seconds = _parse_duration_seconds(duration)
-            if duration_seconds is None:
-                await ctx.send(
-                    f"Couldn't parse `{duration}` as a duration. {_DURATION_FORMAT_HELP}",
-                    ephemeral=True,
-                )
-                return
+        # duration has already been validated by _DurationArg's converter by
+        # this point (or is None) — no error branch needed here.
+        duration_seconds = _parse_duration_seconds(duration) if duration is not None else None
 
         if member.id == guild.owner_id:
             await ctx.send("I can't ban the server owner.", ephemeral=True)

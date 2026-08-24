@@ -619,6 +619,7 @@ async def help_command(ctx: Context):
             "`=unban` / `/unban` `<user_id> [reason]` - Unban a user by ID (mod only)\n"
             "`=kick` / `/kick` `<member> [reason]` - Kick a member (mod only)\n"
             "`=purge` / `/purge` `<amount>` - Bulk-delete recent messages in this channel, 1-100 (mod only)\n"
+            "`=purgeafter` / `/purgeafter` `<target>` - Delete every message after a target message (reply, ID, or link), up to 200 (mod only)\n"
             "`=modlogs` / `/modlogs` `<member_or_id>` - View a member's full case history: warns, kicks, timeouts, bans (mod only)\n"
             "`=modcommands` / `/modcommands` - Show a quick reference of moderation commands and when to use them (mod only)\n"
             "`=joinpolitics` or `/joinpolitics` - Post the #politics application (mod only)\n"
