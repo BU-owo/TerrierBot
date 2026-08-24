@@ -25,6 +25,7 @@ from .logConfig import (
 _MENTION_RE = re.compile(r"^<@!?(\d+)>$")
 
 
+
 def _parse_user_id(raw: str) -> int | None:
     """Accept a raw snowflake or a mention like <@123> / <@!123>."""
     raw = raw.strip()
