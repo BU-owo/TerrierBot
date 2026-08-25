@@ -605,7 +605,8 @@ async def help_command(ctx: Context):
             "`=positivity` or `/positivity status/enable/disable/interval/cooldown` - Configure Positivity Tuesday\n"
             "`=feedbacksetup` or `/feedbacksetup` - Post the anonymous feedback prompt\n"
             "`/starboard setchannel/threshold/enable/disable/status` - Configure the starboard\n"
-            "`/pingrole` - Ping one of the server role options\n\n"
+            "`/pingrole` - Ping one of the server role options\n"
+            "`/reactionrole` `<preset>` - Post a reaction role message from a preset (mod only)\n\n"
             "Moderation tools:\n"
             "`=warn` / `/warn` - Warn a member\n"
             "`=warncount` / `/warncount` - List active warnings\n"
@@ -746,8 +747,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm", "snitch"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm", "snitch"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm", "snitch", "reactionRole"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm", "snitch", "reactionRole"]
 
 
 def _get_token() -> str:

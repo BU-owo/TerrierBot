@@ -13,7 +13,7 @@ TerrierBot currently supports:
 - Community features such as `hello`, `love`, `banner`, `boost`, and `pride`
 - Anonymous feedback and moderation tools such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
 - A shared moderation case log across kicks, timeouts, and bans, viewable per-member with `modlogs`
-- Server management features such as the starboard, Positivity Tuesday automation, and ping roles
+- Server management features such as the starboard, Positivity Tuesday automation, ping roles, and preset reaction roles through `reactionrole`
 - Self-service role removal through `leavepolitics`, and a mod-reviewed application flow for the #politics channel through `joinpolitics`
 - Anonymous mod-only disciplinary votes with quorum and a time limit through `modvote`
 - Member-submitted reports to mods through `snitch`
@@ -113,6 +113,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=feedbacksetup` / `/feedbacksetup` | Post the anonymous feedback prompt |
 | `/starboard ...` | Configure the starboard (Manage Server required) |
 | `/pingrole` | Ping one of the community roles |
+| `/reactionrole <preset>` | Post a reaction role message from a preset (Manage Roles required) |
 | `=warn` / `/warn` | Warn a member |
 | `=warncount` / `/warncount` | List active warnings |
 | `=warninfo` / `/warninfo` | Show a user's warning history |
