@@ -592,7 +592,8 @@ async def help_command(ctx: Context):
             "`=banner` or `/banner` - Learn how to submit a server banner idea\n"
             "`=boost` or `/boost` - See server boost perks\n"
             "`=pride` or `/pride` - Send the Pride message\n"
-            "`=starleaderboard` or `/starleaderboard` - Show the most-starred posts"
+            "`=starleaderboard` or `/starleaderboard` - Show the most-starred posts\n"
+            "`/snitch` `[context]` - Send a report to the mods"
         ),
         inline=False,
     )
@@ -745,8 +746,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm"]
-defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm"]
+cogList = ["test", "hello", "love", "boost", "positivity", "members", "end", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm", "snitch"]
+defaultCogs = ["test", "hello", "love", "boost", "positivity", "members", "start", "banner", "reaction", "rmp", "class", "embed", "starboard", "towoken", "club", "mbta", "scamImage", "feedback", "pingrole", "troll", "warnings", "roleboost", "ticket", "lockin", "joinLeave", "memberLog", "serverLog", "messageLog", "modLog", "leavePolitics", "joinPolitics", "modvote", "lockdown", "caseLog", "modCommands", "purge", "timeout", "ban", "kick", "appealForm", "snitch"]
 
 
 def _get_token() -> str:

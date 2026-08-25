@@ -16,6 +16,7 @@ TerrierBot currently supports:
 - Server management features such as the starboard, Positivity Tuesday automation, and ping roles
 - Self-service role removal through `leavepolitics`, and a mod-reviewed application flow for the #politics channel through `joinpolitics`
 - Anonymous mod-only disciplinary votes with quorum and a time limit through `modvote`
+- Member-submitted reports to mods through `snitch`
 
 ## Requirements
 
@@ -102,6 +103,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=pride` / `/pride` | Send a Pride message |
 | `=roleboost` / `/roleboost` | Give a booster a role tied to their booster status (booster-role required) |
 | `=starleaderboard` / `/starleaderboard` | Show the most-starred posts |
+| `/snitch` | Send a report to the mods, with optional context |
 
 ### Moderation, feedback, and management
 
