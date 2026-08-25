@@ -10,12 +10,13 @@ PRESETS = {
     "Freshmen": {
         "role_id": 1541770660710191134,
         "emoji": "🧑‍🤝‍🧑",
+        "title": "🧑‍🤝‍🧑 Freshmen Ping Role",
         "description": (
             "Freshmen! Are you interested in being invited to do "
-            "[insert anything you want to do] with people from this server? "
+            "**[insert anything you want to do]** with people from this server? "
             "<@&1541770660710191134> is pingable by anyone in your class, and it will "
-            "only reach people who have opted in to be pinged (No constant pings @'30).\n\n"
-            "React with🧑‍🤝‍🧑below to add the role.\n\n"
+            "**only reach people who have opted in to be pinged** (no constant pings @'30).\n\n"
+            "**React with 🧑‍🤝‍🧑 below to add the role.**\n\n"
             "Ping when you are heading to the dining hall, exploring campus, getting coffee, "
             "going to an on campus event, etc.\n\n"
             "*This is for orientation week only.*"
@@ -49,7 +50,7 @@ class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assig
         await interaction.response.defer(ephemeral=True)
 
         data = PRESETS[preset]
-        embed = discord.Embed(description=data["description"], color=discord.Color.blurple())
+        embed = discord.Embed(title=data.get("title"), description=data["description"], color=discord.Color.blurple())
         message = await interaction.channel.send(embed=embed, allowed_mentions=discord.AllowedMentions(roles=True))
         await message.add_reaction(data["emoji"])
 
