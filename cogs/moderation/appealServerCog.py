@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from ..logging.caseLogCog import record_case
-from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel
+from ..logging.logConfig import LogColors, MOD_ROLE_ID
 
 # Dedicated appeals server — TerrierBot is a member of both this and the main
 # Terrier Hub server, so a banned user can still interact with the button
@@ -18,6 +18,11 @@ APPEALS_GUILD_ID = 1541626494122598491
 MAIN_GUILD_ID = 1396541818245484665
 
 APPEAL_BUTTON_CUSTOM_ID = "open_ban_appeal"
+
+# Where the initial appeal request (embed + accept/reject buttons) is posted.
+APPEAL_REQUEST_CHANNEL_ID = 1401924438341062798
+# Where a permanent, button-free record of the decision is posted afterward.
+APPEAL_RESULT_CHANNEL_ID = 1441889164898341098
 
 
 async def setup(bot: TerrierBot):
@@ -58,7 +63,7 @@ class _AppealModal(discord.ui.Modal, title="Ban Appeal"):
             )
             return
 
-        log_channel = get_log_channel(bot, LogChannels.MOD)
+        log_channel = bot.get_channel(APPEAL_REQUEST_CHANNEL_ID)
         if log_channel is not None:
             embed = discord.Embed(
                 title="📨 Ban appeal received",
@@ -162,6 +167,16 @@ class _AppealDecisionModal(discord.ui.Modal):
             embed = discord.Embed(description=outcome_field, color=LogColors.MOD)
         try:
             await self.original_message.edit(embed=embed, view=None)
+        except discord.HTTPException:
+            pass
+
+        # Permanent record of the decision in mod-log — a new message, not an
+        # edit, and with no buttons (the message above is where decisions
+        # happen). Best-effort: never blocks the rest of this flow.
+        try:
+            mod_log_channel = bot.get_channel(APPEAL_RESULT_CHANNEL_ID)
+            if mod_log_channel is not None:
+                await mod_log_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             pass
 
