@@ -77,6 +77,7 @@ def build_message(today: date) -> str | None:
             f"🧢 Day {day_num} of orientation. **{days(left)}** until classes. wear the free shirt they gave you, you look adoworable!",
             f"🐾 **{days(left)}** left. Orientation day {day_num}. almost done, hang in there puppy!!",
         ])
+    
 
     # ── New student move-in (Aug 24–25 → 2 days → 8 msgs) ───────────────────
     if NEW_STUDENT_MOVEIN_START <= today <= NEW_STUDENT_MOVEIN_END:
