@@ -171,7 +171,7 @@ class _AppealDecisionModal(discord.ui.Modal):
             if self.approve:
                 dm_text = (
                     "Your appeal for Terrier Hub was approved! You can rejoin here: "
-                    "https://discord.gg/WtECbmPch6"
+                    "https://discord.gg/bostonuniversity"
                 )
             else:
                 dm_text = "Your appeal for Terrier Hub was reviewed and denied."
