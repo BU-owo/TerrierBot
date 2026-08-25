@@ -9,12 +9,15 @@ DB_DIR = os.path.expanduser("~/terrierbot_data")
 DB_PATH = os.path.join(DB_DIR, "warnings.db")
 
 RULES = {
-    1: "Be Respectful",
-    2: "Keep It Safe and Legal",
-    3: "No Spam or Self-Promotion",
-    4: "No NSFW/NSFL Content",
-    5: "Respect Privacy",
-    6: "Mods Have Final Say",
+    1: "No Harassment or Insults",
+    2: "No Hate Speech or Slurs",
+    3: "No Edgy or Baiting Behavior",
+    4: "No Spam or Ping Abuse",
+    5: "No Doxxing or Sharing DMs",
+    6: "No Threats or Endangering Safety",
+    7: "No NSFW/NSFL Content",
+    8: "No Scams / Unapproved Self-Promo",
+    9: "Mods Have Final Say",
 }
 
 def is_mod():

@@ -11,6 +11,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from bot import Context, TerrierBot
+from .warningsCog import RULES
 from ..logging.caseLogCog import record_case
 from ..logging.logConfig import (
     LogChannels,
@@ -297,6 +298,7 @@ class BanCog(
         target_display: str,
         target_id: int,
         moderator: discord.abc.User,
+        rule: int,
         reason: str,
         dm_delivered: bool,
         unban_at: float | None = None,
@@ -309,6 +311,7 @@ class BanCog(
             # share a guild with the bot once banned.
             f"**Target:** {target_display} (`{target_id}`)",
             f"**Moderator:** {user_line(moderator)}",
+            f"**Rule:** {rule}. {RULES[rule]}",
             f"**Reason:** {reason}",
         ]
         if unban_at is not None:
@@ -359,13 +362,18 @@ class BanCog(
     @commands.hybrid_command(name="ban", description="Ban a member from the server.")
     @app_commands.describe(
         member="The member to ban",
+        rule="Rule being violated",
         duration="Optional: e.g. 30m, 2h, 1d — omit for a permanent ban. Prefix: must be the first word to count.",
         reason="Reason for the ban (prefix: just type it normally, no special phrasing needed)",
+    )
+    @app_commands.choices(
+        rule=[app_commands.Choice(name=f"{k}. {v}", value=k) for k, v in RULES.items()],
     )
     async def ban(
         self,
         ctx: Context,
         member: discord.Member,
+        rule: int,
         duration: _DurationArg | None = None,
         *,
         reason: str | None = None,
@@ -375,6 +383,11 @@ class BanCog(
         guild = ctx.guild
         if guild is None:
             await ctx.send("This command can only be used in a server.", ephemeral=True)
+            return
+
+        if rule not in RULES:
+            valid = ", ".join(f"{k} ({v})" for k, v in RULES.items())
+            await ctx.send(f"Invalid rule number. Valid rules: {valid}", ephemeral=True)
             return
 
         # duration has already been validated by _DurationArg's converter by
@@ -408,6 +421,7 @@ class BanCog(
         dm_lines = [
             f"You were banned from **{guild.name}**.",
             "",
+            f"**Rule:** {rule}. {RULES[rule]}",
             f"**Reason:** {reason_text}",
         ]
         if unban_at is not None:
@@ -466,6 +480,7 @@ class BanCog(
             target_display=target_display,
             target_id=target_id,
             moderator=ctx.author,
+            rule=rule,
             reason=reason_text,
             dm_delivered=dm_delivered,
             unban_at=unban_at,

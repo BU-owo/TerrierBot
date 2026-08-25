@@ -71,10 +71,10 @@ async def _post_application_for_review(applicant: discord.Member) -> None:
 
     try:
         await channel.send(
-            content=f"{applicant.mention} <@&{MOD_ROLE_ID}>",
+            content=applicant.mention,
             embed=embed,
             view=view,
-            allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False),
+            allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False),
         )
     except discord.HTTPException:
         log.exception("joinPoliticsCog: failed to post application review message")

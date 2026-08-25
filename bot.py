@@ -618,7 +618,7 @@ async def help_command(ctx: Context):
             "`=unlock` / `/unlock` - Unlock the current channel (mod only)\n"
             "`=timeout` / `/timeout` `<member> <duration> [reason]` - Time out a member (mod only)\n"
             "`=untimeout` / `/untimeout` `<member> [reason]` - Clear a member's timeout (mod only)\n"
-            "`=ban` / `/ban` `<member> [reason]` - Ban a member, DMs them an appeal button (mod only)\n"
+            "`=ban` / `/ban` `<member> <rule> [duration] [reason]` - Ban a member, DMs them an appeals-server link (mod only)\n"
             "`=unban` / `/unban` `<user_id> [reason]` - Unban a user by ID (mod only)\n"
             "`=kick` / `/kick` `<member> [reason]` - Kick a member (mod only)\n"
             "`=purge` / `/purge` `<amount>` - Bulk-delete recent messages in this channel, 1-100 (mod only)\n"
