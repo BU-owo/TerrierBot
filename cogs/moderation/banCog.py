@@ -298,7 +298,7 @@ class BanCog(
         target_display: str,
         target_id: int,
         moderator: discord.abc.User,
-        rule: int,
+        rule: int | None,
         reason: str,
         dm_delivered: bool,
         unban_at: float | None = None,
@@ -311,9 +311,10 @@ class BanCog(
             # share a guild with the bot once banned.
             f"**Target:** {target_display} (`{target_id}`)",
             f"**Moderator:** {user_line(moderator)}",
-            f"**Rule:** {rule}. {RULES[rule]}",
-            f"**Reason:** {reason}",
         ]
+        if rule is not None:
+            lines.append(f"**Rule:** {rule}. {RULES[rule]}")
+        lines.append(f"**Reason:** {reason}")
         if unban_at is not None:
             lines.append(f"**Expires:** <t:{int(unban_at)}:R> (temporary ban)")
 
@@ -373,7 +374,7 @@ class BanCog(
         self,
         ctx: Context,
         member: discord.Member,
-        rule: int,
+        rule: int | None = None,
         duration: _DurationArg | None = None,
         *,
         reason: str | None = None,
@@ -385,7 +386,14 @@ class BanCog(
             await ctx.send("This command can only be used in a server.", ephemeral=True)
             return
 
-        if rule not in RULES:
+        # Slash still forces a rule pick via the choices decorator's UI, but
+        # since `rule` itself is now Optional (so =ban alone still works),
+        # that's enforced here instead. Prefix invocations may omit it.
+        if ctx.interaction is not None and rule is None:
+            await ctx.send("You must select a rule.", ephemeral=True)
+            return
+
+        if rule is not None and rule not in RULES:
             valid = ", ".join(f"{k} ({v})" for k, v in RULES.items())
             await ctx.send(f"Invalid rule number. Valid rules: {valid}", ephemeral=True)
             return
@@ -421,9 +429,10 @@ class BanCog(
         dm_lines = [
             f"You were banned from **{guild.name}**.",
             "",
-            f"**Rule:** {rule}. {RULES[rule]}",
-            f"**Reason:** {reason_text}",
         ]
+        if rule is not None:
+            dm_lines.append(f"**Rule:** {rule}. {RULES[rule]}")
+        dm_lines.append(f"**Reason:** {reason_text}")
         if unban_at is not None:
             dm_lines += ["", f"This ban is temporary — you'll be auto-unbanned <t:{int(unban_at)}:R>."]
         dm_lines += [
