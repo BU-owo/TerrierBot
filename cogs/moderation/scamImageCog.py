@@ -29,6 +29,7 @@ HASH_THRESHOLD = 10
 
 TIMEOUT_MINUTES = 60
 MOD_LOG_CHANNEL_ID = LogChannels.MOD
+MOD_QUEUE_CHANNEL_ID = LogChannels.QUEUE
 SCAMCATCHER_ROLE_ID = 1402095379935395934
 
 SPAM_CHANNEL_THRESHOLD = 3   # distinct channels within the window to trigger spam alert
@@ -83,6 +84,26 @@ class _HashConfirmView(discord.ui.View):
         except discord.HTTPException:
             pass
 
+        # Permanent record of the decision in mod-log — a new message, not an
+        # edit, and with no buttons (the message above, in the mod queue, is
+        # where decisions happen).
+        mod_log_channel = self.cog.bot.get_channel(MOD_LOG_CHANNEL_ID)
+        if mod_log_channel is not None:
+            embed = discord.Embed(
+                title="✅ Scam hash(es) confirmed",
+                description=(
+                    f"**Decided by:** {interaction.user.mention}\n"
+                    f"**Added:** {len(added)} new hash(es)"
+                    + (f"\n**Already present:** {len(skipped)}" if skipped else "")
+                ),
+                color=discord.Color.green(),
+                timestamp=discord.utils.utcnow(),
+            )
+            try:
+                await mod_log_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+            except discord.HTTPException:
+                pass
+
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if not any(r.id == SCAMCATCHER_ROLE_ID for r in interaction.user.roles):  # type: ignore[union-attr]
@@ -98,6 +119,19 @@ class _HashConfirmView(discord.ui.View):
             )
         except discord.HTTPException:
             pass
+
+        mod_log_channel = self.cog.bot.get_channel(MOD_LOG_CHANNEL_ID)
+        if mod_log_channel is not None:
+            embed = discord.Embed(
+                title="❌ Scam hash confirmation cancelled",
+                description=f"**Decided by:** {interaction.user.mention}\nNo hashes were added.",
+                color=discord.Color.red(),
+                timestamp=discord.utils.utcnow(),
+            )
+            try:
+                await mod_log_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+            except discord.HTTPException:
+                pass
 
 
 # ── Cog ───────────────────────────────────────────────────────────────────────
@@ -437,7 +471,7 @@ class ScamImageCog(commands.Cog):
             discord.File(io.BytesIO(b), filename=att.filename)
             for att, _, b in attachment_hashes
         ]
-        confirm_channel = log_channel
+        confirm_channel = self.bot.get_channel(MOD_QUEUE_CHANNEL_ID)
         if confirm_channel:
             try:
                 confirm_msg = await confirm_channel.send(
@@ -453,7 +487,7 @@ class ScamImageCog(commands.Cog):
                 pass
             try:
                 await interaction.followup.send(
-                    "Confirmation prompt posted in the scam-reports channel.", ephemeral=True
+                    "Confirmation prompt posted in the mod queue.", ephemeral=True
                 )
             except discord.HTTPException:
                 pass

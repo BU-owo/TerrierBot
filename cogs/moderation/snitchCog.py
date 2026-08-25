@@ -4,9 +4,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from ..logging.logConfig import MOD_ROLE_ID
+from ..logging.logConfig import LogChannels, MOD_ROLE_ID
 
-SNITCH_CHANNEL_ID = 1401924438341062798
+SNITCH_CHANNEL_ID = LogChannels.QUEUE
 
 
 async def setup(bot: commands.Bot):

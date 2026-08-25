@@ -14,6 +14,11 @@ class LogChannels:
     SERVER = 1441888428735070400
     MOD = 1441889164898341098
     MESSAGE = 1441888579147141170
+    # Consolidated "mod queue" — every flow that posts something for a mod to
+    # review/act on (warn appeals, ban appeals, politics applications, snitch
+    # reports, the scam-hash confirm prompt) posts the request here. Once a
+    # mod decides, a permanent record of that decision goes to MOD above.
+    QUEUE = 1541936565151080519
 
 
 # Mod role ID — several cogs previously redefined this constant locally with

@@ -7,13 +7,14 @@ import discord
 from discord.ext import commands
 
 from bot import Context, TerrierBot
+from ..logging.logConfig import LogChannels, get_log_channel
 
 log = logging.getLogger(__name__)
 
 MOD_ROLE_ID = 1402095379935395934
 POLITICS_CHANNEL_ID = 1477468981194391675
 RULES_CHANNEL_ID = 1396542143803424768
-MOD_REVIEW_CHANNEL_ID = 1401924438341062798
+MOD_REVIEW_CHANNEL_ID = LogChannels.QUEUE
 INCOMING_STUDENT_ROLE_ID = 1435381901077647412
 POLITICS_ROLE_ID = 1477468718127775824
 
@@ -220,6 +221,17 @@ async def _handle_decision(interaction: discord.Interaction, applicant_id: int, 
         embed.set_footer(text=f"{decision} by {reviewer.display_name}")
 
     await interaction.response.edit_message(embed=embed, view=None)
+
+    # Permanent record of the decision in mod-log — a new message, not an
+    # edit, and with no buttons (the message above, in the mod queue, is
+    # where decisions happen). Best-effort: never blocks the rest of this flow.
+    if embed is not None:
+        mod_log_channel = get_log_channel(interaction.client, LogChannels.MOD)
+        if mod_log_channel is not None:
+            try:
+                await mod_log_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+            except discord.HTTPException:
+                pass
 
 
 class PoliticsApproveButton(discord.ui.DynamicItem[discord.ui.Button], template=APPROVE_TEMPLATE.pattern):

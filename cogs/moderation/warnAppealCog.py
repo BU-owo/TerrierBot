@@ -10,12 +10,7 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from .warningsCog import DB_PATH, RULES
-from ..logging.logConfig import MOD_ROLE_ID, user_line
-
-# Where the initial appeal request (embed + accept/reject buttons) is posted.
-APPEAL_REQUEST_CHANNEL_ID = 1401924438341062798
-# Where a permanent, button-free record of the decision is posted afterward.
-APPEAL_RESULT_CHANNEL_ID = 1441889164898341098
+from ..logging.logConfig import LogChannels, MOD_ROLE_ID, user_line
 
 
 def _is_mod(user: discord.abc.User) -> bool:
@@ -44,7 +39,7 @@ class _WarnAppealTextModal(discord.ui.Modal, title="Appeal Warning"):
         warn_id, rule, reason, warned_at, moderator_id = self.warning
         bot = interaction.client
 
-        log_channel = bot.get_channel(APPEAL_REQUEST_CHANNEL_ID)
+        log_channel = bot.get_channel(LogChannels.QUEUE)
         if log_channel is None:
             await interaction.followup.send(
                 "Couldn't deliver your appeal right now — please contact a moderator another way.",
@@ -160,7 +155,7 @@ class _WarnAppealResponseModal(discord.ui.Modal):
         # edit, and with no buttons (the message above is where decisions
         # happen). Best-effort: never blocks the rest of this flow.
         try:
-            mod_log_channel = interaction.client.get_channel(APPEAL_RESULT_CHANNEL_ID)
+            mod_log_channel = interaction.client.get_channel(LogChannels.MOD)
             if mod_log_channel is not None:
                 await mod_log_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
