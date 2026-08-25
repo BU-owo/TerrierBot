@@ -17,6 +17,7 @@ TerrierBot currently supports:
 - Self-service role removal through `leavepolitics`, and a mod-reviewed application flow for the #politics channel through `joinpolitics`
 - Anonymous mod-only disciplinary votes with quorum and a time limit through `modvote`
 - Member-submitted reports to mods through `snitch`
+- A button + modal ban-appeal flow in a dedicated appeals server, forwarding appeals to the mod log
 
 ## Requirements
 
@@ -134,6 +135,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=leavepolitics` / `/leavepolitics` | Leave the Politics role/channel (re-apply needed to rejoin) |
 | `=sync` | Sync slash commands to the current server (owner only) |
 | `=cog load` / `=cog reload` / `=cog unload` / `=cog list` | Manage cogs during development or maintenance (owner only) |
+| `=postappealbutton` | Post the ban-appeal button in the appeals server (run once, owner only) |
 
 ## Permissions and notes
 

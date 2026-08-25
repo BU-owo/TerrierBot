@@ -414,8 +414,8 @@ class BanCog(
             dm_lines += ["", f"This ban is temporary — you'll be auto-unbanned <t:{int(unban_at)}:R>."]
         dm_lines += [
             "",
-            "If you believe this was a mistake, reply directly to this message with your "
-            "appeal and it will be sent to the moderators.",
+            "If you believe this was a mistake, or would like a second chance, join our appeals "
+            "server to submit an appeal: https://discord.gg/WtECbmPch6",
         ]
         dm_embed = discord.Embed(
             title="You have been banned",
