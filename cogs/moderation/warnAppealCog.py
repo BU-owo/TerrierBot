@@ -127,9 +127,12 @@ class _WarnAppealResponseModal(discord.ui.Modal):
         mod_message = self.message_input.value.strip()
 
         if self.approve:
-            # Same removal path =warnremove uses.
+            # Same removal path =warnremove uses, but tagged so caseLogCog
+            # can show this was removed via appeal rather than manually.
             conn = sqlite3.connect(DB_PATH)
-            conn.execute("UPDATE warnings SET active = 0 WHERE id = ?", (self.warn_id,))
+            conn.execute(
+                "UPDATE warnings SET active = 0, removed_via = 'appeal' WHERE id = ?", (self.warn_id,)
+            )
             conn.commit()
             conn.close()
 

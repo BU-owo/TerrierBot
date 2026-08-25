@@ -44,6 +44,16 @@ class WarningsCog(commands.Cog):
             """
         )
         conn.commit()
+
+        # Migration: tracks how a warning was removed (e.g. "appeal"), NULL
+        # for manual =warnremove or warnings still active. Wrapped so it's
+        # idempotent across restarts once the column already exists.
+        try:
+            conn.execute("ALTER TABLE warnings ADD COLUMN removed_via TEXT")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
+
         conn.close()
 
     def _conn(self):

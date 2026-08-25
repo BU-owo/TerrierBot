@@ -108,6 +108,11 @@ def _fetch_cases(user_id: int) -> list[dict]:
                 "reason": reason or "No reason provided",
                 "duration_seconds": duration_seconds,
                 "timestamp": datetime.fromisoformat(created_at),
+                # Kicks/timeouts/bans aren't warnings and are never appealed —
+                # present here so _format_entry can treat every entry type
+                # uniformly.
+                "active": True,
+                "appealed": False,
             }
         )
     return entries
@@ -118,13 +123,14 @@ def _fetch_warnings(user_id: int) -> list[dict]:
         return []
     conn = sqlite3.connect(_WARNINGS_DB_PATH)
     rows = conn.execute(
-        "SELECT moderator_id, rule, reason, warned_at FROM warnings WHERE user_id = ? ORDER BY warned_at DESC",
+        "SELECT moderator_id, rule, reason, warned_at, active, removed_via FROM warnings "
+        "WHERE user_id = ? ORDER BY warned_at DESC",
         (user_id,),
     ).fetchall()
     conn.close()
 
     entries = []
-    for moderator_id, rule, reason, warned_at in rows:
+    for moderator_id, rule, reason, warned_at, active, removed_via in rows:
         entries.append(
             {
                 "type": "warn",
@@ -132,6 +138,8 @@ def _fetch_warnings(user_id: int) -> list[dict]:
                 "reason": f"Rule {rule}: {reason}",
                 "duration_seconds": None,
                 "timestamp": datetime.fromisoformat(warned_at),
+                "active": bool(active),
+                "appealed": removed_via == "appeal",
             }
         )
     return entries
@@ -174,6 +182,15 @@ def _format_entry(entry: dict) -> str:
     duration_suffix = ""
     if entry["duration_seconds"]:
         duration_suffix = f" ({format_duration(timedelta(seconds=entry['duration_seconds']))})"
+
+    if entry["appealed"]:
+        # Zero-width mark + space in place of the emoji — invisible, but
+        # occupies the same column position as a real emoji would.
+        marker = "‎ "
+        return (
+            f"*{marker}**{type_text}** — <t:{ts}:R> by <@{entry['moderator_id']}> — "
+            f"{reason}{duration_suffix} — Appealed*"
+        )
 
     return (
         f"{emoji} **{type_text}** — <t:{ts}:R> by <@{entry['moderator_id']}> — "
