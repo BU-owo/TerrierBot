@@ -82,7 +82,6 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
 
             description_lines = [
                 f"**Message deleted in {source_channel_mention}**",
-                "",
                 content,
             ]
             if message.attachments:

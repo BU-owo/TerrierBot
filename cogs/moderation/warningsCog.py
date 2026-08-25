@@ -252,6 +252,16 @@ class WarningsCog(commands.Cog):
         conn.close()
         await ctx.send(f"Warning #{warn_id} removed for <@{user_id}>.")
 
+    # ---------- TEMPORARY: =wipewarnings (remove after one-time use) ----------
+    @commands.command(name="wipewarnings")
+    @commands.is_owner()
+    async def wipewarnings(self, ctx: commands.Context):
+        conn = self._conn()
+        cur = conn.execute("DELETE FROM warnings")
+        conn.commit()
+        conn.close()
+        await ctx.send(f"Deleted {cur.rowcount} warning(s).")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(WarningsCog(bot))
