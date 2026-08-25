@@ -17,7 +17,7 @@ class SnitchCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="snitch", description="Send an anonymous-to-others report to the mods.")
+    @app_commands.command(name="snitch", description="Silently alert mods without others knowing.")
     @app_commands.describe(context="What you want to report (optional)")
     async def snitch(self, interaction: discord.Interaction, context: str | None = None) -> None:
         await interaction.response.send_message("Report sent to mods.", ephemeral=True)
