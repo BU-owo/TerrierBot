@@ -17,9 +17,9 @@ _FIELDS = [
     ),
     (
         "⚠️ Warn",
-        "`=warn <member> <rule> <reason> [expiry_months]` — issue a formal warning, auto-expires by default\n"
+        "`=warn <member> <rule> <reason>` — issue a formal warning; warnings are permanent until removed\n"
         "`=warncount` / `=warninfo <member>` — see who has active warnings, or one member's full history\n"
-        "`=warnremove <warn_id>` — remove a warning early",
+        "`=warnremove <warn_id>` — remove a warning",
         "For rule violations that don't need removal from the server; warnings build the paper trail modlogs surfaces later.",
     ),
     (

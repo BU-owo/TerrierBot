@@ -18,6 +18,7 @@ TerrierBot currently supports:
 - Anonymous mod-only disciplinary votes with quorum and a time limit through `modvote`
 - Member-submitted reports to mods through `snitch`
 - A button + modal ban-appeal flow in a dedicated appeals server, forwarding appeals to the mod log
+- Permanent warnings (no auto-expiry) with a `warnappeal` select-and-modal flow for mods to accept/reject
 
 ## Requirements
 
@@ -120,6 +121,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=warninfo` / `/warninfo` | Show a user's warning history |
 | `=mywarns` / `/mywarns` | Show your own active warnings |
 | `=warnremove` / `/warnremove` | Remove a warning |
+| `/warnappeal` | Appeal one of your own active warnings — mods accept/reject with a response |
 | `=modlogs` / `/modlogs` | View a member's full moderation case history: warns, kicks, timeouts, bans (mod only) |
 | `=joinpolitics` / `/joinpolitics` | Post the #politics channel application (Politics mod role required) |
 | `/modvote start` | Start an anonymous timed vote on disciplining a member, with custom options and a quorum (mod role required) |

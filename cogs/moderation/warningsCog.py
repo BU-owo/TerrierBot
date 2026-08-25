@@ -1,13 +1,12 @@
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 import sqlite3
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 DB_DIR = os.path.expanduser("~/terrierbot_data")
 DB_PATH = os.path.join(DB_DIR, "warnings.db")
-NOTICE_CHANNEL_ID = 1401924438341062798
 
 RULES = {
     1: "Be Respectful",
@@ -26,10 +25,6 @@ class WarningsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._init_db()
-        self.expiry_check.start()
-
-    def cog_unload(self):
-        self.expiry_check.cancel()
 
     def _init_db(self):
         os.makedirs(DB_DIR, exist_ok=True)
@@ -61,26 +56,10 @@ class WarningsCog(commands.Cog):
         user="User to warn",
         rule="Rule being violated",
         reason="Brief description of the violation",
-        expiry_months="Months until this warning expires (0-12, 0 = never expires)",
         send_dm="Send the user a DM about this warning (default: Yes)",
     )
     @app_commands.choices(
         rule=[app_commands.Choice(name=f"{k}. {v}", value=k) for k, v in RULES.items()],
-        expiry_months=[
-            app_commands.Choice(name="Never expires", value=0),
-            app_commands.Choice(name="1 month", value=1),
-            app_commands.Choice(name="2 months", value=2),
-            app_commands.Choice(name="3 months (default)", value=3),
-            app_commands.Choice(name="4 months", value=4),
-            app_commands.Choice(name="5 months", value=5),
-            app_commands.Choice(name="6 months", value=6),
-            app_commands.Choice(name="7 months", value=7),
-            app_commands.Choice(name="8 months", value=8),
-            app_commands.Choice(name="9 months", value=9),
-            app_commands.Choice(name="10 months", value=10),
-            app_commands.Choice(name="11 months", value=11),
-            app_commands.Choice(name="12 months", value=12),
-        ],
     )
     async def warn(
         self,
@@ -88,7 +67,6 @@ class WarningsCog(commands.Cog):
         user: discord.Member,
         rule: int,
         reason: str,
-        expiry_months: int = 3,
         send_dm: bool = True,
     ):
         if rule not in RULES:
@@ -96,9 +74,7 @@ class WarningsCog(commands.Cog):
             await ctx.send(f"Invalid rule number. Valid rules: {valid}", ephemeral=True)
             return
 
-        expiry_months = max(0, min(12, expiry_months))
         warned_at = datetime.now(timezone.utc)
-        expires_at = None if expiry_months == 0 else warned_at + timedelta(days=30 * expiry_months)
 
         conn = self._conn()
         cur = conn.execute(
@@ -110,14 +86,12 @@ class WarningsCog(commands.Cog):
                 rule,
                 reason,
                 warned_at.isoformat(),
-                expires_at.isoformat() if expires_at else None,
+                None,
             ),
         )
         warn_id = cur.lastrowid
         conn.commit()
         conn.close()
-
-        expiry_text = "Never" if expiry_months == 0 else f"{expiry_months} month(s)"
 
         # DM the user (best-effort, only if send_dm is True)
         if send_dm:
@@ -128,10 +102,9 @@ class WarningsCog(commands.Cog):
                 )
                 dm_embed.add_field(name="Rule", value=f"{rule}. {RULES[rule]}", inline=False)
                 dm_embed.add_field(name="Reason", value=reason, inline=False)
-                dm_embed.add_field(name="Expires", value=expiry_text, inline=False)
                 dm_embed.add_field(
                     name="Appeals",
-                    value="Warnings can be appealed. To appeal, you must submit a ticket in <#1396542143803424768>.",
+                    value="Warnings can be appealed. To appeal, use the `/warnappeal` command.",
                     inline=False,
                 )
                 dm_embed.set_footer(text=f"Warning ID: {warn_id}")
@@ -148,7 +121,6 @@ class WarningsCog(commands.Cog):
         )
         confirm_embed.add_field(name="User", value=user.mention, inline=True)
         confirm_embed.add_field(name="Rule", value=f"{rule}. {RULES[rule]}", inline=True)
-        confirm_embed.add_field(name="Expires", value=expiry_text, inline=True)
         confirm_embed.add_field(name="Reason", value=reason, inline=False)
         confirm_embed.set_footer(text=dm_status)
         await ctx.send(embed=confirm_embed)
@@ -187,7 +159,7 @@ class WarningsCog(commands.Cog):
     async def warninfo(self, ctx: commands.Context, user: discord.Member):
         conn = self._conn()
         rows = conn.execute(
-            "SELECT id, rule, reason, warned_at, expires_at, active FROM warnings "
+            "SELECT id, rule, reason, warned_at, active FROM warnings "
             "WHERE user_id = ? ORDER BY warned_at DESC",
             (user.id,),
         ).fetchall()
@@ -198,17 +170,12 @@ class WarningsCog(commands.Cog):
             return
 
         embed = discord.Embed(title=f"Warning history — {user.display_name}", color=discord.Color.orange())
-        for warn_id, rule, reason, warned_at, expires_at, active in rows:
+        for warn_id, rule, reason, warned_at, active in rows:
             date_str = datetime.fromisoformat(warned_at).strftime("%Y-%m-%d")
-            if not active:
-                expiry_str = "Expired/removed"
-            elif expires_at is None:
-                expiry_str = "Never"
-            else:
-                expiry_str = datetime.fromisoformat(expires_at).strftime("%Y-%m-%d")
+            status_str = "Active" if active else "Removed"
             embed.add_field(
                 name=f"#{warn_id} — Rule {rule} ({date_str})",
-                value=f"{reason}\nExpires: {expiry_str}",
+                value=f"{reason}\nStatus: {status_str}",
                 inline=False,
             )
         await ctx.send(embed=embed)
@@ -218,7 +185,7 @@ class WarningsCog(commands.Cog):
     async def mywarns(self, ctx: commands.Context):
         conn = self._conn()
         rows = conn.execute(
-            "SELECT id, rule, reason, warned_at, expires_at FROM warnings "
+            "SELECT id, rule, reason, warned_at FROM warnings "
             "WHERE user_id = ? AND active = 1 ORDER BY warned_at DESC",
             (ctx.author.id,),
         ).fetchall()
@@ -229,12 +196,11 @@ class WarningsCog(commands.Cog):
             return
 
         embed = discord.Embed(title="Your active warnings", color=discord.Color.orange())
-        for warn_id, rule, reason, warned_at, expires_at in rows:
+        for warn_id, rule, reason, warned_at in rows:
             date_str = datetime.fromisoformat(warned_at).strftime("%Y-%m-%d")
-            expiry_str = "Never" if expires_at is None else datetime.fromisoformat(expires_at).strftime("%Y-%m-%d")
             embed.add_field(
                 name=f"#{warn_id} — Rule {rule}: {RULES.get(rule, 'Unknown')} ({date_str})",
-                value=f"{reason}\nExpires: {expiry_str}",
+                value=reason,
                 inline=False,
             )
         await ctx.send(embed=embed, ephemeral=True)
@@ -275,43 +241,6 @@ class WarningsCog(commands.Cog):
         conn.commit()
         conn.close()
         await ctx.send(f"Warning #{warn_id} removed for <@{user_id}>.")
-
-    # ---------- background expiry loop ----------
-    @tasks.loop(minutes=30)
-    async def expiry_check(self):
-        now = datetime.now(timezone.utc)
-        conn = self._conn()
-        rows = conn.execute(
-            "SELECT id, user_id, rule FROM warnings WHERE active = 1 AND expires_at IS NOT NULL AND expires_at <= ?",
-            (now.isoformat(),),
-        ).fetchall()
-
-        if rows:
-            conn.executemany(
-                "UPDATE warnings SET active = 0 WHERE id = ?",
-                [(warn_id,) for warn_id, _, _ in rows],
-            )
-            conn.commit()
-        conn.close()
-
-        if not rows:
-            return
-
-        channel = self.bot.get_channel(NOTICE_CHANNEL_ID)
-        if channel is None:
-            return
-
-        for warn_id, user_id, rule in rows:
-            embed = discord.Embed(
-                title="Warning Expired",
-                description=f"Warning #{warn_id} for <@{user_id}> (Rule {rule}: {RULES.get(rule, 'Unknown')}) has expired and been removed.",
-                color=discord.Color.green(),
-            )
-            await channel.send(embed=embed)
-
-    @expiry_check.before_loop
-    async def before_expiry_check(self):
-        await self.bot.wait_until_ready()
 
 
 async def setup(bot: commands.Bot):
