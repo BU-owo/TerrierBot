@@ -5,9 +5,9 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
+from ..logging.logConfig import LogChannels
 
-FEEDBACK_CHANNEL_ID = 1401924438341062798
-FEEDBACK_ROLE_ID = 1401983902511530137
+FEEDBACK_CHANNEL_ID = LogChannels.QUEUE
 
 
 async def setup(bot: TerrierBot):
@@ -62,11 +62,10 @@ class FeedbackModal(discord.ui.Modal, title="Anonymous Feedback"):
 
         try:
             await channel.send(
-                content=f"<@&{FEEDBACK_ROLE_ID}>",
                 embed=embed,
-                # embed.description contains user-supplied feedback text; allow only the
-                # intentional role ping — block @everyone and user mentions from the embed body.
-                allowed_mentions=discord.AllowedMentions(roles=True, users=False, everyone=False),
+                # embed.description contains user-supplied feedback text; block all
+                # mentions from the embed body — no role ping for this flow.
+                allowed_mentions=discord.AllowedMentions.none(),
             )
         except discord.HTTPException as e:
             logging.error("feedbackCog: failed to send feedback embed: %s", e)
