@@ -7,8 +7,8 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from .caseLogCog import record_case
-from .logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, suppress_mod_log, user_line
+from ..logging.caseLogCog import record_case
+from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, suppress_mod_log, user_line
 
 
 async def setup(bot: TerrierBot):

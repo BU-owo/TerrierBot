@@ -5,7 +5,9 @@ description: Wire a new cog into TerrierBot
 A new cog file has been added or referenced. Wire it in fully:
 
 1. **bot.py**
-   - Add the cog's name (without the "Cog" suffix) to `cogList`
+   - Cogs live under `cogs/<category>/` (moderation, logging, campus, community, utility).
+     Add the cog's dotted `<category>.<name>` (without the "Cog" suffix, e.g. `community.newcog`)
+     to `cogList`, placing the file in the matching subfolder
    - Add it to `defaultCogs` as well, unless told it's optional/manual-load-only
    - Do NOT touch unrelated entries in either list
 
@@ -23,8 +25,9 @@ A new cog file has been added or referenced. Wire it in fully:
 
 4. **Sanity checks**
    - Run `python -m py_compile <cogfile>.py` on the new cog before considering this done
-   - Confirm the cog uses `from cogs.logConfig import` (not `from logConfig import`) if it
-     imports logConfig
+   - Confirm the cog uses a relative import for `logConfig`, which lives in `cogs/logging/logConfig.py`:
+     `from .logConfig import ...` if the new cog is itself in `cogs/logging/`, otherwise
+     `from ..logging.logConfig import ...` (not `from logConfig import` or an absolute `cogs.` import)
    - Do not refactor or rewrite the cog's own logic — only touch bot.py, help text, and README.md
 
 Ask me for the cog's filename and a one-line description if it's not already obvious from context.

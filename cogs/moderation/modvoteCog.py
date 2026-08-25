@@ -10,7 +10,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from .logConfig import LogChannels
+from ..logging.logConfig import LogChannels
 
 log = logging.getLogger(__name__)
 

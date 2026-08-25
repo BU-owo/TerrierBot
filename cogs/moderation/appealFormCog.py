@@ -11,7 +11,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel
+from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel
 
 # ── Google Sheets config ──────────────────────────────────────────────────────
 # Read-only service account, credentials pre-provisioned on the host (not in

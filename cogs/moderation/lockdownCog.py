@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from .logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
+from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
 
 
 @dataclass

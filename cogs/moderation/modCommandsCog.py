@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from .logConfig import LogColors, MOD_ROLE_ID
+from ..logging.logConfig import LogColors, MOD_ROLE_ID
 
 # Discipline and case-management tools only — community/config features
 # (positivity, starboard, feedbacksetup) and fun toggles (towoken) live

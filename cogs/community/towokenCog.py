@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import TerrierBot, Context
-from .logConfig import MOD_ROLE_ID
+from ..logging.logConfig import MOD_ROLE_ID
 
 _SHELVE_FILE = "terrierbot.shelve"
 _SHELVE_KEY = "towoken_enabled"

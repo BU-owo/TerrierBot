@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from .logConfig import MOD_ROLE_ID, register_purge
+from ..logging.logConfig import MOD_ROLE_ID, register_purge
 
 # Matches a full Discord message link, e.g.
 # https://discord.com/channels/{guild}/{channel}/{message}

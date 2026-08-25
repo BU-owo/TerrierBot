@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, get_log_channel
+from .logConfig import LogChannels, LogColors, get_log_channel, user_line
 
 
 async def setup(bot: TerrierBot):
@@ -41,7 +41,7 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
 
         embed = discord.Embed(
             title="🎭 Member roles updated",
-            description=f"{after.mention} (`{after.id}`)\n" + "\n".join(lines),
+            description=user_line(after) + "\n" + "\n".join(lines),
             color=LogColors.MEMBER,
             timestamp=discord.utils.utcnow(),
         )
