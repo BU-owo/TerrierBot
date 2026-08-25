@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, get_log_channel
+from .logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel
 
 
 async def setup(bot: TerrierBot):
@@ -17,6 +17,8 @@ class MemberLogCog(commands.Cog, name="MemberLog", description="Logs nickname, u
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if after.guild.id != MAIN_GUILD_ID:
+            return
         if before.nick == after.nick:
             return
 
@@ -51,6 +53,8 @@ class MemberLogCog(commands.Cog, name="MemberLog", description="Logs nickname, u
             return
 
         for guild in self.bot.guilds:
+            if guild.id != MAIN_GUILD_ID:
+                continue
             member = guild.get_member(after.id)
             if member is None:
                 continue

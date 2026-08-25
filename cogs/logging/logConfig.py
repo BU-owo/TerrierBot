@@ -21,6 +21,14 @@ class LogChannels:
 MOD_ROLE_ID = 1402095379935395934
 
 
+# Terrier Hub — the only guild these logging cogs should report activity
+# for. TerrierBot is also a member of a separate appeals server (see
+# appealServerCog.py), and every LogChannels.* channel above lives in this
+# guild only — guild-scoped listeners must guard on this ID so activity
+# from the appeals server doesn't get logged into Terrier Hub's channels.
+MAIN_GUILD_ID = 1396541818245484665
+
+
 class LogColors:
     """Standard embed colors per log category. Keep these consistent across
     every cog that posts to a log channel."""

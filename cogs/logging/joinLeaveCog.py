@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, format_duration, get_log_channel, user_line
+from .logConfig import LogChannels, LogColors, MAIN_GUILD_ID, format_duration, get_log_channel, user_line
 
 
 async def setup(bot: TerrierBot):
@@ -17,6 +17,9 @@ class JoinLeaveCog(commands.Cog, name="JoinLeave", description="Logs member join
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        if member.guild.id != MAIN_GUILD_ID:
+            return
+
         channel = get_log_channel(self.bot, LogChannels.JOIN_LEAVE)
         if channel is None:
             return
@@ -45,6 +48,9 @@ class JoinLeaveCog(commands.Cog, name="JoinLeave", description="Logs member join
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
+        if member.guild.id != MAIN_GUILD_ID:
+            return
+
         channel = get_log_channel(self.bot, LogChannels.JOIN_LEAVE)
         if channel is None:
             return

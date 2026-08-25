@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, get_log_channel, get_purger, is_suppressed
+from .logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel, get_purger, is_suppressed
 
 # How recent an audit log entry must be to count as "this deletion" — Discord
 # only creates a message_delete audit entry when someone deletes another
@@ -52,7 +52,7 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
         # fires when the message happens to still be in discord.py's internal
         # cache (bot-wide default cap of ~1000 messages), so deletions of
         # older/uncached messages were silently never logged.
-        if payload.guild_id is None:
+        if payload.guild_id != MAIN_GUILD_ID:
             return
         if is_suppressed(payload.message_id):
             return  # already logged elsewhere (e.g. scam alert in mod-log)
@@ -122,7 +122,7 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
 
     @commands.Cog.listener()
     async def on_raw_bulk_message_delete(self, payload: discord.RawBulkMessageDeleteEvent):
-        if payload.guild_id is None:
+        if payload.guild_id != MAIN_GUILD_ID:
             return
 
         cached_by_id = {m.id: m for m in payload.cached_messages}

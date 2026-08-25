@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, get_log_channel, user_line
+from .logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel, user_line
 
 
 async def setup(bot: TerrierBot):
@@ -26,6 +26,9 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if after.guild.id != MAIN_GUILD_ID:
+            return
+
         before_ids = {role.id for role in before.roles}
         after_ids = {role.id for role in after.roles}
         added_roles = [role for role in after.roles if role.id not in before_ids and role.name != "@everyone"]
@@ -58,6 +61,9 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
+        if channel.guild.id != MAIN_GUILD_ID:
+            return
+
         embed = discord.Embed(
             title="➕ Channel created",
             description=f"{channel.mention} (`{channel.name}`, {channel.type})",
@@ -68,6 +74,9 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel):
+        if channel.guild.id != MAIN_GUILD_ID:
+            return
+
         embed = discord.Embed(
             title="➖ Channel deleted",
             description=f"`#{channel.name}` ({channel.type})",
@@ -78,6 +87,9 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
+        if after.guild.id != MAIN_GUILD_ID:
+            return
+
         if before.name != after.name:
             embed = discord.Embed(
                 title="✏️ Channel renamed",
@@ -163,6 +175,9 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role):
+        if role.guild.id != MAIN_GUILD_ID:
+            return
+
         embed = discord.Embed(
             title="➕ Role created",
             description=f"{role.mention} (`{role.name}`)",
@@ -173,6 +188,9 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role):
+        if role.guild.id != MAIN_GUILD_ID:
+            return
+
         embed = discord.Embed(
             title="➖ Role deleted",
             description=f"`@{role.name}` ({role.id})",
@@ -183,6 +201,9 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
 
     @commands.Cog.listener()
     async def on_guild_role_update(self, before: discord.Role, after: discord.Role):
+        if after.guild.id != MAIN_GUILD_ID:
+            return
+
         changes: list[str] = []
         if before.name != after.name:
             changes.append(f"**Name:** `{before.name}` → `{after.name}`")
@@ -207,6 +228,9 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
     async def on_guild_emojis_update(
         self, guild: discord.Guild, before: list[discord.Emoji], after: list[discord.Emoji]
     ):
+        if guild.id != MAIN_GUILD_ID:
+            return
+
         before_ids = {e.id for e in before}
         after_ids = {e.id for e in after}
         added = [e for e in after if e.id not in before_ids]

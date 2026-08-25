@@ -10,6 +10,7 @@ from bot import TerrierBot
 from .logConfig import (
     LogChannels,
     LogColors,
+    MAIN_GUILD_ID,
     format_duration,
     get_log_channel,
     is_mod_log_suppressed,
@@ -80,6 +81,9 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
+        if member.guild.id != MAIN_GUILD_ID:
+            return
+
         entry = await self._find_audit_entry(member.guild, discord.AuditLogAction.kick, member.id)
         if entry is None:
             return  # not a kick (plain leave) — JoinLeaveCog already covers that
@@ -106,6 +110,9 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: discord.User):
+        if guild.id != MAIN_GUILD_ID:
+            return
+
         entry = await self._find_audit_entry(guild, discord.AuditLogAction.ban, user.id)
 
         # Checked here, after the delay above, not at the top — see the
@@ -124,6 +131,9 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild: discord.Guild, user: discord.User):
+        if guild.id != MAIN_GUILD_ID:
+            return
+
         entry = await self._find_audit_entry(guild, discord.AuditLogAction.unban, user.id)
 
         # Checked here, after the delay above, not at the top — see the
@@ -144,6 +154,8 @@ class ModLogCog(
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if after.guild.id != MAIN_GUILD_ID:
+            return
         if before.timed_out_until == after.timed_out_until:
             return
 
