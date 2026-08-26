@@ -607,15 +607,20 @@ async def help_command(ctx: Context):
     )
 
     embed.add_field(
-        name="Moderation & Feedback",
+        name="Server Config",
         value=(
-            "Manage Server required:\n"
             "`=positivity` or `/positivity status/enable/disable/interval/cooldown` - Configure Positivity Tuesday\n"
             "`=feedbacksetup` or `/feedbacksetup` - Post the anonymous feedback prompt\n"
             "`/starboard setchannel/threshold/enable/disable/status` - Configure the starboard\n"
             "`/pingrole` - Ping one of the server role options\n"
-            "`/reactionrole` `<preset>` - Post a reaction role message from a preset (mod only)\n\n"
-            "Moderation tools:\n"
+            "`/reactionrole` `<preset>` - Post a reaction role message from a preset (mod only)"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="Moderation Tools — Warnings, Timeouts & Votes",
+        value=(
             "`=warn` / `/warn` - Warn a member\n"
             "`=warncount` / `/warncount` - List active warnings\n"
             "`=warninfo` / `/warninfo` - Show a user's warning history\n"
@@ -626,15 +631,22 @@ async def help_command(ctx: Context):
             "`=unlock` / `/unlock` - Unlock the current channel (mod only)\n"
             "`=timeout` / `/timeout` `<member> <duration> [reason]` - Time out a member (mod only)\n"
             "`=untimeout` / `/untimeout` `<member> [reason]` - Clear a member's timeout (mod only)\n"
+            "`/modvote start/close` `<target> <options> <duration>` - Run an anonymous disciplinary vote (mod only)"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="Moderation Tools — Bans, Kicks & Records",
+        value=(
+            "`=kick` / `/kick` `<member> [reason]` - Kick a member (mod only)\n"
             "`=ban` / `/ban` `<member> <rule> [duration] [reason]` - Ban a member, DMs them an appeals-server link (mod only)\n"
             "`=unban` / `/unban` `<user_id> [reason]` - Unban a user by ID (mod only)\n"
-            "`=kick` / `/kick` `<member> [reason]` - Kick a member (mod only)\n"
             "`=purge` / `/purge` `<amount>` - Bulk-delete recent messages in this channel, 1-100 (mod only)\n"
             "`=purgeafter` / `/purgeafter` `<target>` - Delete every message after a target message (reply, ID, or link), up to 200 (mod only)\n"
             "`=modlogs` / `/modlogs` `<member_or_id>` - View a member's full case history: warns, kicks, timeouts, bans (mod only)\n"
             "`=modcommands` / `/modcommands` - Show a quick reference of moderation commands and when to use them (mod only)\n"
-            "`=joinpolitics` or `/joinpolitics` - Post the #politics application (mod only)\n"
-            "`/modvote start/close` `<target> <options> <duration>` - Run an anonymous disciplinary vote (mod only)"
+            "`=joinpolitics` or `/joinpolitics` - Post the #politics application (mod only)"
         ),
         inline=False,
     )
