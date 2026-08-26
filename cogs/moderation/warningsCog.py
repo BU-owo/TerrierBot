@@ -176,6 +176,14 @@ class WarningsCog(commands.Cog):
         mod_log_embed.set_thumbnail(url=user.display_avatar.url)
         await self._log_to_mod_channel(mod_log_embed)
 
+        try:
+            await ctx.channel.send(
+                f"{user} has been warned.",
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        except discord.HTTPException:
+            pass
+
     # ---------- /warncount ----------
     @commands.hybrid_command(name="warncount", description="List all users with active warnings")
     @is_mod()

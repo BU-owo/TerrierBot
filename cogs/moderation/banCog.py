@@ -505,6 +505,16 @@ class BanCog(
             unban_at=unban_at,
         )
 
+        announce_channel = get_log_channel(self.bot, LogChannels.ANNOUNCE)
+        if announce_channel is not None:
+            try:
+                await announce_channel.send(
+                    f"{target_display} has been banned.",
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+            except discord.HTTPException:
+                pass
+
         try:
             record_case(
                 user_id=target_id,

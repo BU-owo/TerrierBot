@@ -19,6 +19,10 @@ class LogChannels:
     # reports, the scam-hash confirm prompt) posts the request here. Once a
     # mod decides, a permanent record of that decision goes to MOD above.
     QUEUE = 1541936565151080519
+    # Plain-text, non-embed one-liner announcements ("X has been banned.")
+    # posted alongside the richer MOD embed above whenever a ban happens —
+    # a separate, lower-detail public channel.
+    ANNOUNCE = 1470061524394709083
 
 
 # Mod role ID — several cogs previously redefined this constant locally with
