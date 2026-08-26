@@ -138,7 +138,6 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         )
         embed.add_field(name="Options", value=option_lines or "—", inline=False)
         embed.add_field(name="Votes cast", value=f"{total} votes cast so far", inline=True)
-        embed.add_field(name="Quorum required", value=str(vote["quorum"]), inline=True)
         embed.add_field(name="Closes", value=f"<t:{vote['close_ts']}:R>", inline=True)
         embed.set_footer(text=f"Vote ID: {vote['vote_id']}")
         return embed
@@ -191,35 +190,27 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         options = vote["options"]
         counts = self._compute_counts(vote)
         total = sum(counts)
-        quorum = vote["quorum"]
-        quorum_met = total >= quorum
 
         option_lines = "\n".join(
             f"**{opt}** — {counts[i]} vote(s)" for i, opt in enumerate(options)
         )
 
+        max_count = max(counts) if counts else 0
+        leaders = [options[i] for i, c in enumerate(counts) if c == max_count]
+        if max_count == 0:
+            outcome = "No votes were cast for any option."
+        elif len(leaders) > 1:
+            outcome = "Tied — no clear outcome, mod judgment required."
+        else:
+            outcome = f"**{leaders[0]}**"
+
         embed = discord.Embed(
             title="🗳️ Mod Vote Results",
             description=f"Target: {self._target_display(vote)}",
-            color=discord.Color.green() if quorum_met else discord.Color.dark_grey(),
+            color=discord.Color.green() if max_count > 0 and len(leaders) == 1 else discord.Color.dark_grey(),
         )
         embed.add_field(name="Options", value=option_lines or "—", inline=False)
         embed.add_field(name="Total votes", value=str(total), inline=True)
-        embed.add_field(
-            name="Quorum", value=f"{total}/{quorum} ({'met' if quorum_met else 'not met'})", inline=True
-        )
-
-        if quorum_met:
-            max_count = max(counts) if counts else 0
-            leaders = [options[i] for i, c in enumerate(counts) if c == max_count]
-            if max_count == 0:
-                outcome = "No votes were cast for any option."
-            elif len(leaders) > 1:
-                outcome = "Tied — no clear outcome, mod judgment required."
-            else:
-                outcome = f"**{leaders[0]}**"
-        else:
-            outcome = "Quorum not reached — result does not count."
         embed.add_field(name="Outcome", value=outcome, inline=False)
         embed.set_footer(text=f"Vote ID: {vote['vote_id']}")
         return embed
@@ -296,7 +287,6 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         target="The member the vote concerns",
         options="Comma-separated choices, e.g. \"Warn, Timeout, No action\"",
         duration_minutes="How long the vote stays open, in minutes",
-        quorum="Minimum number of votes required for the result to count",
     )
     async def modvote_start(
         self,
@@ -304,7 +294,6 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         target: discord.Member,
         options: str,
         duration_minutes: int,
-        quorum: int,
     ) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
 
@@ -322,9 +311,6 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             return
         if duration_minutes < 1:
             await interaction.followup.send("Duration must be at least 1 minute.", ephemeral=True)
-            return
-        if quorum < 1:
-            await interaction.followup.send("Quorum must be at least 1.", ephemeral=True)
             return
 
         channel = interaction.channel
@@ -352,7 +338,6 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             "target_id": target.id,
             "options": parsed_options,
             "votes": {},
-            "quorum": quorum,
             "close_ts": close_ts,
             "created_by": interaction.user.id,
             "closed": False,

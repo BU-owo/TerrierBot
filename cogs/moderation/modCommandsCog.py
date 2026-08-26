@@ -49,8 +49,8 @@ _FIELDS = [
     ),
     (
         "🗳️ Modvote",
-        "`/modvote start <target> <options> <duration_minutes> <quorum>` / `/modvote close [vote_id]`",
-        "For a discipline call that shouldn't rest on one mod alone — anonymous, quorum-gated team vote.",
+        "`/modvote start <target> <options> <duration_minutes>` / `/modvote close [vote_id]`",
+        "For a discipline call that shouldn't rest on one mod alone — anonymous team vote.",
     ),
 ]
 

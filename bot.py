@@ -626,7 +626,7 @@ async def help_command(ctx: Context):
             "`=modlogs` / `/modlogs` `<member_or_id>` - View a member's full case history: warns, kicks, timeouts, bans (mod only)\n"
             "`=modcommands` / `/modcommands` - Show a quick reference of moderation commands and when to use them (mod only)\n"
             "`=joinpolitics` or `/joinpolitics` - Post the #politics application (mod only)\n"
-            "`/modvote start/close` `<target> <options> <duration> <quorum>` - Run an anonymous disciplinary vote (mod only)"
+            "`/modvote start/close` `<target> <options> <duration>` - Run an anonymous disciplinary vote (mod only)"
         ),
         inline=False,
     )
@@ -637,7 +637,8 @@ async def help_command(ctx: Context):
             "`=end` or `/end` - See how many days are left until the semester ends\n"
             "`=test` or `/test` - Confirm that the bot is responding\n"
             "`=help` - Show this help message\n"
-            "`=leavepolitics` or `/leavepolitics` - Leave the Politics role/channel"
+            "`=leavepolitics` or `/leavepolitics` - Leave the Politics role/channel\n"
+            "`=embedrules` - Post the Terrier Hub rules embed in this channel"
         ),
         inline=False,
     )

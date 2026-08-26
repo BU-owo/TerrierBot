@@ -649,6 +649,66 @@ value=(
     return [embed1, embed2, embed3, embed4, embed5, embed6, embed7]
 
 
+def _build_embedrules_sequence() -> list[discord.Embed]:
+    RULES_CHANNEL = 1396542143803424768
+
+    embed = discord.Embed(
+        color=discord.Color.blurple(),
+        title="Terrier Hub Rules",
+        description=(
+            "1. No harassment or insults.\n"
+            "2. No bigotry, hate speech, hate symbols, or use of slurs.\n"
+            "3. Don't be edgy, provocative, or baiting in a way that upsets people or starts "
+            "needless arguments.\n"
+            "4. No spamming chat or misusing pings.\n"
+            "5. No doxxing identities or personal information, including sharing DMs without "
+            "permission.\n"
+            "6. No threats of harm or encouraging any behaviors that endanger health/safety.\n"
+            "7. No NSFW (sexual/flirting) or NSFL (gore/violent) content or language.\n"
+            "8. No scams allowed. Self-promotion requires prior approval.\n"
+            "9. Mods reserve the right to interpret, enforce, and change rules to keep the "
+            "community healthy.\n\n"
+            "Always follow [Discord Community Guidelines](https://discord.com/guidelines)."
+        ),
+    )
+    embed.add_field(
+        name="📚 Academic Integrity Policy",
+        value=(
+            "**ZERO TOLERANCE** for anything infringing university or professor policy.\n"
+            "Any academic misconduct results in a **ban**."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="⚖️ Punishment",
+        value=(
+            "**Timeouts:** Mod discretion — for heated situations, spam, or disruption.\n"
+            "**Warning Policy:** Any violation results in a **warning**, viewable with `/mywarns`.\n"
+            "**Ban Policy:** Severe or repeated violations result in a **ban**.\n"
+            "*Use `/warnappeal` to appeal a warning.*"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="📣 Reporting",
+        value=(
+            "Ping **@Moderator** for help.\n"
+            "`/snitch` for an immediate, silent alert.\n"
+            f"Create a ticket in <#{RULES_CHANNEL}> to discuss a concern.\n"
+            "Use the Anonymous Feedback Form for anonymous feedback."
+        ),
+        inline=False,
+    )
+    embed.set_footer(
+        text=(
+            "This is an unofficial, student-run server not affiliated with Boston University. "
+            "Posts here don't reflect BU's views. Participate at your own discretion."
+        )
+    )
+
+    return [embed]
+
+
 class EmbedModal(discord.ui.Modal, title="Send Embed"):
     embed_title = discord.ui.TextInput(
         label="Title",
@@ -859,4 +919,15 @@ class EmbedCog(commands.Cog, name="Embed", description="Send rich embeds. Owner 
             pass
 
         for embed in _build_embedmodhandbook_sequence():
+            await ctx.channel.send(embed=embed)
+
+    @commands.command(name="embedrules")
+    async def embedrules(self, ctx: Context):
+        """Delete trigger message and post the Terrier Hub rules embed."""
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+        for embed in _build_embedrules_sequence():
             await ctx.channel.send(embed=embed)

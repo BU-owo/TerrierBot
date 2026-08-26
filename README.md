@@ -15,7 +15,7 @@ TerrierBot currently supports:
 - A shared moderation case log across kicks, timeouts, and bans, viewable per-member with `modlogs`
 - Server management features such as the starboard, Positivity Tuesday automation, ping roles, and preset reaction roles through `reactionrole`
 - Self-service role removal through `leavepolitics`, and a mod-reviewed application flow for the #politics channel through `joinpolitics`
-- Anonymous mod-only disciplinary votes with quorum and a time limit through `modvote`
+- Anonymous mod-only disciplinary votes with a time limit through `modvote`
 - Member-submitted reports to mods through `snitch`
 - A button + modal ban-appeal flow in a dedicated appeals server, forwarding appeals to the mod log
 - Permanent warnings (no auto-expiry) with a `warnappeal` select-and-modal flow for mods to accept/reject
@@ -124,7 +124,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `/warnappeal` | Appeal one of your own active warnings — mods accept/reject with a response |
 | `=modlogs` / `/modlogs` | View a member's full moderation case history: warns, kicks, timeouts, bans (mod only) |
 | `=joinpolitics` / `/joinpolitics` | Post the #politics channel application (Politics mod role required) |
-| `/modvote start` | Start an anonymous timed vote on disciplining a member, with custom options and a quorum (mod role required) |
+| `/modvote start` | Start an anonymous timed vote on disciplining a member, with custom options (mod role required) |
 | `/modvote close` | Manually close an open modvote early and post results (mod role required) |
 
 ### Utility and maintenance
@@ -135,6 +135,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=test` / `/test` | Confirm that the bot is responding |
 | `=help` | Show the command overview |
 | `=leavepolitics` / `/leavepolitics` | Leave the Politics role/channel (re-apply needed to rejoin) |
+| `=embedrules` | Post the Terrier Hub rules embed in this channel |
 | `=sync` | Sync slash commands to the current server (owner only) |
 | `=cog load` / `=cog reload` / `=cog unload` / `=cog list` | Manage cogs during development or maintenance (owner only) |
 | `=postappealbutton` | Post the ban-appeal button in the appeals server (run once, owner only) |
