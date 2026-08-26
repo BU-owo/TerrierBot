@@ -6,9 +6,12 @@ from discord.ext import commands
 from bot import Context, TerrierBot
 from ..logging.logConfig import LogColors, MOD_ROLE_ID
 
-# Discipline and case-management tools only — community/config features
-# (positivity, starboard, feedbacksetup) and fun toggles (towoken) live
-# elsewhere in =help, not here.
+# Tools gated to the MOD_ROLE_ID team, wherever they actually live in the
+# repo — discipline/case-management (cogs/moderation/) plus a couple of
+# other mod-only actions from cogs/community/. Excluded: manage_guild-gated
+# server config (positivity, starboard, feedbacksetup — a different, higher
+# permission tier than the mod role) and fun toggles (towoken) — those stay
+# in the general =help instead.
 _FIELDS = [
     (
         "📋 Case History",
@@ -17,10 +20,10 @@ _FIELDS = [
     ),
     (
         "⚠️ Warn",
-        "`=warn <member> <rule> <reason>` — issue a formal warning; warnings are permanent until removed\n"
+        "`=warn <member> <rule> <reason> [send_dm]` — issue a formal warning; warnings are permanent until removed\n"
         "`=warncount` / `=warninfo <member>` — see who has active warnings, or one member's full history\n"
         "`=warnremove <warn_id>` — remove a warning",
-        "For rule violations that don't need removal from the server; warnings build the paper trail modlogs surfaces later.",
+        "For rule violations that don't need removal from the server; warnings build the paper trail modlogs surfaces later. Members can self-appeal via `/warnappeal` — you'll get an accept/reject prompt in response when they do.",
     ),
     (
         "🔇 Timeout / Untimeout",
@@ -34,8 +37,8 @@ _FIELDS = [
     ),
     (
         "🔨 Ban / Unban",
-        "`=ban <member> <rule> [duration] [reason]` / `=unban <user_id> [reason]`",
-        "For serious or repeated violations; add a duration (e.g. `2h`) right after the member for a temp ban, omit it for permanent — everything else is just the reason, no special phrasing needed. Unban reverses it by ID. Requires vote.",
+        "`=ban <member> [rule] [duration] [reason]` / `=unban <user_id> [reason]`",
+        "For serious or repeated violations; `/ban` requires picking a rule from the dropdown, `=ban` can skip it. Add a duration (e.g. `2h`) right after the member for a temp ban, omit it for permanent — everything else is just the reason, no special phrasing needed. Unban reverses it by ID. Banned users get pointed to the appeals server in their DM; approve/deny shows up as buttons on the appeal post in mod-log.",
     ),
     (
         "🧹 Purge",
@@ -51,6 +54,16 @@ _FIELDS = [
         "🗳️ Modvote",
         "`/modvote start <target> <options> <duration_minutes>` / `/modvote close [vote_id]`",
         "For a discipline call that shouldn't rest on one mod alone — anonymous team vote.",
+    ),
+    (
+        "🏛️ Politics Application",
+        "`=joinpolitics` — post the application embed in a channel",
+        "Members apply through the embed's button; you'll get an Approve/Deny prompt to review each application that comes in.",
+    ),
+    (
+        "🚀 Roleboost",
+        "`=roleboost <user> <role>`",
+        "Grants a role tied to someone's booster status (they must already have the booster role); auto-removed if they lose it later.",
     ),
 ]
 
@@ -79,7 +92,7 @@ class ModCommandsCog(
 
         embed = discord.Embed(
             title="Moderation Commands",
-            description="Quick reference for TerrierBot's discipline and case-management tools.",
+            description="Quick reference for everything gated to the mod role — discipline, case-management, and a few other mod-only actions.",
             color=LogColors.MOD,
         )
         for name, syntax, usage in _FIELDS:
