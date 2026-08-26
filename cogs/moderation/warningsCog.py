@@ -5,6 +5,8 @@ import sqlite3
 import os
 from datetime import datetime, timezone
 
+from ..logging.logConfig import LogChannels, LogColors, get_log_channel, user_line
+
 DB_DIR = os.path.expanduser("~/terrierbot_data")
 DB_PATH = os.path.join(DB_DIR, "warnings.db")
 
@@ -61,6 +63,15 @@ class WarningsCog(commands.Cog):
 
     def _conn(self):
         return sqlite3.connect(DB_PATH)
+
+    async def _log_to_mod_channel(self, embed: discord.Embed) -> None:
+        channel = get_log_channel(self.bot, LogChannels.MOD)
+        if channel is None:
+            return
+        try:
+            await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            pass
 
     # ---------- /warn ----------
     @commands.hybrid_command(name="warn", description="Warn a user for violating a rule")
@@ -136,7 +147,34 @@ class WarningsCog(commands.Cog):
         confirm_embed.add_field(name="Rule", value=f"{rule}. {RULES[rule]}", inline=True)
         confirm_embed.add_field(name="Reason", value=reason, inline=False)
         confirm_embed.set_footer(text=dm_status)
-        await ctx.send(embed=confirm_embed)
+
+        if ctx.interaction is not None:
+            # Slash invocation: ack privately so only the moderator who ran
+            # it sees anything — the channel itself gets no visible trace.
+            await ctx.send(embed=confirm_embed, ephemeral=True)
+        else:
+            # Prefix invocation (=warn): no interaction to ack, so stay
+            # silent in-channel and remove the command message too. The DM
+            # above and the mod-log embed below are the only record left.
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+
+        mod_log_embed = discord.Embed(
+            title=f"⚠️ Warning #{warn_id} issued",
+            description=(
+                f"**Target:** {user.mention} (`{user.id}`)\n"
+                f"**Moderator:** {user_line(ctx.author)}\n"
+                f"**Rule:** {rule}. {RULES[rule]}\n"
+                f"**Reason:** {reason}\n"
+                f"**DM:** {dm_status}"
+            ),
+            color=LogColors.MOD,
+            timestamp=discord.utils.utcnow(),
+        )
+        mod_log_embed.set_thumbnail(url=user.display_avatar.url)
+        await self._log_to_mod_channel(mod_log_embed)
 
     # ---------- /warncount ----------
     @commands.hybrid_command(name="warncount", description="List all users with active warnings")
@@ -242,18 +280,31 @@ class WarningsCog(commands.Cog):
     async def warnremove(self, ctx: commands.Context, warn_id: int):
         conn = self._conn()
         row = conn.execute(
-            "SELECT user_id FROM warnings WHERE id = ? AND active = 1", (warn_id,)
+            "SELECT user_id, rule, reason FROM warnings WHERE id = ? AND active = 1", (warn_id,)
         ).fetchone()
         if not row:
             conn.close()
             await ctx.send(f"No active warning #{warn_id} found.")
             return
 
-        user_id = row[0]
+        user_id, rule, reason = row
         conn.execute("UPDATE warnings SET active = 0 WHERE id = ?", (warn_id,))
         conn.commit()
         conn.close()
         await ctx.send(f"Warning #{warn_id} removed for <@{user_id}>.")
+
+        mod_log_embed = discord.Embed(
+            title=f"✅ Warning #{warn_id} removed",
+            description=(
+                f"**Target:** <@{user_id}> (`{user_id}`)\n"
+                f"**Moderator:** {user_line(ctx.author)}\n"
+                f"**Original rule:** {rule}. {RULES.get(rule, 'Unknown')}\n"
+                f"**Original reason:** {reason}"
+            ),
+            color=LogColors.MOD,
+            timestamp=discord.utils.utcnow(),
+        )
+        await self._log_to_mod_channel(mod_log_embed)
 
 
 async def setup(bot: commands.Bot):

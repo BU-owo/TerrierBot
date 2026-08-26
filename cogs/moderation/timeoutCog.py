@@ -162,6 +162,16 @@ class TimeoutCog(
         # duplicate before posting our own (richer) embed for it below.
         suppress_mod_log(member.id, "timeout")
 
+        if ctx.interaction is None:
+            # Prefix invocation (=timeout): the command message itself shows
+            # the moderator's name/avatar as its author, and the timed-out
+            # member can still read this channel — delete it so identity is
+            # only ever recorded in the mod log, not visible in-channel.
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+
         await ctx.send(
             f"Timed out {member.mention} for {duration_display}{clamp_note}. Reason: {reason_text}",
             ephemeral=True,

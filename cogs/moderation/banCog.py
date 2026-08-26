@@ -471,6 +471,16 @@ class BanCog(
         # duplicate before posting our own (richer) embed for it below.
         suppress_mod_log(target_id, "ban")
 
+        if ctx.interaction is None:
+            # Prefix invocation (=ban): the command message itself shows the
+            # moderator's name/avatar as its author, which the banned member
+            # could otherwise still see for a moment — delete it so identity
+            # is only ever recorded in the mod log, not visible in-channel.
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+
         if unban_at is not None:
             self._add_tempban(guild_id=guild.id, user_id=target_id, unban_at=unban_at, reason=reason_text)
 
