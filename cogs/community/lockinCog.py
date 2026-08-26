@@ -198,6 +198,13 @@ class LockinCog(commands.Cog):
             await ctx.reply("lock-in role not found on this server — ping a mod.", ephemeral=True)
             return
 
+        # All checks passed — defer now. The role-strip, role-add, shelve
+        # write, and member-log send below are several sequential network
+        # calls, which combined can outrun Discord's 3-second interaction ack
+        # window and make the final reply below fail with a 404 Unknown
+        # interaction even though the lock-in itself went through.
+        await ctx.defer(ephemeral=True)
+
         end_ts = int(time.time() + seconds)
 
         # Stash the member's current roles (minus @everyone, which can't be
@@ -214,7 +221,7 @@ class LockinCog(commands.Cog):
                 )
             await ctx.author.add_roles(role, reason="Lock-in requested")
         except discord.HTTPException:
-            await ctx.reply("couldn't assign the role — ping a mod.", ephemeral=True)
+            await ctx.send("couldn't assign the role — ping a mod.", ephemeral=True)
             return
 
         self.lockins[user_id] = {
@@ -227,7 +234,7 @@ class LockinCog(commands.Cog):
 
         await self._log_lockin_start(ctx.author, seconds=seconds, end_ts=end_ts)
 
-        await ctx.reply(
+        await ctx.send(
             f"locked in for {format_duration(seconds)}. ends <t:{end_ts}:F> (<t:{end_ts}:R>). "
             f"no take-backs, good luck 🔒",
             ephemeral=True

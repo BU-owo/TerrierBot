@@ -406,6 +406,14 @@ class TerrierBot(commands.Bot):
             logging.warning("Discord rate limit hit (429) in command error handler; skipping ctx.send")
             return
 
+        # Unknown interaction (10062) — the interaction already died (e.g. a
+        # slow hybrid command outran the 3s ack window), so any further
+        # ctx.send() attempt below to report the error would just raise the
+        # same NotFound a second time instead of reporting anything useful.
+        if isinstance(http_error, discord.NotFound) and http_error.code == 10062:
+            logging.warning("Unknown interaction (10062) in command error handler; skipping ctx.send")
+            return
+
         if isinstance(error, commands.CommandNotFound):
             logging.debug(f"command not found {ctx.message.content} (by {ctx.author})")
             return
