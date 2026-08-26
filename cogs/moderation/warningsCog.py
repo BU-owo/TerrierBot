@@ -5,7 +5,7 @@ import sqlite3
 import os
 from datetime import datetime, timezone
 
-from ..logging.logConfig import LogChannels, LogColors, get_log_channel, user_line
+from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
 
 DB_DIR = os.path.expanduser("~/terrierbot_data")
 DB_PATH = os.path.join(DB_DIR, "warnings.db")
@@ -22,14 +22,19 @@ RULES = {
     9: "Mods Have Final Say",
 }
 
-def is_mod():
-    return commands.has_permissions(manage_messages=True)
-
-
 class WarningsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._init_db()
+
+    @staticmethod
+    async def _require_mod(ctx: commands.Context) -> bool:
+        if not isinstance(ctx.author, discord.Member) or not any(
+            r.id == MOD_ROLE_ID for r in ctx.author.roles
+        ):
+            await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
+            return False
+        return True
 
     def _init_db(self):
         os.makedirs(DB_DIR, exist_ok=True)
@@ -75,7 +80,6 @@ class WarningsCog(commands.Cog):
 
     # ---------- /warn ----------
     @commands.hybrid_command(name="warn", description="Warn a user for violating a rule")
-    @is_mod()
     @app_commands.describe(
         user="User to warn",
         rule="Rule being violated",
@@ -93,6 +97,8 @@ class WarningsCog(commands.Cog):
         reason: str,
         send_dm: bool = True,
     ):
+        if not await self._require_mod(ctx):
+            return
         if rule not in RULES:
             valid = ", ".join(f"{k} ({v})" for k, v in RULES.items())
             await ctx.send(f"Invalid rule number. Valid rules: {valid}", ephemeral=True)
@@ -186,8 +192,9 @@ class WarningsCog(commands.Cog):
 
     # ---------- /warncount ----------
     @commands.hybrid_command(name="warncount", description="List all users with active warnings")
-    @is_mod()
     async def warncount(self, ctx: commands.Context):
+        if not await self._require_mod(ctx):
+            return
         conn = self._conn()
         rows = conn.execute(
             "SELECT user_id, COUNT(*) FROM warnings WHERE active = 1 GROUP BY user_id ORDER BY COUNT(*) DESC"
@@ -213,9 +220,10 @@ class WarningsCog(commands.Cog):
 
     # ---------- /warninfo ----------
     @commands.hybrid_command(name="warninfo", description="Show a user's warning history")
-    @is_mod()
     @app_commands.describe(user="User to look up")
     async def warninfo(self, ctx: commands.Context, user: discord.Member):
+        if not await self._require_mod(ctx):
+            return
         conn = self._conn()
         rows = conn.execute(
             "SELECT id, rule, reason, warned_at, active FROM warnings "
@@ -282,10 +290,11 @@ class WarningsCog(commands.Cog):
         return choices[:25]
 
     @commands.hybrid_command(name="warnremove", description="Manually remove a warning")
-    @is_mod()
     @app_commands.describe(warn_id="Warning to remove (start typing to search)")
     @app_commands.autocomplete(warn_id=_warn_id_autocomplete)
     async def warnremove(self, ctx: commands.Context, warn_id: int):
+        if not await self._require_mod(ctx):
+            return
         conn = self._conn()
         row = conn.execute(
             "SELECT user_id, rule, reason FROM warnings WHERE id = ? AND active = 1", (warn_id,)

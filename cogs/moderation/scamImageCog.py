@@ -324,7 +324,7 @@ class ScamImageCog(commands.Cog):
     ) -> None:
         if not self._has_scamcatcher_role(interaction.user):  # type: ignore[arg-type]
             await interaction.response.send_message(
-                "You don't have permission to use this command.", ephemeral=True
+                "Oops! You can't run that... mods only!", ephemeral=True
             )
             return
 
@@ -513,7 +513,7 @@ class ScamImageCog(commands.Cog):
     async def removehash(self, interaction: discord.Interaction, hash: str) -> None:
         if not self._has_scamcatcher_role(interaction.user):  # type: ignore[arg-type]
             await interaction.response.send_message(
-                "You don't have permission to use this command.", ephemeral=True
+                "Oops! You can't run that... mods only!", ephemeral=True
             )
             return
 

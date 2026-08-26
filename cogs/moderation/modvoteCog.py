@@ -38,7 +38,7 @@ class ModVoteGroup(app_commands.Group):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not _has_mod_role(interaction.user):
             await interaction.response.send_message(
-                "You don't have permission to use this command.", ephemeral=True
+                "Oops! You can't run that... mods only!", ephemeral=True
             )
             return False
         return True

@@ -30,7 +30,7 @@ class KickCog(
         if not isinstance(ctx.author, discord.Member) or not any(
             r.id == MOD_ROLE_ID for r in ctx.author.roles
         ):
-            await ctx.send("You don't have permission to use this command.", ephemeral=True)
+            await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
             return False
         return True
 
