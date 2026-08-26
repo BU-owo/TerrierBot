@@ -180,6 +180,34 @@ async def _handle_decision(interaction: discord.Interaction, applicant_id: int, 
         await interaction.response.send_message("You don't have permission to review applications.", ephemeral=True)
         return
 
+    message = interaction.message
+    # Idempotency guard: the buttons are removed (view=None) as the very
+    # first thing once a decision is made, below. If they're already gone,
+    # this is a duplicate click — e.g. a mod clicking again because the
+    # first click was slow to visibly respond — racing in before Discord's
+    # client re-rendered the message. Bail out instead of reprocessing.
+    if message is not None and not message.components:
+        await interaction.response.send_message(
+            "This application has already been handled.", ephemeral=True
+        )
+        return
+
+    embed = message.embeds[0] if message and message.embeds else None
+    if embed is not None:
+        decision = "Approved" if approved else "Denied"
+        embed.color = discord.Color.green() if approved else discord.Color.red()
+        embed.set_footer(text=f"{decision} by {reviewer.display_name}")
+
+    # Respond immediately — remove the buttons and update the embed right
+    # away, before the slower role-add/DM calls below, so a mod always sees
+    # the click register instantly instead of wondering if it landed. This
+    # delay (both network calls ran before any response was sent) is what
+    # let a second click race in and send the acceptance DM twice.
+    try:
+        await interaction.response.edit_message(embed=embed, view=None)
+    except discord.HTTPException:
+        pass
+
     guild = interaction.guild
     if guild is None:
         return
@@ -214,14 +242,6 @@ async def _handle_decision(interaction: discord.Interaction, applicant_id: int, 
     else:
         log.warning("joinPoliticsCog: applicant %d not found in guild, skipping DM", applicant_id)
 
-    embed = interaction.message.embeds[0] if interaction.message and interaction.message.embeds else None
-    if embed is not None:
-        decision = "Approved" if approved else "Denied"
-        embed.color = discord.Color.green() if approved else discord.Color.red()
-        embed.set_footer(text=f"{decision} by {reviewer.display_name}")
-
-    await interaction.response.edit_message(embed=embed, view=None)
-
     # Permanent record of the decision in mod-log — a new message, not an
     # edit, and with no buttons (the message above, in the mod queue, is
     # where decisions happen). Best-effort: never blocks the rest of this flow.
@@ -232,6 +252,13 @@ async def _handle_decision(interaction: discord.Interaction, applicant_id: int, 
                 await mod_log_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
             except discord.HTTPException:
                 pass
+
+    try:
+        await interaction.followup.send(
+            f"Application {'approved' if approved else 'denied'}.", ephemeral=True
+        )
+    except discord.HTTPException:
+        pass
 
 
 class PoliticsApproveButton(discord.ui.DynamicItem[discord.ui.Button], template=APPROVE_TEMPLATE.pattern):
