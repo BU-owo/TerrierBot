@@ -16,7 +16,7 @@ _FIELDS = [
     (
         "📋 Case History",
         "`=modlogs <member_or_id>` / `/modlogs`",
-        "Check a member's full history (warns, kicks, timeouts, bans) before deciding how to escalate.",
+        "Check a member's full history (warns, kicks, timeouts, hardmutes, bans) before deciding how to escalate.",
     ),
     (
         "⚠️ Warn",
@@ -29,6 +29,11 @@ _FIELDS = [
         "🔇 Timeout / Untimeout",
         "`=timeout <member> <duration> [reason]` / `=untimeout <member> [reason]`",
         "Quick cooldown for minor or heated behavior; untimeout lifts it early once things calm down.",
+    ),
+    (
+        "🔇 Hardmute / Unmute",
+        "`=hardmute <member>` / `=unmute <member>`",
+        "Strips a member's roles and confines them to one channel, indefinitely — useful when you're not sure if an account is a bot yet and want to question it somewhere isolated. `=unmute` restores their original roles. No auto-expiry; you have to lift it manually.",
     ),
     (
         "👢 Kick",

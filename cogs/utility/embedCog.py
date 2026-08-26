@@ -482,7 +482,7 @@ value=(
 
     "**Warning**\n"
     "> **When:** Clear rule violations or repeated behavior\n"
-    "> **Vote:** Majority\n"
+    "> **Vote:** None\n"
     "> **Method:** TerrierBot `=warn` / `/warn`\n\n"
 
     "**Ban**\n"
@@ -495,9 +495,9 @@ value=(
     embed3.add_field(
         name="For Bots",
         value=(
-            "Dyno `/ban`\n"
-            "If unsure whether an account is a bot, use Carl `/hardmute` and ask about their affiliation "
-            "in <#1498345257455194242>.\n"
+            "TerrierBot `/ban`\n"
+            "If unsure whether an account is a bot, use TerrierBot `/hardmute` and ask about their "
+            "affiliation in <#1498345257455194242>. `/unmute` reverses it once things are sorted out.\n"
             "When in doubt, time out."
         ),
         inline=False,
@@ -506,7 +506,8 @@ value=(
         name="Warning Thresholds",
         value=(
             "**5 active warnings = ban.**\n"
-            "Warnings expire after **3 months** and no longer count toward the 5-warning limit."
+            "Warnings don't expire — they stay active until removed by a mod (`=warnremove`) or "
+            "a successful `/warnappeal`."
         ),
         inline=False,
     )
@@ -575,8 +576,7 @@ value=(
     embed5.add_field(
         name="Moderator Tools",
         value=(
-            "**Dyno** — legacy bans (bot accounts only)\n"
-            "**TerrierBot** — warnings, timeouts, kicks, bans, purges, lockdowns, modvotes, boost notes\n"
+            "**TerrierBot** — warnings, timeouts, kicks, bans, purges, lockdowns, modvotes, hardmutes, boost notes\n"
             "**Carl** — Logging\n"
             "**Floof** — Starboard, tags, Minecraft info, ping roles"
         ),
@@ -611,16 +611,18 @@ value=(
     embed6.add_field(
         name="Voting",
         value=(
-            f"Majority vote decides warnings and bans. Anyone can start one — ping <@&{MOD_ROLE}>, "
-            "state your case, and try not to make it too lengthy."
+            f"Majority vote decides bans — warnings can be issued unilaterally. Anyone can start a "
+            f"vote — ping <@&{MOD_ROLE}>, state your case, and try not to make it too lengthy."
         ),
         inline=False,
     )
     embed6.add_field(
         name="Appeals",
         value=(
-            f"**Bans** — appeals go to <#{MOD_IMPORTANT_CHANNEL}> for the team to review together.\n"
-            "**Warnings** — appeals happen in a ticket."
+            f"**Bans** — the ban DM links to our dedicated appeals server; the button there opens a "
+            f"modal that posts to mod-queue (<#{MOD_QUEUE_CHANNEL}>) for a mod to Approve/Deny.\n"
+            f"**Warnings** — the user runs `/warnappeal`, picks the warning, and a mod Accepts/Rejects "
+            f"it from mod-queue (<#{MOD_QUEUE_CHANNEL}>)."
         ),
         inline=False,
     )
