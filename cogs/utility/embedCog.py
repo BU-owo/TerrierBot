@@ -378,11 +378,11 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
     # Navy -> crimson gradient across the 7 embeds
     gradient = [0x1B2A4A, 0x342943, 0x4D273D, 0x662636, 0x80252F, 0x992329, 0xB22222]
 
-    RULES_CHANNEL = 1396542143803424768
     MOD_IMPORTANT_CHANNEL = 1401924438341062798
     MOD_FEET_CHANNEL = 1446304077213597807
     OWO_DOOMER_CHANNEL = 1441925119202164886
     CONFESSION_REVIEW_CHANNEL = 1441905934975635566
+    MOD_QUEUE_CHANNEL = 1541936565151080519
     MOD_ROLE = 1402095379935395934
     SERVER_OWNER = 1274047585098793034
 
@@ -413,7 +413,7 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
         ),
         inline=False,
     )
-    embed1.set_footer(text="Last updated: July 2026")
+    embed1.set_footer(text="Last updated: August 2026")
 
     embed2 = discord.Embed(
         color=discord.Color(gradient[1]),
@@ -447,6 +447,16 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
         ),
         inline=False,
     )
+    embed2.add_field(
+        name="Engaging Without Bias",
+        value=(
+            "Mods need to be able to engage with everyone without prejudice or bias, despite any "
+            "previously held qualms or experiences. You may choose to step back if there is another "
+            "mod already engaged, however if there is no other mod available or otherwise currently "
+            "engaged, you must step in — if you don't see another mod typing, you should start typing."
+        ),
+        inline=False,
+    )
 
     embed3 = discord.Embed(
         color=discord.Color(gradient[2]),
@@ -473,12 +483,12 @@ value=(
     "**Warning**\n"
     "> **When:** Clear rule violations or repeated behavior\n"
     "> **Vote:** Majority\n"
-    "> **Method:** TerrierBot `/warn`\n\n"
+    "> **Method:** TerrierBot `=warn` / `/warn`\n\n"
 
     "**Ban**\n"
     "> **When:** Severe violations or excessive warnings\n"
     "> **Vote:** Majority\n"
-    "> **Method:** Dyno `/ban`"
+    "> **Method:** TerrierBot `/ban`"
 ),
         inline=False,
     )
@@ -504,36 +514,28 @@ value=(
     embed4 = discord.Embed(
         color=discord.Color(gradient[3]),
         title="📜 The Rules",
-        description=f"Full rules: <#{RULES_CHANNEL}>",
+        description=(
+            "1. No harassment or insults.\n"
+            "2. No bigotry, hate speech, hate symbols, or use of slurs.\n"
+            "3. Don't be edgy, provocative, or baiting in a way that upsets people or starts "
+            "needless arguments.\n"
+            "4. No spamming chat or misusing pings.\n"
+            "5. No doxxing identities or personal information, including sharing DMs without "
+            "permission.\n"
+            "6. No threats of harm or encouraging any behaviors that endanger health/safety.\n"
+            "7. No NSFW (sexual/flirting) or NSFL (gore/violent) content or language.\n"
+            "8. No scams allowed. Self-promotion requires prior approval.\n"
+            "9. Mods reserve the right to interpret, enforce, and change rules to keep the "
+            "community healthy.\n\n"
+            "Always follow [Discord Community Guidelines](https://discord.com/guidelines)."
+        ),
     )
     embed4.add_field(
-        name="1. Be Respectful",
-        value="Kindness & maturity. No hate speech/harassment/uninvited flirting. Use trigger warnings for sensitive topics.",
-        inline=False,
-    )
-    embed4.add_field(
-        name="2. Keep It Safe and Legal",
-        value="No illegal activity or academic misconduct, no encouraging unsafe behavior, no threats.",
-        inline=False,
-    )
-    embed4.add_field(
-        name="3. No Spam or Self-Promotion",
-        value="No unrelated advertising, no selling/promoting cheating services.",
-        inline=False,
-    )
-    embed4.add_field(
-        name="4. No NSFW/NSFL Content",
-        value="No porn, gore, or unwanted sexual comments. Jokes without graphic depictions are fine.",
-        inline=False,
-    )
-    embed4.add_field(
-        name="5. Respect Privacy",
-        value="No doxxing, sharing DMs, or personal info without consent.",
-        inline=False,
-    )
-    embed4.add_field(
-        name="6. Mods Have Final Say",
-        value="If a mod asks you to stop, stop.",
+        name="📚 Academic Integrity Policy",
+        value=(
+            "We have a ZERO TOLERANCE policy for anything that infringes against the policies set "
+            "by the university or individual professors. Any academic misconduct will result in a ban."
+        ),
         inline=False,
     )
 
@@ -565,17 +567,27 @@ value=(
         value=(
             f"• Encourage <@&{MOD_ROLE}> instead of pinging individuals\n"
             "• Use Floof pingroles instead of manual role pings\n"
-            "• Avoid unnecessary @everyone/@here pings"
+            "• Avoid unnecessary @everyone/@here pings\n"
+            f"• Check mod-queue (<#{MOD_QUEUE_CHANNEL}>) regularly for /snitch alerts and report tickets that need action"
         ),
         inline=False,
     )
     embed5.add_field(
         name="Moderator Tools",
         value=(
-            "**Dyno** — Bans\n"
-            "**TerrierBot** — Warnings (`/warn`), boost notes\n"
+            "**Dyno** — legacy bans (bot accounts only)\n"
+            "**TerrierBot** — warnings, timeouts, kicks, bans, purges, lockdowns, modvotes, boost notes\n"
             "**Carl** — Logging\n"
             "**Floof** — Starboard, tags, Minecraft info, ping roles"
+        ),
+        inline=False,
+    )
+    embed5.add_field(
+        name="Moderation Commands",
+        value=(
+            "The full command reference (warn, timeout, kick, ban/unban, purge/purgeafter, "
+            "lockdown/unlock, modvote, roleboost, and more) is posted separately — see the "
+            "Moderation Commands doc. Refer to it for exact syntax before running an unfamiliar command."
         ),
         inline=False,
     )
@@ -640,6 +652,7 @@ value=(
         name="Mod Channels",
         value=(
             f"<#{MOD_IMPORTANT_CHANNEL}> — main moderation decision channel\n"
+            f"<#{MOD_QUEUE_CHANNEL}> — snitch alerts and report tickets, check regularly\n"
             f"<#{MOD_FEET_CHANNEL}> — moderator unserious channel\n"
             f"<#{OWO_DOOMER_CHANNEL}> — please ignore"
         ),
