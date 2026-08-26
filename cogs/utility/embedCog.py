@@ -478,7 +478,7 @@ value=(
     "**Time Out**\n"
     "> **When:** User won't disengage or needs to cool off\n"
     "> **Vote:** None\n"
-    "> **Method:** Discord Timeout\n\n"
+    "> **Method:** TerrierBot `=timeout` / `/timeout`\n\n"
 
     "**Warning**\n"
     "> **When:** Clear rule violations or repeated behavior\n"
@@ -503,9 +503,11 @@ value=(
         inline=False,
     )
     embed3.add_field(
-        name="Warning Thresholds",
+        name="Warnings as a Log",
         value=(
-            "**5 active warnings = ban.**\n"
+            "Don't hesitate to warn for any transgression, even minor ones — a warning isn't a strike "
+            "toward an automatic ban, it's a log entry. It builds the paper trail (`=modlogs`) that "
+            "helps the next mod make an informed call.\n"
             "Warnings don't expire — they stay active until removed by a mod (`=warnremove`) or "
             "a successful `/warnappeal`."
         ),
@@ -576,8 +578,7 @@ value=(
     embed5.add_field(
         name="Moderator Tools",
         value=(
-            "**TerrierBot** — warnings, timeouts, kicks, bans, purges, lockdowns, modvotes, hardmutes, boost notes\n"
-            "**Carl** — Logging\n"
+            "**TerrierBot** — warnings, timeouts, kicks, bans, purges, lockdowns, modvotes, hardmutes, logging, boost notes\n"
             "**Floof** — Starboard, tags, Minecraft info, ping roles"
         ),
         inline=False,
