@@ -136,6 +136,26 @@ def owo_ify(text: str) -> str:
 
 WEBHOOK_NAME = "troll-webhook"
 
+# owo_ify() inflates text (per-word stutter, escalated "!", nyaify, trailing
+# emoticon, "-chan" on mentions), so a message that started under Discord's
+# 2000-char cap can cross it after transform — check the transformed text,
+# not the raw input.
+DISCORD_MESSAGE_LIMIT = 2000
+
+
+def _length_error(text: str) -> str | None:
+    """None if `text` fits in a Discord message, else a user-facing message
+    naming the actual/limit character counts."""
+    length = len(text)
+    if length <= DISCORD_MESSAGE_LIMIT:
+        return None
+    # Numbers pass through owo_ify() untouched (its regexes only match
+    # letters), so the counts stay accurate even after the uwu-ified pass.
+    return owo_ify(
+        f"That's too long after uwu-ifying: {length} characters, "
+        f"{length - DISCORD_MESSAGE_LIMIT} over Discord's {DISCORD_MESSAGE_LIMIT}-character limit."
+    )
+
 
 class TrollCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -163,6 +183,18 @@ class TrollCog(commands.Cog):
         content: str,
         reference: discord.MessageReference | discord.Message | None = None,
     ) -> None:
+        length_error = _length_error(content)
+        if length_error is not None:
+            # Backstop for any caller that didn't already check — the two
+            # current call sites (uwu command, on_message auto-repost) check
+            # earlier so they can skip deleting/consuming the original
+            # message instead of reaching this branch.
+            try:
+                await channel.send(length_error, reference=reference)
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+            return
+
         target_channel = channel
         thread_kwarg = discord.utils.MISSING
 
@@ -304,6 +336,11 @@ class TrollCog(commands.Cog):
     async def uwu(self, ctx: commands.Context, *, text: str):
         transformed = owo_ify(text)
 
+        length_error = _length_error(transformed)
+        if length_error is not None:
+            await ctx.send(length_error, ephemeral=True)
+            return
+
         if ctx.interaction is None:
             # Prefix invocation (=uwu ...): delete the user's raw command message.
             try:
@@ -332,6 +369,14 @@ class TrollCog(commands.Cog):
             return
 
         transformed = owo_ify(original_content)
+
+        length_error = _length_error(transformed)
+        if length_error is not None:
+            try:
+                await message.reply(length_error, mention_author=False)
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+            return
 
         try:
             await message.delete()

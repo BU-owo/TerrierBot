@@ -25,6 +25,12 @@ from ..logging.logConfig import (
 
 _MENTION_RE = re.compile(r"^<@!?(\d+)>$")
 
+# Rule 8 (scams / unapproved self-promo) bans purge the target's recent
+# messages server-wide via Discord's native delete_message_seconds — scam
+# links/pings tend to be spammed across multiple channels right before the
+# ban, so a scoped purge catches those without a manual mod sweep.
+_RULE_8_PURGE_SECONDS = 4 * 60 * 60
+
 
 
 def _parse_user_id(raw: str) -> int | None:
@@ -315,6 +321,8 @@ class BanCog(
         if rule is not None:
             lines.append(f"**Rule:** {rule}. {RULES[rule]}")
         lines.append(f"**Reason:** {reason}")
+        if rule == 8:
+            lines.append("**Message purge:** last 4 hours, server-wide")
         if unban_at is not None:
             lines.append(f"**Expires:** <t:{int(unban_at)}:R> (temporary ban)")
 
@@ -334,6 +342,41 @@ class BanCog(
             )
         try:
             await log_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            pass
+
+    async def _announce_ban(
+        self,
+        *,
+        target_display: str,
+        target_id: int,
+        rule: int | None,
+        reason: str,
+        unban_at: float | None,
+    ) -> None:
+        """Public-facing ban announcement — more detail than the old
+        one-liner, but deliberately no moderator identity (that's the
+        internal #mod-log's job; see _log_ban above)."""
+        announce_channel = get_log_channel(self.bot, LogChannels.ANNOUNCE)
+        if announce_channel is None:
+            return
+        lines = [f"**User:** {target_display} (`{target_id}`)"]
+        if rule is not None:
+            lines.append(f"**Rule:** {rule}. {RULES[rule]}")
+        lines.append(f"**Reason:** {reason}")
+        if unban_at is not None:
+            lines.append(f"**Expires:** <t:{int(unban_at)}:R> (temporary ban)")
+        else:
+            lines.append("**Duration:** Permanent")
+
+        embed = discord.Embed(
+            title="🔨 Member banned",
+            description="\n".join(lines),
+            color=LogColors.MOD,
+            timestamp=discord.utils.utcnow(),
+        )
+        try:
+            await announce_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             pass
 
@@ -454,11 +497,13 @@ class BanCog(
         target_display = str(member)
         target_id = member.id
 
+        delete_message_seconds = _RULE_8_PURGE_SECONDS if rule == 8 else 0
+
         try:
             await guild.ban(
                 member,
                 reason=f"{reason_text} — by {ctx.author} ({ctx.author.id})",
-                delete_message_seconds=0,
+                delete_message_seconds=delete_message_seconds,
             )
         except discord.Forbidden:
             await ctx.send("I don't have permission to ban that member.", ephemeral=True)
@@ -505,15 +550,13 @@ class BanCog(
             unban_at=unban_at,
         )
 
-        announce_channel = get_log_channel(self.bot, LogChannels.ANNOUNCE)
-        if announce_channel is not None:
-            try:
-                await announce_channel.send(
-                    f"{target_display} has been banned.",
-                    allowed_mentions=discord.AllowedMentions.none(),
-                )
-            except discord.HTTPException:
-                pass
+        await self._announce_ban(
+            target_display=target_display,
+            target_id=target_id,
+            rule=rule,
+            reason=reason_text,
+            unban_at=unban_at,
+        )
 
         try:
             record_case(
