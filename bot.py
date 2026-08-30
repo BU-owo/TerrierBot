@@ -576,98 +576,31 @@ async def help_command(ctx: Context):
     """Show categorized TerrierBot commands."""
     embed = discord.Embed(
         title="TerrierBot Commands",
-        description="Use the `=` prefix or `/` slash commands where available. Some commands need admin, moderator, or owner permissions.",
+        description="Use the `=` prefix or `/` slash commands where available.",
         color=discord.Color.red(),
     )
 
     embed.add_field(
-        name="Campus & BU Info",
+        name="Moderation",
         value=(
-            "`=class` or `/class` `<course>` - Look up BU Bulletin course information\n"
-            "`=club` or `/club` `<query>` - Search Terrier Central clubs\n"
-            "`=rmp` or `/rmp` `<name>` - Search RateMyProfessors for a BU instructor\n"
-            "`=search` or `/search` `<query>` - Search BU courses by school, department, or HUB units\n"
-            "`=mbta` or `/mbta` `<station>` - Check live MBTA Green Line ETAs"
+            "`/mywarns` — see your active warnings\n"
+            "`/warnappeal` — appeal one of your warnings\n"
+            "`/snitch` — send an anonymous, silent alert to the mods"
         ),
         inline=False,
     )
 
     embed.add_field(
-        name="Community & Fun",
+        name="Tools",
         value=(
-            "`=hello` or `/hello` - Say hello to the bot\n"
-            "`=love` or `/love` - Share some Terrier love\n"
-            "`=banner` or `/banner` - Learn how to submit a server banner idea\n"
-            "`=boost` or `/boost` - See server boost perks\n"
-            "`=pride` or `/pride` - Send the Pride message\n"
-            "`=starleaderboard` or `/starleaderboard` - Show the most-starred posts\n"
-            "`/snitch` `[context]` - Send a report to the mods"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="Server Config",
-        value=(
-            "`=positivity` or `/positivity status/enable/disable/interval/cooldown` - Configure Positivity Tuesday\n"
-            "`=feedbacksetup` or `/feedbacksetup` - Post the anonymous feedback prompt\n"
-            "`/starboard setchannel/threshold/enable/disable/status` - Configure the starboard\n"
-            "`/pingrole` - Ping one of the server role options\n"
-            "`/reactionrole` `<preset>` - Post a reaction role message from a preset (mod only)"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="Moderation Tools — Warnings, Timeouts & Votes",
-        value=(
-            "`=warn` / `/warn` - Warn a member\n"
-            "`=warncount` / `/warncount` - List active warnings\n"
-            "`=warninfo` / `/warninfo` - Show a user's warning history\n"
-            "`=mywarns` / `/mywarns` - Show your own active warnings\n"
-            "`=warnremove` / `/warnremove` - Remove a warning\n"
-            "`/warnappeal` - Appeal one of your own active warnings\n"
-            "`=lockdown` / `/lockdown` - Lock the current channel (mod only)\n"
-            "`=unlock` / `/unlock` - Unlock the current channel (mod only)\n"
-            "`=timeout` / `/timeout` `<member> <duration> [reason]` - Time out a member (mod only)\n"
-            "`=untimeout` / `/untimeout` `<member> [reason]` - Clear a member's timeout (mod only)\n"
-            "`/modvote start/close` `<target> <options> <duration>` - Run an anonymous disciplinary vote (mod only)"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="Moderation Tools — Bans, Kicks & Records",
-        value=(
-            "`=kick` / `/kick` `<member> [reason]` - Kick a member (mod only)\n"
-            "`=ban` / `/ban` `<member> <rule> [duration] [reason]` - Ban a member, DMs them an appeals-server link (mod only)\n"
-            "`=unban` / `/unban` `<user_id> [reason]` - Unban a user by ID (mod only)\n"
-            "`=purge` / `/purge` `<amount>` - Bulk-delete recent messages in this channel, 1-100 (mod only)\n"
-            "`=purgeafter` / `/purgeafter` `<target>` - Delete every message after a target message (reply, ID, or link), up to 200 (mod only)\n"
-            "`=modlogs` / `/modlogs` `<member_or_id>` - View a member's full case history: warns, kicks, timeouts, bans (mod only)\n"
-            "`=modcommands` / `/modcommands` - Show a quick reference of moderation commands and when to use them (mod only)\n"
-            "`=joinpolitics` or `/joinpolitics` - Post the #politics application (mod only)"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="Utility",
-        value=(
-            "`=end` or `/end` - See how many days are left until the semester ends\n"
-            "`=test` or `/test` - Confirm that the bot is responding\n"
-            "`=help` - Show this help message\n"
-            "`=leavepolitics` or `/leavepolitics` - Leave the Politics role/channel\n"
-            "`=embedrules` - Post the Terrier Hub rules embed in this channel"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="Owner / Maintenance",
-        value=(
-            "Owner only (prefix commands):\n"
-            "`=disconnect`, `=delete`, `=sync`, `=cog load`, `=cog unload`, `=cog reload`, `=cog list`, `=exportmembers`, `=exportprunecandidates`, `=postappealbutton`"
+            "`=class` / `/class` — look up a BU course from the Bulletin\n"
+            "`=rmp` / `/rmp` — look up a professor on RateMyProfessors\n"
+            "`=club` / `/club` — search for BU clubs on Terrier Central\n"
+            "`=mbta` / `/mbta` — check how far Green Line trains are from a station (leave blank for the BU stops)\n"
+            "`/pingrole` — ping one of our community roles — events, food, gaming, and more — with a message\n"
+            "`=lockin` / `/lockin` — lock yourself out of the server for a set time to focus (can't be undone early)\n"
+            "`=lockinleft` / `/lockinleft` — check how much time is left on your lock-in\n"
+            "`=uwu` / `/uwu` — uwu-ify your own message"
         ),
         inline=False,
     )
