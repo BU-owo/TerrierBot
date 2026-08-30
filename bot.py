@@ -575,35 +575,37 @@ async def status_command(interaction: discord.Interaction) -> None:
 async def help_command(ctx: Context):
     """Show categorized TerrierBot commands."""
     embed = discord.Embed(
-        title="TerrierBot Commands",
-        description="Use the `=` prefix or `/` slash commands where available.",
+        title="🐾 TerrierBot Commands 🐾",
+        description="Use the `=` prefix or `/` slash commands where available!",
         color=discord.Color.red(),
     )
 
     embed.add_field(
-        name="Moderation",
+        name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Moderation ✧",
         value=(
-            "`/mywarns` — see your active warnings\n"
-            "`/warnappeal` — appeal one of your warnings\n"
-            "`/snitch` — send an anonymous, silent alert to the mods"
+            "🐕 `/mywarns` — see your active warnings\n"
+            "📝 `/warnappeal` — appeal one of your warnings\n"
+            "🤫 `/snitch` — send an anonymous, silent alert to the mods"
         ),
         inline=False,
     )
 
     embed.add_field(
-        name="Tools",
+        name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Tools ✧",
         value=(
-            "`=class` / `/class` — look up a BU course from the Bulletin\n"
-            "`=rmp` / `/rmp` — look up a professor on RateMyProfessors\n"
-            "`=club` / `/club` — search for BU clubs on Terrier Central\n"
-            "`=mbta` / `/mbta` — check how far Green Line trains are from a station (leave blank for the BU stops)\n"
-            "`/pingrole` — ping one of our community roles — events, food, gaming, and more — with a message\n"
-            "`=lockin` / `/lockin` — lock yourself out of the server for a set time to focus (can't be undone early)\n"
-            "`=lockinleft` / `/lockinleft` — check how much time is left on your lock-in\n"
-            "`=uwu` / `/uwu` — uwu-ify your own message"
+            "📚 `=class` / `/class` — look up a BU course from the Bulletin\n"
+            "⭐ `=rmp` / `/rmp` — look up a professor on RateMyProfessors\n"
+            "🐾 `=club` / `/club` — search for BU clubs on Terrier Central\n"
+            "🚋 `=mbta` / `/mbta` — check how far Green Line trains are from a station (leave blank for the BU stops)\n"
+            "📣 `/pingrole` — ping one of our community roles — events, food, gaming, and more — with a message\n"
+            "🔒 `=lockin` / `/lockin` — lock yourself out of the server for a set time to focus (can't be undone early)\n"
+            "⏳ `=lockinleft` / `/lockinleft` — check how much time is left on your lock-in\n"
+            "🥰 `=uwu` / `/uwu` — uwu-ify your own message"
         ),
         inline=False,
     )
+
+    embed.set_footer(text="⋆⁺₊✧ ✧₊⁺⋆ — woof! — ⋆⁺₊✧ ✧₊⁺⋆")
 
     await ctx.send(embed=embed)
 
