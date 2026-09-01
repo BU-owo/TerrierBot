@@ -487,6 +487,7 @@ bot = TerrierBot(
 bot.help_command = None
 
 
+
 @bot.tree.error
 async def on_app_command_error(
     interaction: discord.Interaction,
