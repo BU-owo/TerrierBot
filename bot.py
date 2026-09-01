@@ -606,6 +606,19 @@ async def help_command(ctx: Context):
         inline=False,
     )
 
+    embed.add_field(
+        name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Birthdays ✧",
+        value=(
+            "🎂 `=birthday` — see your own saved birthday\n"
+            "🎉 `=birthday set` / `/birthday set` `<month> <day>` — save (or update) your birthday\n"
+            "🔎 `=birthday get` / `/birthday get` `[user]` — look up your own or someone else's birthday\n"
+            "🗑️ `=birthday remove` / `/birthday remove` — remove your saved birthday\n"
+            "📅 `=birthday nearest` / `/birthday nearest` — see birthdays coming up in the next two weeks\n"
+            "*(mods only: `/birthday export` and `/birthday override` manage the whole list)*"
+        ),
+        inline=False,
+    )
+
     embed.set_footer(text="⋆⁺₊✧ ✧₊⁺⋆ — woof! — ⋆⁺₊✧ ✧₊⁺⋆")
 
     await ctx.send(embed=embed)
@@ -705,8 +718,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.end", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute"]
-defaultCogs = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute"]
+cogList = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.end", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday"]
+defaultCogs = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday"]
 
 
 def _get_token() -> str:

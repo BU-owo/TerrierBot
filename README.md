@@ -19,6 +19,7 @@ TerrierBot currently supports:
 - Member-submitted reports to mods through `snitch`
 - A button + modal ban-appeal flow in a dedicated appeals server, forwarding appeals to the mod log
 - Permanent warnings (no auto-expiry) with a `warnappeal` select-and-modal flow for mods to accept/reject
+- Self-service birthday tracking through `birthday`, with automatic daily role assignment/removal and a server announcement
 
 ## Requirements
 
@@ -106,6 +107,13 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=roleboost` / `/roleboost` | Give a booster a role tied to their booster status (booster-role required) |
 | `=starleaderboard` / `/starleaderboard` | Show the most-starred posts |
 | `/snitch` | Send a report to the mods, with optional context |
+| `=birthday` | Show your own saved birthday |
+| `=birthday set` / `/birthday set` | Save (or update) your birthday |
+| `=birthday get` / `/birthday get` | Look up your own or another member's birthday |
+| `=birthday remove` / `/birthday remove` | Remove your saved birthday |
+| `=birthday nearest` / `/birthday nearest` | Show birthdays coming up in the next two weeks |
+| `/birthday export` | Export every saved birthday to a text file (mod role required) |
+| `/birthday override` | Set another member's birthday (mod role required) |
 
 ### Moderation, feedback, and management
 
@@ -146,6 +154,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 - Warning commands require moderation access that fits your server’s workflow.
 - Owner-only maintenance commands are available for bot upkeep and debugging.
 - The bot stores small pieces of state in `terrierbot.shelve` and reads the token from `token.txt` or `DISCORD_TOKEN` when it starts.
+- The birthday role is assigned and removed automatically once a day, based on the current date in America/New_York — `/birthday export` and `/birthday override` require the mod role.
 
 ## Troubleshooting
 
