@@ -110,7 +110,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=birthday` | Show your own saved birthday |
 | `=birthday set` / `/birthday set` | Save (or update) your birthday |
 | `=birthday get` / `/birthday get` | Look up your own or another member's birthday |
-| `=birthday remove` / `/birthday remove` | Remove your saved birthday |
+| `=birthday remove` / `/birthday remove` | Remove your saved birthday (mods can pass a `user` to remove someone else's) |
 | `=birthday nearest` / `/birthday nearest` | Show birthdays coming up in the next two weeks |
 | `/birthday export` | Export every saved birthday to a text file (mod role required) |
 | `/birthday override` | Set another member's birthday (mod role required) |

@@ -289,19 +289,33 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
         possessive = "Your" if target.id == ctx.author.id else f"{target.display_name}'s"
         await ctx.send(f"{possessive} birthday is {format_birthday(entry['month'], entry['day'])}.")
 
-    @birthday.command(name="remove", description="Remove your saved birthday.")
-    async def birthday_remove(self, ctx: Context) -> None:
-        removed = self.birthdays.pop(str(ctx.author.id), None)
+    @birthday.command(name="remove", description="Remove a saved birthday.")
+    @app_commands.describe(user="Whose birthday to remove (mods only — leave blank to remove your own)")
+    async def birthday_remove(self, ctx: Context, user: discord.Member | None = None) -> None:
+        is_self = user is None or user.id == ctx.author.id
+        if not is_self and not self._is_mod(ctx.author):
+            await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
+            return
+
+        target = ctx.author if is_self else user
+        removed = self.birthdays.pop(str(target.id), None)
         if removed is None:
-            await ctx.send("You don't have a birthday on file.", ephemeral=True)
+            possessive = "You don't" if is_self else f"{target.display_name} doesn't"
+            await ctx.send(f"{possessive} have a birthday on file.", ephemeral=True)
             return
 
         self._save_birthdays()
-        await ctx.send(
-            "Your birthday has been removed and won't recur. "
-            "If you're wearing the birthday role today, it'll still come off at the end of the day as usual.",
-            ephemeral=True,
-        )
+        if is_self:
+            await ctx.send(
+                "Your birthday has been removed and won't recur. "
+                "If you're wearing the birthday role today, it'll still come off at the end of the day as usual.",
+                ephemeral=True,
+            )
+        else:
+            await ctx.send(
+                f"{target.display_name}'s birthday has been removed and won't recur. "
+                "If they're wearing the birthday role today, it'll still come off at the end of the day as usual."
+            )
 
     @birthday.command(name="nearest", description="Show birthdays coming up in the next couple weeks.")
     async def birthday_nearest(self, ctx: Context) -> None:
