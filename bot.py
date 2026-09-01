@@ -572,53 +572,6 @@ async def status_command(interaction: discord.Interaction) -> None:
 #Utility
 #============================================
 
-@bot.command(name="help")
-async def help_command(ctx: Context):
-    """Show categorized TerrierBot commands."""
-    embed = discord.Embed(
-        title="🐾 TerrierBot Commands 🐾",
-        description="Use the `=` prefix or `/` slash commands where available!",
-        color=discord.Color.red(),
-    )
-
-    embed.add_field(
-        name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Moderation ✧",
-        value=(
-            "🐕 `/mywarns` — see your active warnings\n"
-            "📝 `/warnappeal` — appeal one of your warnings\n"
-            "🤫 `/snitch` — send an anonymous, silent alert to the mods"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Tools ✧",
-        value=(
-            "📚 `=class` / `/class` — look up a BU course from the Bulletin\n"
-            "⭐ `=rmp` / `/rmp` — look up a professor on RateMyProfessors\n"
-            "🐾 `=club` / `/club` — search for BU clubs on Terrier Central\n"
-            "🚋 `=mbta` / `/mbta` — check how far Green Line trains are from a station (leave blank for the BU stops)\n"
-            "🌈 `=mbtgay` / `/mbtgay` — track down the MBTA Pride Train (car #3706), if it's out riding today\n"
-            "📣 `/pingrole` — ping one of our community roles — events, food, gaming, and more — with a message\n"
-            "🔒 `=lockin` / `/lockin` — lock yourself out of the server for a set time to focus (can't be undone early)\n"
-            "⏳ `=lockinleft` / `/lockinleft` — check how much time is left on your lock-in\n"
-            "🥰 `=uwu` / `/uwu` — uwu-ify your own message"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Birthdays ✧",
-        value=(
-            "🎉 `=birthday set` / `/birthday set` `<month> <day>` — save (or update) your birthday"
-        ),
-        inline=False,
-    )
-
-    embed.set_footer(text="⋆⁺₊✧ ✧₊⁺⋆ — woof! — ⋆⁺₊✧ ✧₊⁺⋆")
-
-    await ctx.send(embed=embed)
-
 @bot.command()
 @commands.is_owner()
 async def sync(ctx: Context):
@@ -714,8 +667,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.end", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday"]
-defaultCogs = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday"]
+cogList = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.end", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday", "utility.help"]
+defaultCogs = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday", "utility.help"]
 
 
 def _get_token() -> str:
