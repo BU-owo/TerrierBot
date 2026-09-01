@@ -9,7 +9,7 @@ TerrierBot currently supports:
 - BU course and department lookups through the `class` and `search` features
 - BU club discovery through `club`
 - RateMyProfessors lookups through `rmp`
-- Live MBTA Green Line ETA checks through `mbta`
+- Live MBTA Green Line ETA checks through `mbta`, plus MBTA Pride Train (car #3706) tracking through `mbtgay`
 - Community features such as `hello`, `love`, `banner`, `boost`, and `pride`
 - Anonymous feedback and moderation tools such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
 - A shared moderation case log across kicks, timeouts, and bans, viewable per-member with `modlogs`
@@ -94,6 +94,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=rmp` / `/rmp` | Search RateMyProfessors for a BU instructor |
 | `=search` / `/search` | Search BU courses by school, department, or HUB units |
 | `=mbta` / `/mbta` | Check live MBTA Green Line ETAs |
+| `=mbtgay` / `/mbtgay` | Track the MBTA Pride Train (Green Line car #3706), if it's currently running |
 
 ### Community and fun
 

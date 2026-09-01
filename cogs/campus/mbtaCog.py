@@ -14,6 +14,17 @@ from bot import Context, TerrierBot
 MBTA_PREDICTIONS_URL = "https://api-v3.mbta.com/predictions"
 MBTA_SCHEDULES_URL = "https://api-v3.mbta.com/schedules"
 MBTA_ALERTS_URL = "https://api-v3.mbta.com/alerts"
+MBTA_VEHICLES_URL = "https://api-v3.mbta.com/vehicles"
+
+# Service alert header text gets truncated to this many characters (at the
+# last whole word) before being shown on a board.
+ALERT_TEXT_LIMIT = 90
+
+# The MBTA's rainbow-liveried Green Line trolley. Green Line cars usually run
+# as married pairs (e.g. label "3706-3871"), so vehicle lookups match this as
+# a substring rather than requiring an exact label match.
+PRIDE_TRAIN_CAR_NUMBER = "3706"
+GREEN_LINE_ROUTE_IDS: tuple[str, ...] = ("Green-B", "Green-C", "Green-D", "Green-E")
 
 # MBTA direction_id convention for the Green Line (all branches share it):
 # 0 = outbound (westbound/southbound away from downtown)
@@ -29,6 +40,7 @@ BU_GREEN_B_STOPS: list[tuple[str, str]] = [
     ("Boston University Central", "place-bucen"),
     ("Boston University East", "place-buest"),
     ("Blandford Street", "place-bland"),
+    ("Kenmore", "place-kencl"),
 ]
 
 
@@ -37,6 +49,15 @@ class GreenLineStop:
     name: str
     stop_id: str
     routes: tuple[str, ...]  # e.g. ("Green-B",) or ("Green-B", "Green-C", "Green-D")
+
+
+@dataclass(frozen=True)
+class PrideTrainStatus:
+    vehicle_id: str
+    route_id: str
+    current_status: str  # STOPPED_AT / IN_TRANSIT_TO / INCOMING_AT
+    direction_id: int
+    stop_name: str
 
 
 ROUTE_BRANCH_LABEL: dict[str, str] = {
@@ -151,6 +172,26 @@ def _direction_label(direction_id: int) -> str:
     return "Eastbound" if direction_id == DIR_EASTBOUND else "Westbound"
 
 
+def _pride_status_phrase(status: PrideTrainStatus) -> str:
+    if status.current_status == "STOPPED_AT":
+        return f"stopped at {status.stop_name}"
+    if status.current_status == "INCOMING_AT":
+        return f"arriving at {status.stop_name}"
+    return f"heading toward {status.stop_name}"
+
+
+def _truncate_alert_text(text: str, limit: int = ALERT_TEXT_LIMIT) -> str:
+    """Word-safe truncation: cut at the last whitespace before `limit` rather
+    than mid-word, e.g. "...Babcock, Ke..." -> "...Babcock, Kenmore..."."""
+    if len(text) <= limit:
+        return text
+    truncated = text[:limit]
+    last_space = truncated.rfind(" ")
+    if last_space > 0:
+        truncated = truncated[:last_space]
+    return f"{truncated.rstrip(',.;: ')}..."
+
+
 def _line_for_direction(
     direction_id: int,
     eta_text: str,
@@ -228,14 +269,14 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
     # MBTA API calls
     # ------------------------------------------------------------------
 
-    async def _fetch_next_eta_by_stop(self) -> dict[str, str]:
+    async def _fetch_next_eta_by_stop(self, pride_vehicle_id: str | None = None) -> dict[str, str]:
         stop_ids = ",".join(stop_id for _, stop_id in BU_GREEN_B_STOPS)
         params = {
             "filter[route]": "Green-B",
             "filter[stop]": stop_ids,
             "sort": "departure_time",
             "page[limit]": "100",
-            "include": "stop",
+            "include": "stop,vehicle",
         }
 
         try:
@@ -285,7 +326,7 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
 
         for stop_name, stop_id in BU_GREEN_B_STOPS:
             predictions = by_stop.get(stop_id, [])
-            best_info_by_direction: dict[int, tuple[datetime, str | None]] = {}
+            best_info_by_direction: dict[int, tuple[datetime, str | None, str]] = {}
 
             for prediction in predictions:
                 attrs = prediction.get("attributes", {})
@@ -296,9 +337,13 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
                 if t is None or t < now_utc:
                     continue
                 status = attrs.get("status") if isinstance(attrs.get("status"), str) else None
+                vehicle_data = prediction.get("relationships", {}).get("vehicle", {}).get("data")
+                vehicle_id = vehicle_data.get("id") if isinstance(vehicle_data, dict) else None
+                if not isinstance(vehicle_id, str):
+                    vehicle_id = ""
                 current_best = best_info_by_direction.get(direction_id)
                 if current_best is None or t < current_best[0]:
-                    best_info_by_direction[direction_id] = (t, status)
+                    best_info_by_direction[direction_id] = (t, status, vehicle_id)
 
             east_info = best_info_by_direction.get(DIR_EASTBOUND)
             west_info = best_info_by_direction.get(DIR_WESTBOUND)
@@ -312,6 +357,10 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
 
             east_text = _minutes_away_text(east_time, now_utc) if east_time is not None else "no live prediction"
             west_text = _minutes_away_text(west_time, now_utc) if west_time is not None else "no live prediction"
+            if pride_vehicle_id and east_info is not None and east_info[2] == pride_vehicle_id:
+                east_text += " 🌈 Pride Train!"
+            if pride_vehicle_id and west_info is not None and west_info[2] == pride_vehicle_id:
+                west_text += " 🌈 Pride Train!"
             result[stop_name] = "\n".join(
                 [
                     _line_for_direction(DIR_EASTBOUND, east_text, status=east_info[1] if east_info else None),
@@ -401,18 +450,19 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
 
     async def _fetch_station_predictions(
         self, stop: GreenLineStop
-    ) -> tuple[dict[int, list[tuple[datetime, str, str | None]]], bool]:
+    ) -> tuple[dict[int, list[tuple[datetime, str, str | None, str]]], bool]:
         """Fetch up to the next 2 upcoming predictions per direction for a
         single Green Line stop, across whichever branches serve it.
 
-        Returns (predictions_by_direction, api_error_occurred).
+        Returns (predictions_by_direction, api_error_occurred). Each entry is
+        (time, route_id, status, vehicle_id).
         """
         params = {
             "filter[route]": ",".join(stop.routes),
             "filter[stop]": stop.stop_id,
             "sort": "departure_time",
             "page[limit]": "100",
-            "include": "stop",
+            "include": "stop,vehicle",
         }
 
         try:
@@ -427,7 +477,7 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
         parent_by_stop_id = _build_parent_map(payload)
         now_utc = datetime.now(timezone.utc)
 
-        by_direction: dict[int, list[tuple[datetime, str, str | None]]] = {
+        by_direction: dict[int, list[tuple[datetime, str, str | None, str]]] = {
             DIR_EASTBOUND: [],
             DIR_WESTBOUND: [],
         }
@@ -459,7 +509,11 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
                 continue
 
             status = attrs.get("status") if isinstance(attrs.get("status"), str) else None
-            by_direction[direction_id].append((t, route_id, status))
+            vehicle_data = rel.get("vehicle", {}).get("data")
+            vehicle_id = vehicle_data.get("id") if isinstance(vehicle_data, dict) else None
+            if not isinstance(vehicle_id, str):
+                vehicle_id = ""
+            by_direction[direction_id].append((t, route_id, status, vehicle_id))
 
         for direction_id in by_direction:
             by_direction[direction_id].sort(key=lambda entry: entry[0])
@@ -510,9 +564,7 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
                 continue
             seen.add(key)
 
-            text = f"{effect_text}: {header.strip()}"
-            if len(text) > 170:
-                text = text[:167] + "..."
+            text = _truncate_alert_text(f"{effect_text}: {header.strip()}")
             items.append(f"- {text}")
 
             if len(items) >= limit:
@@ -520,12 +572,81 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
 
         return items
 
+    async def _fetch_pride_train_vehicle(self) -> PrideTrainStatus | None:
+        """Look for the Pride Train (car #3706) currently reporting a
+        position anywhere on the Green Line. Returns None if it isn't
+        currently running, or on any API error (treated as "not running")."""
+        params = {
+            "filter[route]": ",".join(GREEN_LINE_ROUTE_IDS),
+            "include": "stop,route",
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(MBTA_VEHICLES_URL, params=params, timeout=15) as resp:
+                    if resp.status != 200:
+                        return None
+                    payload = await resp.json()
+        except (aiohttp.ClientError, TimeoutError):
+            return None
+
+        vehicle_item = None
+        for item in payload.get("data", []):
+            label = item.get("attributes", {}).get("label")
+            if isinstance(label, str) and PRIDE_TRAIN_CAR_NUMBER in label:
+                vehicle_item = item
+                break
+
+        if vehicle_item is None:
+            return None
+
+        vehicle_id = vehicle_item.get("id")
+        if not isinstance(vehicle_id, str):
+            return None
+
+        attrs = vehicle_item.get("attributes", {})
+        current_status = attrs.get("current_status")
+        if not isinstance(current_status, str):
+            current_status = "IN_TRANSIT_TO"
+
+        direction_id = attrs.get("direction_id")
+        if direction_id not in (DIR_EASTBOUND, DIR_WESTBOUND):
+            direction_id = DIR_EASTBOUND
+
+        rel = vehicle_item.get("relationships", {})
+        route_data = rel.get("route", {}).get("data")
+        route_id = route_data.get("id") if isinstance(route_data, dict) else None
+        if not isinstance(route_id, str):
+            route_id = ""
+
+        stop_data = rel.get("stop", {}).get("data")
+        stop_id = stop_data.get("id") if isinstance(stop_data, dict) else None
+
+        stop_name = "an unknown stop"
+        if isinstance(stop_id, str):
+            for included in payload.get("included", []):
+                if included.get("type") == "stop" and included.get("id") == stop_id:
+                    name = included.get("attributes", {}).get("name")
+                    if isinstance(name, str) and name:
+                        stop_name = name
+                    break
+
+        return PrideTrainStatus(
+            vehicle_id=vehicle_id,
+            route_id=route_id,
+            current_status=current_status,
+            direction_id=direction_id,
+            stop_name=stop_name,
+        )
+
     # ------------------------------------------------------------------
     # Embed builders
     # ------------------------------------------------------------------
 
     async def _build_mbta_embed(self) -> discord.Embed:
-        eta_by_stop = await self._fetch_next_eta_by_stop()
+        pride_train = await self._fetch_pride_train_vehicle()
+        pride_vehicle_id = pride_train.vehicle_id if pride_train else None
+        eta_by_stop = await self._fetch_next_eta_by_stop(pride_vehicle_id)
         alerts = await self._fetch_active_alerts()
 
         embed = discord.Embed(
@@ -557,17 +678,20 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
     def _format_direction_block(
         self,
         direction_id: int,
-        entries: list[tuple[datetime, str, str | None]],
+        entries: list[tuple[datetime, str, str | None, str]],
         now_utc: datetime,
         show_branch: bool,
+        pride_vehicle_id: str | None = None,
     ) -> str:
         if not entries:
             return _line_for_direction(direction_id, "no live prediction")
 
         parts: list[str] = []
-        for t, route_id, status in entries:
+        for t, route_id, status, vehicle_id in entries:
             eta_text = _minutes_away_text(t, now_utc)
-            if show_branch:
+            if pride_vehicle_id and vehicle_id == pride_vehicle_id:
+                eta_text = f"{eta_text} 🌈 Pride Train!"
+            elif show_branch:
                 branch = ROUTE_BRANCH_LABEL.get(route_id, route_id or "?")
                 eta_text = f"{eta_text} ({branch})"
             if status and status.strip() and status.strip().lower() not in {"on time", "no data"}:
@@ -581,6 +705,8 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
     async def _build_station_embed(self, stop: GreenLineStop) -> discord.Embed:
         predictions_by_direction, api_error = await self._fetch_station_predictions(stop)
         alerts = await self._fetch_active_alerts(stop_ids=[stop.stop_id], routes=list(stop.routes))
+        pride_train = await self._fetch_pride_train_vehicle()
+        pride_vehicle_id = pride_train.vehicle_id if pride_train else None
         now_utc = datetime.now(timezone.utc)
 
         show_branch = len(stop.routes) > 1
@@ -600,10 +726,10 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
             )
         else:
             east_line = self._format_direction_block(
-                DIR_EASTBOUND, predictions_by_direction.get(DIR_EASTBOUND, []), now_utc, show_branch
+                DIR_EASTBOUND, predictions_by_direction.get(DIR_EASTBOUND, []), now_utc, show_branch, pride_vehicle_id
             )
             west_line = self._format_direction_block(
-                DIR_WESTBOUND, predictions_by_direction.get(DIR_WESTBOUND, []), now_utc, show_branch
+                DIR_WESTBOUND, predictions_by_direction.get(DIR_WESTBOUND, []), now_utc, show_branch, pride_vehicle_id
             )
             embed.add_field(name="Upcoming Trains", value=f"{east_line}\n{west_line}", inline=False)
 
@@ -622,6 +748,21 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
 
         now_local = datetime.now().strftime("%I:%M %p").lstrip("0")
         embed.set_footer(text=f"Source: MBTA v3 API • Updated {now_local}")
+        return embed
+
+    def _build_pride_train_embed(self, status: PrideTrainStatus) -> discord.Embed:
+        branch = LINE_DISPLAY_NAME.get(status.route_id, "the Green Line")
+        phrase = _pride_status_phrase(status)
+
+        embed = discord.Embed(
+            title="🌈 Pride Train Tracker 🌈",
+            description=(
+                f"✨🏳️‍🌈 Car #{PRIDE_TRAIN_CAR_NUMBER} is out riding the **{branch}**! 🏳️‍🌈✨\n\n"
+                f"🌈 {phrase} 🌈"
+            ),
+            color=discord.Color.from_rgb(255, 0, 128),
+        )
+        embed.set_footer(text="Source: MBTA v3 API 🏳️‍🌈")
         return embed
 
     # ------------------------------------------------------------------
@@ -689,3 +830,16 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
             matches = [s.name for s in GREEN_LINE_STOPS]
         matches.sort()
         return [app_commands.Choice(name=name, value=name) for name in matches[:25]]
+
+    @commands.hybrid_command(
+        name="mbtgay",
+        description="Track the MBTA Pride Train (Green Line car #3706), if it's out today.",
+    )
+    async def mbtgay(self, ctx: Context) -> None:
+        status = await self._fetch_pride_train_vehicle()
+        if status is None:
+            await ctx.send("🏳️‍🌈🌈 No sign of the Pride Train right now.... MBTA homophobic? 🌈🏳️‍🌈")
+            return
+
+        embed = self._build_pride_train_embed(status)
+        await ctx.send(embed=embed)
