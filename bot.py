@@ -609,12 +609,7 @@ async def help_command(ctx: Context):
     embed.add_field(
         name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Birthdays ✧",
         value=(
-            "🎂 `=birthday` — see your own saved birthday\n"
-            "🎉 `=birthday set` / `/birthday set` `<month> <day>` — save (or update) your birthday\n"
-            "🔎 `=birthday get` / `/birthday get` `[user]` — look up your own or someone else's birthday\n"
-            "🗑️ `=birthday remove` / `/birthday remove` — remove your saved birthday\n"
-            "📅 `=birthday nearest` / `/birthday nearest` — see birthdays coming up in the next two weeks\n"
-            "*(mods only: `/birthday export` and `/birthday override` manage the whole list)*"
+            "🎉 `=birthday set` / `/birthday set` `<month> <day>` — save (or update) your birthday"
         ),
         inline=False,
     )

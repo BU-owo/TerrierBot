@@ -6,6 +6,7 @@ import logging
 import shelve
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import discord
@@ -60,7 +61,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
         self.birthdays: dict[str, dict[str, int]] = {}
-        self.last_assigned_date: str | None = None
+        # {"date": iso_date_str, "user_ids": [user_id, ...]} — tracks who has
+        # already been assigned/announced today, per-user rather than a single
+        # whole-day flag, so a birthday added mid-day still gets picked up on
+        # the next tick instead of waiting until the following year.
+        self.announced_today: dict[str, Any] = {"date": None, "user_ids": []}
         self.last_removed_date: str | None = None
         self.current_holders: list[int] = []
 
@@ -77,7 +82,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     def _load_state(self) -> None:
         with shelve.open(SHELVE_FILE) as sh:
             self.birthdays = sh.get("birthdays", {})
-            self.last_assigned_date = sh.get("birthday_last_assigned_date")
+            self.announced_today = sh.get("birthday_announced_today", {"date": None, "user_ids": []})
             self.last_removed_date = sh.get("birthday_last_removed_date")
             self.current_holders = sh.get("birthday_current_holders", [])
 
@@ -87,7 +92,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
 
     def _save_task_state(self) -> None:
         with shelve.open(SHELVE_FILE) as sh:
-            sh["birthday_last_assigned_date"] = self.last_assigned_date
+            sh["birthday_announced_today"] = self.announced_today
             sh["birthday_last_removed_date"] = self.last_removed_date
             sh["birthday_current_holders"] = self.current_holders
 
@@ -129,8 +134,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
         now = datetime.now(EASTERN)
         today_str = now.date().isoformat()
 
-        if today_str != self.last_assigned_date:
-            await self._assign_todays_birthdays(now)
+        if self.announced_today.get("date") != today_str:
+            self.announced_today = {"date": today_str, "user_ids": []}
+            self._save_task_state()
+
+        await self._assign_todays_birthdays(now)
 
         if (now.hour, now.minute) >= (23, 59) and today_str != self.last_removed_date:
             await self._remove_expired_holders(today_str)
@@ -142,18 +150,20 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     async def _assign_todays_birthdays(self, now: datetime) -> None:
         guild = self.bot.get_guild(MAIN_GUILD_ID)
         if guild is None:
-            self.last_assigned_date = now.date().isoformat()
-            self._save_task_state()
             return
 
         role = guild.get_role(BIRTHDAY_ROLE_ID)
         channel = self.bot.get_channel(BIRTHDAY_ANNOUNCE_CHANNEL_ID)
+        announced_ids: list[int] = self.announced_today["user_ids"]
 
         for user_id_str, entry in self.birthdays.items():
             if entry.get("month") != now.month or entry.get("day") != now.day:
                 continue
 
             user_id = int(user_id_str)
+            if user_id in announced_ids:
+                continue
+
             member = guild.get_member(user_id)
             if member is None:
                 continue
@@ -175,10 +185,10 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
                 except discord.HTTPException:
                     log.exception("birthdayCog: failed to post birthday announcement for %s", user_id)
 
+            announced_ids.append(user_id)
             if user_id not in self.current_holders:
                 self.current_holders.append(user_id)
 
-        self.last_assigned_date = now.date().isoformat()
         self._save_task_state()
 
     async def _remove_expired_holders(self, today_str: str) -> None:
@@ -201,15 +211,17 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
 
     # ---------- shared command logic ----------
 
-    async def _set_birthday(self, ctx: Context, target: discord.abc.User, month_raw: str, day: int) -> bool:
+    async def _set_birthday(
+        self, ctx: Context, target: discord.abc.User, month_raw: str, day: int, *, ephemeral: bool = True
+    ) -> bool:
         month = parse_month(month_raw)
         if month is None:
-            await ctx.send(f"\"{month_raw}\" isn't a valid month — use a name like `March` or a number 1-12.", ephemeral=True)
+            await ctx.send(f"\"{month_raw}\" isn't a valid month — use a name like `March` or a number 1-12.", ephemeral=ephemeral)
             return False
 
         max_day = MONTH_DAYS[month]
         if not (1 <= day <= max_day):
-            await ctx.send(f"{MONTH_NAMES[month - 1]} only has {max_day} days.", ephemeral=True)
+            await ctx.send(f"{MONTH_NAMES[month - 1]} only has {max_day} days.", ephemeral=ephemeral)
             return False
 
         self.birthdays[str(target.id)] = {"month": month, "day": day}
@@ -280,10 +292,13 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
             if member is None:
                 continue
             entry_doy = day_of_year(entry["month"], entry["day"])
-            diff = abs(today_doy - entry_doy)
-            distance = min(diff, 366 - diff)
-            if distance <= 14:
-                upcoming.append((distance, member, entry))
+            # Signed day offset from today, wrapped to (-183, 183] so a birthday
+            # just before year-end still sorts correctly relative to early January.
+            offset = (entry_doy - today_doy) % 366
+            if offset > 183:
+                offset -= 366
+            if abs(offset) <= 14:
+                upcoming.append((offset, member, entry))
 
         if not upcoming:
             await ctx.send("No birthdays in the next two weeks. 🥲")
@@ -330,11 +345,10 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
             await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
             return
 
-        if await self._set_birthday(ctx, user, month, day):
+        if await self._set_birthday(ctx, user, month, day, ephemeral=False):
             entry = self.birthdays[str(user.id)]
             await ctx.send(
-                f"Set {user.display_name}'s birthday to {format_birthday(entry['month'], entry['day'])}.",
-                ephemeral=True,
+                f"Set {user.display_name}'s birthday to {format_birthday(entry['month'], entry['day'])}."
             )
 
 
