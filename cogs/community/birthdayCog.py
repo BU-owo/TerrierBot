@@ -147,6 +147,14 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     async def before_birthday_task(self) -> None:
         await self.bot.wait_until_ready()
 
+    @staticmethod
+    def _join_mentions(mentions: list[str]) -> str:
+        if len(mentions) == 1:
+            return mentions[0]
+        if len(mentions) == 2:
+            return f"{mentions[0]} and {mentions[1]}"
+        return f"{', '.join(mentions[:-1])}, and {mentions[-1]}"
+
     async def _assign_todays_birthdays(self, now: datetime) -> None:
         guild = self.bot.get_guild(MAIN_GUILD_ID)
         if guild is None:
@@ -156,6 +164,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
         channel = self.bot.get_channel(BIRTHDAY_ANNOUNCE_CHANNEL_ID)
         announced_ids: list[int] = self.announced_today["user_ids"]
 
+        members_today: list[discord.Member] = []
         for user_id_str, entry in self.birthdays.items():
             if entry.get("month") != now.month or entry.get("day") != now.day:
                 continue
@@ -168,26 +177,44 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
             if member is None:
                 continue
 
-            if role is not None:
+            members_today.append(member)
+
+        if not members_today:
+            return
+
+        if role is not None:
+            for member in members_today:
                 try:
                     await member.add_roles(role, reason="Birthday today")
                 except (discord.Forbidden, discord.HTTPException):
-                    log.warning("birthdayCog: couldn't add birthday role to %s", user_id)
+                    log.warning("birthdayCog: couldn't add birthday role to %s", member.id)
 
-            if isinstance(channel, discord.TextChannel):
-                try:
-                    await channel.send(
-                        f"# {member.mention} is a birthday terrier today! Please wish them a happy birthday!\n"
-                        f"{BIRTHDAY_GIF_URL}\n"
-                        f"*[Add]({BIRTHDAY_GIF_URL}) your birthday with the command /birthday set month date*",
-                        allowed_mentions=discord.AllowedMentions(users=True, everyone=False, roles=False),
-                    )
-                except discord.HTTPException:
-                    log.exception("birthdayCog: failed to post birthday announcement for %s", user_id)
+        if isinstance(channel, discord.TextChannel):
+            mentions = [member.mention for member in members_today]
+            if len(members_today) == 1:
+                intro = f"# {mentions[0]} is a birthday terrier today! Please wish them a happy birthday!"
+            else:
+                intro = f"# {self._join_mentions(mentions)} are birthday terriers today! Please wish them a happy birthday!"
 
-            announced_ids.append(user_id)
-            if user_id not in self.current_holders:
-                self.current_holders.append(user_id)
+            try:
+                await channel.send(
+                    f"{intro}\n"
+                    # Zero-width space as the link text hides the visible URL while
+                    # Discord still unfurls the gif embed for the link underneath.
+                    f"[\u200b]({BIRTHDAY_GIF_URL})\n"
+                    f"*Add your birthday with the command /birthday set month date*",
+                    allowed_mentions=discord.AllowedMentions(users=True, everyone=False, roles=False),
+                )
+            except discord.HTTPException:
+                log.exception(
+                    "birthdayCog: failed to post birthday announcement for %s",
+                    [member.id for member in members_today],
+                )
+
+        for member in members_today:
+            announced_ids.append(member.id)
+            if member.id not in self.current_holders:
+                self.current_holders.append(member.id)
 
         self._save_task_state()
 
