@@ -622,6 +622,9 @@ async def loadCog(ctx : Context, cogName : str):
     module_name = "cogs." + full
     try:
         await bot.load_extension(module_name)
+    except commands.ExtensionError as exc:
+        _ = await ctx.send(f"Couldn't load cog \"{cogName}\": {exc}")
+        return
     except Exception as exc:
         await bot.report_exception(category="cog_load", affected=module_name, error=exc)
         raise
@@ -635,6 +638,9 @@ async def unloadCog(ctx : Context, cogName : str):
     module_name = "cogs." + full
     try:
         await bot.unload_extension(module_name)
+    except commands.ExtensionError as exc:
+        _ = await ctx.send(f"Couldn't unload cog \"{cogName}\": {exc}")
+        return
     except Exception as exc:
         await bot.report_exception(category="cog_unload", affected=module_name, error=exc)
         raise
@@ -648,6 +654,9 @@ async def reloadCog(ctx : Context, cogName : str):
     module_name = "cogs." + full
     try:
         await bot.reload_extension(module_name)
+    except commands.ExtensionError as exc:
+        _ = await ctx.send(f"Couldn't reload cog \"{cogName}\": {exc}")
+        return
     except Exception as exc:
         await bot.report_exception(category="cog_reload", affected=module_name, error=exc)
         raise
