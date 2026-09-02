@@ -753,12 +753,14 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
     def _build_pride_train_embed(self, status: PrideTrainStatus) -> discord.Embed:
         branch = LINE_DISPLAY_NAME.get(status.route_id, "the Green Line")
         phrase = _pride_status_phrase(status)
+        arrow = "➡️" if status.direction_id == DIR_EASTBOUND else "⬅️"
+        direction_label = _direction_label(status.direction_id)
 
         embed = discord.Embed(
             title="🌈 Pride Train Tracker 🌈",
             description=(
                 f"✨🏳️‍🌈 Car #{PRIDE_TRAIN_CAR_NUMBER} is out riding the **{branch}**! 🏳️‍🌈✨\n\n"
-                f"🌈 {phrase} 🌈"
+                f"🌈 {phrase} — {arrow} {direction_label} 🌈"
             ),
             color=discord.Color.from_rgb(255, 0, 128),
         )
