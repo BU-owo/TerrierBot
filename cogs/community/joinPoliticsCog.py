@@ -15,7 +15,6 @@ MOD_ROLE_ID = 1402095379935395934
 POLITICS_CHANNEL_ID = 1477468981194391675
 RULES_CHANNEL_ID = 1396542143803424768
 MOD_REVIEW_CHANNEL_ID = LogChannels.QUEUE
-INCOMING_STUDENT_ROLE_ID = 1435381901077647412
 POLITICS_ROLE_ID = 1477468718127775824
 
 MIN_TENURE_DAYS = 7
@@ -149,14 +148,6 @@ class PoliticsApplicationStartView(discord.ui.View):
 
         if any(r.id == POLITICS_ROLE_ID for r in member.roles):
             await interaction.response.send_message("You're already in #politics.", ephemeral=True)
-            return
-
-        if any(r.id == INCOMING_STUDENT_ROLE_ID for r in member.roles):
-            await interaction.response.send_message(
-                "Incoming students can apply for #politics access starting September 1, 2026. "
-                "Check back then!",
-                ephemeral=True,
-            )
             return
 
         if member.joined_at is not None:
@@ -319,7 +310,6 @@ class JoinPoliticsCog(commands.Cog, name="JoinPolitics", description="Politics c
                 f"To gain access to <#{POLITICS_CHANNEL_ID}>, you must complete the application "
                 f"and agree to the rules in <#{RULES_CHANNEL_ID}>. A history of civil behavior in "
                 "the server is required for acceptance.\n\n"
-                "Incoming students may apply for access on September 1, 2026 :)\n\n"
                 f"Please submit a ticket in <#{RULES_CHANNEL_ID}> if you have any questions."
             ),
             color=discord.Color.blurple(),
