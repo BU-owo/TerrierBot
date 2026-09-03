@@ -20,6 +20,7 @@ TerrierBot currently supports:
 - A button + modal ban-appeal flow in a dedicated appeals server, forwarding appeals to the mod log
 - Permanent warnings (no auto-expiry) with a `warnappeal` select-and-modal flow for mods to accept/reject
 - Self-service birthday tracking through `birthday`, with automatic daily role assignment/removal and a server announcement
+- Automatic class chat discovery: mentioning a BU class code (e.g. "CH 109") points members to that class's forum thread, or spins one up automatically once a code comes up enough
 
 ## Requirements
 
@@ -156,6 +157,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 - Owner-only maintenance commands are available for bot upkeep and debugging.
 - The bot stores small pieces of state in `terrierbot.shelve` and reads the token from `token.txt` or `DISCORD_TOKEN` when it starts.
 - The birthday role is assigned and removed automatically once a day, based on the current date in America/New_York — `/birthday export` and `/birthday override` require the mod role.
+- Class chat detection has no command — it watches messages for BU class codes, points to that class's thread in the class-chats forum channel if one exists, and auto-creates one (with a tag, when a matching one exists) once a code is mentioned 3+ times in 30 days. Reminders for the same code/channel are throttled to once per 24h.
 
 ## Troubleshooting
 
