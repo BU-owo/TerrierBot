@@ -44,7 +44,7 @@ class PingRoleCog(commands.Cog):
 
         if guild_role is None:
             await interaction.response.send_message(
-                "That role couldn't be found in this server. It may have been deleted or renamed.",
+                "I can't find a role with that name.",
                 ephemeral=True,
             )
             return

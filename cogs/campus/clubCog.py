@@ -229,7 +229,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         if not results:
             embed = discord.Embed(
                 title=f"BU Clubs — {display}",
-                description="No active organizations found.",
+                description="No active clubs found.",
                 color=discord.Color.from_rgb(254, 231, 92),
                 url=search_url,
             )
@@ -287,7 +287,7 @@ class ClubCog(commands.Cog, name="Clubs", description="Search BU clubs on Terrie
         if not results:
             embed = discord.Embed(
                 title=f"BU Clubs — {display}",
-                description="No active organizations found.",
+                description="No active clubs found.",
                 color=discord.Color.from_rgb(254, 231, 92),
                 url=search_url,
             )

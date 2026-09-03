@@ -243,12 +243,12 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     ) -> bool:
         month = parse_month(month_raw)
         if month is None:
-            await ctx.send(f"\"{month_raw}\" isn't a valid month — use a name like `March` or a number 1-12.", ephemeral=ephemeral)
+            await ctx.send(f"\"{month_raw}\" isn't a real month — use a name like `March` or a number 1-12.", ephemeral=ephemeral)
             return False
 
         max_day = MONTH_DAYS[month]
         if not (1 <= day <= max_day):
-            await ctx.send(f"{MONTH_NAMES[month - 1]} only has {max_day} days.", ephemeral=ephemeral)
+            await ctx.send(f"Come on... {MONTH_NAMES[month - 1]} only has {max_day} days.", ephemeral=ephemeral)
             return False
 
         self.birthdays[str(target.id)] = {"month": month, "day": day}
@@ -264,9 +264,9 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
 
         entry = self.birthdays.get(str(ctx.author.id))
         if entry is None:
-            await ctx.send("You haven't set a birthday yet — try `=birthday set`.")
+            await ctx.send("You haven't set your birthday yet. Run `=birthday set`.")
             return
-        await ctx.send(f"Your birthday is set to {format_birthday(entry['month'], entry['day'])}. 🎂")
+        await ctx.send(f"Your birthday is {format_birthday(entry['month'], entry['day'])}! 🎂")
 
     @birthday.command(name="set", description="Set your birthday.")
     @app_commands.describe(month="Your birth month", day="Your birth day")
@@ -274,7 +274,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     async def birthday_set(self, ctx: Context, month: str, day: app_commands.Range[int, 1, 31]) -> None:
         if await self._set_birthday(ctx, ctx.author, month, day):
             entry = self.birthdays[str(ctx.author.id)]
-            await ctx.send(f"Got it — your birthday is set to {format_birthday(entry['month'], entry['day'])}. 🎂", ephemeral=True)
+            await ctx.send(f"Thank you! Your birthday is set to {format_birthday(entry['month'], entry['day'])}. 🎂", ephemeral=True)
 
     @birthday.command(name="get", description="Look up a saved birthday.")
     @app_commands.describe(user="Whose birthday to check (leave blank for your own)")
@@ -301,7 +301,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
         removed = self.birthdays.pop(str(target.id), None)
         if removed is None:
             possessive = "You don't" if is_self else f"{target.display_name} doesn't"
-            await ctx.send(f"{possessive} have a birthday on file.", ephemeral=True)
+            await ctx.send(f"{possessive} have a birthday here!", ephemeral=True)
             return
 
         self._save_birthdays()

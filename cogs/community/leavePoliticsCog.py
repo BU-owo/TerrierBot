@@ -39,7 +39,7 @@ class LeaveConfirmView(discord.ui.View):
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         for child in self.children:
             child.disabled = True
-        await interaction.response.edit_message(content="Cancelled — you're still in Politics.", view=self)
+        await interaction.response.edit_message(content="Cancelled — you're still in Politics!", view=self)
         self.stop()
 
 
@@ -57,12 +57,12 @@ class LeavePoliticsCog(commands.Cog):
 
         member = ctx.author
         if role not in member.roles:
-            await ctx.send("You're not in Politics.", ephemeral=True)
+            await ctx.send("You're not in Politics, so you obviously can't leave.", ephemeral=True)
             return
 
         view = LeaveConfirmView(member, role)
         await ctx.send(
-            "Are you sure? You'll need to re-apply to get back into the politics channel.",
+            "Are you sure.... You'll need to re-apply to get back into the politics channel.",
             view=view,
             ephemeral=True,
         )

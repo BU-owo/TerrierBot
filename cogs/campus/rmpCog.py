@@ -504,7 +504,7 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
         """Core RMP lookup. Returns (embed, view, error_message)."""
         cleaned = " ".join(professor_name.split())
         if not cleaned:
-            return None, None, "Please provide a professor name. Example: =rmp Jane Smith or =rmp Smith"
+            return None, None, "Please type in a professor name. Example: =rmp Melissa Gilliam or =rmp Gilliam"
 
         try:
             school_id = await self._get_bu_school_id()
@@ -532,7 +532,7 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
         results = self._rank_matches(cleaned, results)
 
         if not results:
-            return None, None, f"No Boston University professor found for '{cleaned}'."
+            return None, None, f"I couldn't find anyone at BU with the name '{cleaned}'."
 
         prof = results[0]
         teacher_id = prof.get("id")

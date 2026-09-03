@@ -427,7 +427,7 @@ class TerrierBot(commands.Bot):
             _ = await ctx.send(f"{type(error.original).__name__}: {error.original}")
             return
         if isinstance(error, commands.NotOwner):
-            _ = await ctx.send("That command is not for you")
+            _ = await ctx.send("Sorry, you can't run that!")
             if isinstance(ctx.channel, discord.DMChannel):
                 logging.info(f"{ctx.author.display_name} is trying to run the owner-only command \"{ctx.message.content}\" in a DM")
             else:
@@ -438,10 +438,10 @@ class TerrierBot(commands.Bot):
                 logging.info(f"{ctx.author.display_name} is trying to run the owner-only command \"{ctx.message.content}\" {location}")
             return
         if isinstance(error, commands.MemberNotFound) or isinstance(error, commands.UserNotFound):
-            _ = await ctx.send("User not found")
+            _ = await ctx.send("That's not a real person.")
             return
         if isinstance(error, commands.CommandOnCooldown):
-            _ = await ctx.send(f"You are on cooldown. Try again in {error.retry_after}s")
+            _ = await ctx.send(f"You are on cooldown. Chill out for {error.retry_after}s")
             return
         if isinstance(error, commands.MissingRequiredArgument):
             _ = await ctx.send(f"Missing argument {error.param}")

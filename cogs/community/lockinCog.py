@@ -148,7 +148,7 @@ class LockinCog(commands.Cog):
                     pass
 
             try:
-                await member.send("your lock-in is over — welcome back 🔓")
+                await member.send("WOO HOO! Your lock-in is over-- welcome back! 🔓")
             except discord.HTTPException:
                 pass  # DMs closed, no big deal
 
@@ -181,7 +181,7 @@ class LockinCog(commands.Cog):
         seconds = parse_duration(duration)
         if seconds is None:
             await ctx.reply(
-                "couldn't parse that duration. try something like `30m`, `2h`, `1d`, or `1d2h30m`.",
+                "couldn't understand that duration. try something like `30m`, `2h`, `1d`, or `1d2h30m`.",
                 ephemeral=True
             )
             return

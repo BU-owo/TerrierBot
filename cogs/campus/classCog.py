@@ -494,7 +494,7 @@ def _parse_course_query(raw_query: str) -> tuple[str | None, str, str]:
     upper = re.sub(r"\s+", " ", upper).strip()
 
     if not upper:
-        raise ValueError("Please provide a course code. Example: =class CAS CH 101")
+        raise ValueError("Please give a course code. Example: =class CAS CH 101")
 
     compact = upper.replace(" ", "")
 
@@ -530,7 +530,7 @@ def _parse_course_query(raw_query: str) -> tuple[str | None, str, str]:
         if m and re.fullmatch(r"\d{3}[A-Z]?", tokens[1]):
             return _normalize_school(m.group(1)), m.group(2), tokens[1]
 
-    raise ValueError("Couldn't parse course code. Try: =class CAS CH 101, =class CASCH101, or =class CH 101")
+    raise ValueError("I couldn't understand that course code. Try: =class CAS CH 101, =class CASCH101, or =class CH 101")
 
 
 def _resolve_school(explicit_school: str | None, subject: str) -> tuple[str, list[str]]:
@@ -539,15 +539,15 @@ def _resolve_school(explicit_school: str | None, subject: str) -> tuple[str, lis
     if explicit_school:
         school = _normalize_school(explicit_school)
         if school is None:
-            raise ValueError("Invalid school code.")
+            raise ValueError("Not a real school code.")
         if school not in SCHOOL_SLUG:
-            raise ValueError(f"Unsupported school code '{school}'.")
+            raise ValueError(f"We don't have that school code '{school}'.")
         if subj_schools and school not in subj_schools:
-            raise ValueError(f"{school} does not typically use subject code {subject}.")
+            raise ValueError(f"{school} does not have subject code {subject}.")
         return school, []
 
     if not subj_schools:
-        raise ValueError(f"Unknown subject code '{subject}'. Include school code, e.g. =class CAS {subject} 100")
+        raise ValueError(f"I don't know that subject code '{subject}'. Include school code, e.g. =class CAS {subject} 100")
 
     if len(subj_schools) == 1:
         return subj_schools[0], []
@@ -598,8 +598,8 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
             return (
                 None,
                 None,
-                f"Subject code {subject} exists in multiple schools: {', '.join(ambiguous)}. "
-                f"Please include school code, e.g. =class CAS {subject} {number}",
+                f"Subject code {subject} is in multiple schools: {', '.join(ambiguous)}. "
+                f"Please include school code to clarify! e.g. =class CAS {subject} {number}",
             )
 
         slug = SCHOOL_SLUG.get(school)
@@ -611,10 +611,10 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
         try:
             page_html = await self._fetch_course_html(url)
         except Exception as exc:
-            return None, None, f"Bulletin lookup failed: {type(exc).__name__}: {exc}"
+            return None, None, f"Oops! Bulletin lookup failed: {type(exc).__name__}: {exc}"
 
         if page_html is None:
-            return None, None, f"Course not found on the BU Bulletin: {school} {subject} {number}\n{url}"
+            return None, None, f"Uh oh... Course not found on the BU Bulletin: {school} {subject} {number}\n{url}"
 
         details = self._parse_course_page(page_html)
 
