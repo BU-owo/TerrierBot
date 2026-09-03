@@ -75,7 +75,7 @@ class ClassChatCog(
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
         self.thread_cache: dict[str, int] = self._load(THREADS_KEY, {})
-        self.mentions: dict[str, list[float]] = self._load(MENTIONS_KEY, {})
+        self.mentions: dict[str, list[tuple[int, float]]] = self._load(MENTIONS_KEY, {})
         self.last_notified: dict[tuple[str, int], float] = self._load(LAST_NOTIFIED_KEY, {})
 
     # ---------- storage helpers ----------
@@ -160,7 +160,7 @@ class ClassChatCog(
             )
             return
 
-        if not self._record_mention(code):
+        if not self._record_mention(code, message.author.id):
             return
 
         new_thread = await self._create_class_thread(forum, code, lookup_query)
@@ -213,16 +213,18 @@ class ClassChatCog(
 
     # ---------- mention tracking / auto-create ----------
 
-    def _record_mention(self, code: str) -> bool:
-        """Records a mention timestamp for `code`, prunes entries older than the
-        30-day window, and returns True once the code has hit the creation threshold."""
+    def _record_mention(self, code: str, user_id: int) -> bool:
+        """Records a mention of `code` by `user_id`, prunes entries older than the
+        30-day window, and returns True once the code has been mentioned by at
+        least MENTION_THRESHOLD unique users within that window."""
         now = time.time()
         cutoff = now - MENTION_WINDOW_SECONDS
-        timestamps = [t for t in self.mentions.get(code, []) if t >= cutoff]
-        timestamps.append(now)
-        self.mentions[code] = timestamps
+        entries = [(uid, t) for uid, t in self.mentions.get(code, []) if t >= cutoff]
+        entries.append((user_id, now))
+        self.mentions[code] = entries
         self._save_mentions()
-        return len(timestamps) >= MENTION_THRESHOLD
+        unique_users = {uid for uid, _ in entries}
+        return len(unique_users) >= MENTION_THRESHOLD
 
     async def _create_class_thread(
         self, forum: discord.ForumChannel, code: str, lookup_query: str
@@ -235,7 +237,7 @@ class ClassChatCog(
                 name=code,
                 content=content,
                 applied_tags=applied_tags,
-                reason=f"Auto-created class chat for {code} (3+ mentions in 30 days)",
+                reason=f"Auto-created class chat for {code} (3+ unique users in 30 days)",
             )
         except (discord.Forbidden, discord.HTTPException):
             return None
