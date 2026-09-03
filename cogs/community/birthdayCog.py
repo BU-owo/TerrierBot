@@ -179,6 +179,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
 
             members_today.append(member)
 
+
         if not members_today:
             return
 
