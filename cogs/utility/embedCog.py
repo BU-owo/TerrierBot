@@ -5,6 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
+from cogs.logging.logConfig import LogChannels, MOD_ROLE_ID
 
 
 async def setup(bot: TerrierBot):
@@ -380,10 +381,10 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
 
     MOD_IMPORTANT_CHANNEL = 1401924438341062798
     MOD_FEET_CHANNEL = 1446304077213597807
-    OWO_DOOMER_CHANNEL = 1441925119202164886
+    OWO_DOOMER_CHANNEL = LogChannels.DOOMER
     CONFESSION_REVIEW_CHANNEL = 1441905934975635566
-    MOD_QUEUE_CHANNEL = 1541936565151080519
-    MOD_ROLE = 1402095379935395934
+    MOD_QUEUE_CHANNEL = LogChannels.QUEUE
+    MOD_ROLE = MOD_ROLE_ID
     SERVER_OWNER = 1274047585098793034
 
     embed1 = discord.Embed(

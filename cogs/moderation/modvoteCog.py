@@ -11,10 +11,10 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from ..logging.logConfig import LogChannels
+from cogs.logging.logConfig import MOD_ROLE_ID
 
 log = logging.getLogger(__name__)
 
-MOD_ROLE_ID = 1402095379935395934
 MODVOTE_RESULTS_CHANNEL_ID = LogChannels.MOD
 
 MAX_OPTIONS = 10  # buttons must stay under Discord's 25-component cap

@@ -11,6 +11,7 @@ from PIL import Image
 import imagehash
 
 from ..logging.logConfig import LogChannels, suppress_message_log
+from cogs.logging.logConfig import MOD_ROLE_ID
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ HASH_THRESHOLD = 10
 TIMEOUT_MINUTES = 60
 MOD_LOG_CHANNEL_ID = LogChannels.MOD
 MOD_QUEUE_CHANNEL_ID = LogChannels.QUEUE
-SCAMCATCHER_ROLE_ID = 1402095379935395934
+SCAMCATCHER_ROLE_ID = MOD_ROLE_ID
 
 SPAM_CHANNEL_THRESHOLD = 3   # distinct channels within the window to trigger spam alert
 SPAM_WINDOW_SECONDS = 60     # rolling window for cross-channel spam detection

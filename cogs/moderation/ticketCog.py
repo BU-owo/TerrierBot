@@ -5,14 +5,13 @@ import logging
 import discord
 from discord.ext import commands
 
+from cogs.logging.logConfig import MOD_ROLE_ID
+
 log = logging.getLogger(__name__)
 
 # Category that TicketTool creates mod-application ticket channels under.
 # Every channel created in this category is a mod application (confirmed).
 MOD_APP_CATEGORY_ID = 1528788382434726029
-
-# Mod/scamcatcher role — used to exclude staff from the "who's the applicant" guess.
-MOD_ROLE_ID = 1402095379935395934
 
 # TicketTool sometimes finishes wiring up the applicant's permission overwrite
 # a moment after the channel itself is created, so we retry briefly instead

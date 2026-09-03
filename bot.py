@@ -18,10 +18,12 @@ import aiohttp
 import shelve
 from datetime import datetime, timedelta, timezone
 
+from cogs.logging.logConfig import LogChannels, MOD_ROLE_ID
+
 logging.basicConfig(level=logging.INFO)
 
-ERROR_CHANNEL_ID = 1441925119202164886
-STATUS_ROLE_ID = 1402095379935395934
+ERROR_CHANNEL_ID = LogChannels.DOOMER
+STATUS_ROLE_ID = MOD_ROLE_ID
 ALERT_COOLDOWN_SECONDS = 10 * 60
 STARTUP_FAILURE_WINDOW_SECONDS = 5 * 60
 STARTUP_FAILURE_THRESHOLD = 5

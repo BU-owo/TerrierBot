@@ -23,6 +23,9 @@ class LogChannels:
     # posted alongside the richer MOD embed above whenever a ban happens —
     # a separate, lower-detail public channel.
     ANNOUNCE = 1470061524394709083
+    # "OwO Doomer" — bot error/crash alerts (bot.py) and boost-role
+    # announcements (roleboostCog) both post here.
+    DOOMER = 1441925119202164886
 
 
 # Mod role ID — several cogs previously redefined this constant locally with

@@ -7,12 +7,13 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import TerrierBot, Context
+from cogs.logging.logConfig import LogChannels, MOD_ROLE_ID
 
 log = logging.getLogger(__name__)
 
 BOOST_ROLE_ID = 1415488019435098152
-ROLEBOOST_MOD_ROLE_ID = 1402095379935395934
-ANNOUNCE_CHANNEL_ID = 1441925119202164886
+ROLEBOOST_MOD_ROLE_ID = MOD_ROLE_ID
+ANNOUNCE_CHANNEL_ID = LogChannels.DOOMER
 
 _SHELVE_FILE = "terrierbot.shelve"
 _SHELVE_KEY = "roleboost_assignments"

@@ -8,10 +8,10 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from ..logging.logConfig import LogChannels, get_log_channel
+from cogs.logging.logConfig import MOD_ROLE_ID
 
 log = logging.getLogger(__name__)
 
-MOD_ROLE_ID = 1402095379935395934
 POLITICS_CHANNEL_ID = 1477468981194391675
 RULES_CHANNEL_ID = 1396542143803424768
 MOD_REVIEW_CHANNEL_ID = LogChannels.QUEUE
