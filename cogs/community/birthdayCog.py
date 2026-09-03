@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 BIRTHDAY_ROLE_ID = 1404879458992914484
 BIRTHDAY_ANNOUNCE_CHANNEL_ID = 1396542256445391069
 EASTERN = ZoneInfo("America/New_York")
-BIRTHDAY_GIF_URL = "https://tenor.com/view/happy-birthday-cute-dog-puppy-gif-16118582"
+BIRTHDAY_GIF_URL = "https://media1.tenor.com/m/Hq-zbjBKsRYAAAAC/happy-birthday-cute.gif"
 SHELVE_FILE = "terrierbot.shelve"
 # One-time (repeatable, no-op after first success) import of birthdays collected
 # by the old birthday bot before it was replaced by this cog.
@@ -196,13 +196,15 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
             else:
                 intro = f"# {self._join_mentions(mentions)} are birthday terriers today! Please wish them a happy birthday!"
 
+            embed = discord.Embed(
+                description=f"{intro}\n\n*Add your birthday with the command /birthday set month date*",
+            )
+            embed.set_image(url=BIRTHDAY_GIF_URL)
+
             try:
                 await channel.send(
-                    f"{intro}\n"
-                    # Zero-width space as the link text hides the visible URL while
-                    # Discord still unfurls the gif embed for the link underneath.
-                    f"[\u200b]({BIRTHDAY_GIF_URL})\n"
-                    f"*Add your birthday with the command /birthday set month date*",
+                    content=" ".join(mentions),
+                    embed=embed,
                     allowed_mentions=discord.AllowedMentions(users=True, everyone=False, roles=False),
                 )
             except discord.HTTPException:

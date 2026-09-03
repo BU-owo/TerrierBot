@@ -22,6 +22,10 @@ FORUM_CHANNEL_ID = 1545063908048642058
 # tracking, just a hard no-op.
 IGNORED_USER_IDS = {332945815209246720}
 
+# Messages in this channel never feed the mention count (or anything else in
+# this cog).
+EXCLUDED_CHANNEL_ID = 1412461313321603233
+
 # An optional leading school code (CAS, ENG, MET, ...) is allowed — fused or
 # spaced — before the subject+number, so "CASCH109", "CASCH 109", and
 # "CAS CH 109" are all recognized the same as bare "CH109"/"CH 109". The
@@ -103,6 +107,8 @@ class ClassChatCog(
         if message.author.id in IGNORED_USER_IDS:
             return
         if message.guild is None or message.guild.id != MAIN_GUILD_ID:
+            return
+        if message.channel.id == EXCLUDED_CHANNEL_ID or getattr(message.channel, "parent_id", None) == EXCLUDED_CHANNEL_ID:
             return
 
         codes = self._extract_codes(message.content)
