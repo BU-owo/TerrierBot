@@ -768,13 +768,14 @@ def run_web_server(stop_event: threading.Event, bot_loop: asyncio.AbstractEventL
         ready = bot.is_ready()
         return jsonify(latency=bot.latency), (200 if ready else 503)
 
-    @app.route("/reload/<cog_name>", methods=["POST"])
+    @app.route("/reload/<path:cog_name>", methods=["POST"])
     def reload_cog(cog_name: str):
         from flask import request
         if not reload_secret or request.headers.get("X-Reload-Secret") != reload_secret:
             return "Unauthorized", 401
 
-        full = cog_name if cog_name.endswith("Cog") else cog_name + "Cog"
+        dotted = cog_name.replace("/", ".")
+        full = dotted if dotted.endswith("Cog") else dotted + "Cog"
         module_name = "cogs." + full
         if module_name not in bot.extensions:
             return f"Cog {module_name} not currently loaded", 404
