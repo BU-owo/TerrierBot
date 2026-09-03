@@ -8,6 +8,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
+from ..campus.classCog import SCHOOL_SLUG
 from ..logging.logConfig import MAIN_GUILD_ID
 
 SHELVE_FILE = "terrierbot.shelve"
@@ -17,11 +18,24 @@ LAST_NOTIFIED_KEY = "last_notified"
 
 FORUM_CHANNEL_ID = 1545063908048642058
 
-CODE_PATTERN = re.compile(r"\b([A-Z]{2,4})\s?(\d{3})\b", re.IGNORECASE)
+# This cog never runs at all for these users — not even the mention/threshold
+# tracking, just a hard no-op.
+IGNORED_USER_IDS = {332945815209246720}
+
+# An optional leading school code (CAS, ENG, MET, ...) is allowed — fused or
+# spaced — before the subject+number, so "CASCH109", "CASCH 109", and
+# "CAS CH 109" are all recognized the same as bare "CH109"/"CH 109". The
+# school itself is dropped from the normalized code; it's only kept around
+# (via _extract_codes) to disambiguate the course lookup.
+_SCHOOL_ALTERNATION = "|".join(re.escape(school) for school in sorted(SCHOOL_SLUG, key=len, reverse=True))
+CODE_PATTERN = re.compile(
+    rf"\b(?:({_SCHOOL_ALTERNATION})\s?)?([A-Z]{{2,4}})\s?(\d{{3}})\b",
+    re.IGNORECASE,
+)
 
 MENTION_THRESHOLD = 3
 MENTION_WINDOW_SECONDS = 30 * 24 * 60 * 60  # 30 days
-NOTIFY_COOLDOWN_SECONDS = 24 * 60 * 60  # 24h
+NOTIFY_COOLDOWN_SECONDS = 60 * 60  # 1 hour
 
 # Department-code prefix -> forum tag name. Matched case-insensitively against
 # the forum's actual available_tags, so a prefix with no matching tag is
@@ -86,6 +100,8 @@ class ClassChatCog(
     async def on_message(self, message: discord.Message) -> None:
         if message.author.bot:
             return
+        if message.author.id in IGNORED_USER_IDS:
+            return
         if message.guild is None or message.guild.id != MAIN_GUILD_ID:
             return
 
@@ -97,21 +113,31 @@ class ClassChatCog(
         if not isinstance(forum, discord.ForumChannel):
             return
 
-        for code in codes:
-            await self._handle_code(message, forum, code)
+        for code, lookup_query in codes.items():
+            await self._handle_code(message, forum, code, lookup_query)
 
     @staticmethod
-    def _extract_codes(content: str) -> list[str]:
-        codes: list[str] = []
+    def _extract_codes(content: str) -> dict[str, str]:
+        """Returns {normalized_code: lookup_query} for each unique code found.
+
+        normalized_code is always bare subject+number (e.g. "CH109"), even
+        when a school was given — that's what threads are named/cached by.
+        lookup_query includes the school when one was given, so the course
+        lookup can disambiguate subjects that exist in multiple schools.
+        """
+        codes: dict[str, str] = {}
         for match in CODE_PATTERN.finditer(content):
-            code = f"{match.group(1).upper()}{match.group(2)}"
+            school, subject, number = match.group(1), match.group(2), match.group(3)
+            code = f"{subject.upper()}{number}"
             if code not in codes:
-                codes.append(code)
+                codes[code] = f"{school.upper()} {subject.upper()} {number}" if school else code
         return codes
 
     # ---------- per-code handling ----------
 
-    async def _handle_code(self, message: discord.Message, forum: discord.ForumChannel, code: str) -> None:
+    async def _handle_code(
+        self, message: discord.Message, forum: discord.ForumChannel, code: str, lookup_query: str
+    ) -> None:
         thread = await self._resolve_cached_thread(forum, code)
         if thread is None:
             thread = self._find_active_thread_by_name(forum, code)
@@ -131,7 +157,7 @@ class ClassChatCog(
         if not self._record_mention(code):
             return
 
-        new_thread = await self._create_class_thread(forum, code)
+        new_thread = await self._create_class_thread(forum, code, lookup_query)
         if new_thread is None:
             return
 
@@ -192,8 +218,10 @@ class ClassChatCog(
         self._save_mentions()
         return len(timestamps) >= MENTION_THRESHOLD
 
-    async def _create_class_thread(self, forum: discord.ForumChannel, code: str) -> discord.Thread | None:
-        content = await self._build_starter_content(code)
+    async def _create_class_thread(
+        self, forum: discord.ForumChannel, code: str, lookup_query: str
+    ) -> discord.Thread | None:
+        content = await self._build_starter_content(lookup_query)
         applied_tags = self._match_tag(forum, code)
 
         try:
@@ -208,16 +236,16 @@ class ClassChatCog(
 
         return result.thread
 
-    async def _build_starter_content(self, code: str) -> str:
+    async def _build_starter_content(self, lookup_query: str) -> str:
         class_cog = self.bot.get_cog("Class")
         if class_cog is not None:
             try:
-                embed, _view, _error = await class_cog.lookup_course(code)
+                embed, _view, _error = await class_cog.lookup_course(lookup_query)
             except Exception:
                 embed = None
 
             if embed is not None:
-                title = embed.title or code
+                title = embed.title or lookup_query
                 description = next(
                     (field.value for field in embed.fields if field.name == "Description"),
                     None,
