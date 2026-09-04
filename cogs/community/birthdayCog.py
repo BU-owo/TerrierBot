@@ -196,15 +196,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
             else:
                 intro = f"# {self._join_mentions(mentions)} are birthday terriers today! Please wish them a happy birthday!"
 
-            content = f"{intro}\n\n*Add your birthday with the command /birthday set month date*"
-
-            embed = discord.Embed()
-            embed.set_image(url=BIRTHDAY_GIF_URL)
+            content = f"{intro}\n\n*Add your birthday with the command /birthday set month date*\n\n{BIRTHDAY_GIF_URL}"
 
             try:
                 await channel.send(
                     content=content,
-                    embed=embed,
                     allowed_mentions=discord.AllowedMentions(users=True, everyone=False, roles=False),
                 )
             except discord.HTTPException:

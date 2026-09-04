@@ -76,6 +76,7 @@ class ClassChatCog(
         self.bot: TerrierBot = bot
         self.thread_cache: dict[str, int] = self._load(THREADS_KEY, {})
         self.mentions: dict[str, list[tuple[int, float]]] = self._load(MENTIONS_KEY, {})
+        self._cleanup_legacy_mentions()
         self.last_notified: dict[tuple[str, int], float] = self._load(LAST_NOTIFIED_KEY, {})
 
     # ---------- storage helpers ----------
@@ -97,6 +98,27 @@ class ClassChatCog(
 
     def _save_last_notified(self) -> None:
         self._save(LAST_NOTIFIED_KEY, self.last_notified)
+
+    @staticmethod
+    def _filter_valid_entries(entries) -> list[tuple[int, float]]:
+        """Keeps only well-formed (user_id, timestamp) tuples, discarding
+        legacy bare-float entries (from before mentions were tracked
+        per-user) that can't be attributed to a user."""
+        return [entry for entry in entries if isinstance(entry, tuple) and len(entry) == 2]
+
+    def _cleanup_legacy_mentions(self) -> None:
+        """One-time migration on cog load: strips any legacy bare-float
+        entries out of self.mentions and persists the cleaned data, so the
+        defensive filter in _record_mention doesn't keep tripping on the
+        same stale data every message."""
+        changed = False
+        for code, entries in self.mentions.items():
+            cleaned = self._filter_valid_entries(entries)
+            if len(cleaned) != len(entries):
+                self.mentions[code] = cleaned
+                changed = True
+        if changed:
+            self._save_mentions()
 
     # ---------- listener ----------
 
@@ -219,7 +241,8 @@ class ClassChatCog(
         least MENTION_THRESHOLD unique users within that window."""
         now = time.time()
         cutoff = now - MENTION_WINDOW_SECONDS
-        entries = [(uid, t) for uid, t in self.mentions.get(code, []) if t >= cutoff]
+        valid = self._filter_valid_entries(self.mentions.get(code, []))
+        entries = [(uid, t) for uid, t in valid if t >= cutoff]
         entries.append((user_id, now))
         self.mentions[code] = entries
         self._save_mentions()
