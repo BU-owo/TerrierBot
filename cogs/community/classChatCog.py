@@ -175,11 +175,12 @@ class ClassChatCog(
         if thread is not None:
             self.thread_cache[code] = thread.id
             self._save_thread_cache()
-            await self._maybe_notify(
-                message,
-                code,
-                f"There's a class chat for {code} where you can connect with your classmates! → {thread.jump_url}",
-            )
+            if message.channel.id != thread.id:
+                await self._maybe_notify(
+                    message,
+                    code,
+                    f"There's a class chat for {code} where you can connect with your classmates! → {thread.jump_url}",
+                )
             return
 
         if not self._record_mention(code, message.author.id):
