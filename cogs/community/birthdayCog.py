@@ -134,14 +134,18 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
         now = datetime.now(EASTERN)
         today_str = now.date().isoformat()
 
-        if self.announced_today.get("date") != today_str:
+        is_new_day = self.announced_today.get("date") != today_str
+        if is_new_day:
             self.announced_today = {"date": today_str, "user_ids": []}
             self._save_task_state()
 
-        await self._assign_todays_birthdays(now)
-
-        if (now.hour, now.minute) >= (23, 59) and today_str != self.last_removed_date:
+        # Runs on the first tick of a new day rather than waiting for an exact
+        # 23:59 tick, since a 5-minute loop's tick offset depends on bot start
+        # time and may never land on :59.
+        if is_new_day and today_str != self.last_removed_date:
             await self._remove_expired_holders(today_str)
+
+        await self._assign_todays_birthdays(now)
 
     @birthday_task.before_loop
     async def before_birthday_task(self) -> None:
