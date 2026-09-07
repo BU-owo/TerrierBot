@@ -78,32 +78,21 @@ class WarningsCog(commands.Cog):
         except discord.HTTPException:
             pass
 
-    # ---------- /warn ----------
-    @commands.hybrid_command(name="warn", description="Warn a user for violating a rule")
-    @app_commands.describe(
-        user="User to warn",
-        rule="Rule being violated",
-        reason="Brief description of the violation",
-        send_dm="Send the user a DM about this warning (default: Yes)",
-    )
-    @app_commands.choices(
-        rule=[app_commands.Choice(name=f"{k}. {v}", value=k) for k, v in RULES.items()],
-    )
-    async def warn(
+    # ---------- shared issuance path ----------
+    async def issue_warning(
         self,
-        ctx: commands.Context,
+        *,
         user: discord.Member,
+        moderator: discord.abc.User,
         rule: int,
         reason: str,
         send_dm: bool = True,
-    ):
-        if not await self._require_mod(ctx):
-            return
-        if rule not in RULES:
-            valid = ", ".join(f"{k} ({v})" for k, v in RULES.items())
-            await ctx.send(f"Invalid rule number. Valid rules: {valid}", ephemeral=True)
-            return
-
+    ) -> tuple[int, str]:
+        """Writes the warning row, DMs the user, and posts the mod-log embed.
+        Shared by `=warn` and any other warning source (e.g. the AutoMod
+        slur-filter listener) so both go through one issuance path instead of
+        duplicating the DB write / DM / mod-log embed. Returns (warn_id,
+        dm_status)."""
         warned_at = datetime.now(timezone.utc)
 
         conn = self._conn()
@@ -112,7 +101,7 @@ class WarningsCog(commands.Cog):
             "VALUES (?, ?, ?, ?, ?, ?, 1)",
             (
                 user.id,
-                ctx.author.id,
+                moderator.id,
                 rule,
                 reason,
                 warned_at.isoformat(),
@@ -145,6 +134,53 @@ class WarningsCog(commands.Cog):
         else:
             dm_status = "DM skipped"
 
+        mod_log_embed = discord.Embed(
+            title=f"⚠️ Warning #{warn_id} issued",
+            description=(
+                f"**Target:** {user.mention} (`{user.id}`)\n"
+                f"**Moderator:** {user_line(moderator)}\n"
+                f"**Rule:** {rule}. {RULES[rule]}\n"
+                f"**Reason:** {reason}\n"
+                f"**DM:** {dm_status}"
+            ),
+            color=LogColors.MOD,
+            timestamp=discord.utils.utcnow(),
+        )
+        mod_log_embed.set_thumbnail(url=user.display_avatar.url)
+        await self._log_to_mod_channel(mod_log_embed)
+
+        return warn_id, dm_status
+
+    # ---------- /warn ----------
+    @commands.hybrid_command(name="warn", description="Warn a user for violating a rule")
+    @app_commands.describe(
+        user="User to warn",
+        rule="Rule being violated",
+        reason="Brief description of the violation",
+        send_dm="Send the user a DM about this warning (default: Yes)",
+    )
+    @app_commands.choices(
+        rule=[app_commands.Choice(name=f"{k}. {v}", value=k) for k, v in RULES.items()],
+    )
+    async def warn(
+        self,
+        ctx: commands.Context,
+        user: discord.Member,
+        rule: int,
+        reason: str,
+        send_dm: bool = True,
+    ):
+        if not await self._require_mod(ctx):
+            return
+        if rule not in RULES:
+            valid = ", ".join(f"{k} ({v})" for k, v in RULES.items())
+            await ctx.send(f"Invalid rule number. Valid rules: {valid}", ephemeral=True)
+            return
+
+        warn_id, dm_status = await self.issue_warning(
+            user=user, moderator=ctx.author, rule=rule, reason=reason, send_dm=send_dm
+        )
+
         confirm_embed = discord.Embed(
             title=f"Warning #{warn_id} issued",
             color=discord.Color.orange(),
@@ -167,24 +203,9 @@ class WarningsCog(commands.Cog):
             except (discord.Forbidden, discord.HTTPException):
                 pass
 
-        mod_log_embed = discord.Embed(
-            title=f"⚠️ Warning #{warn_id} issued",
-            description=(
-                f"**Target:** {user.mention} (`{user.id}`)\n"
-                f"**Moderator:** {user_line(ctx.author)}\n"
-                f"**Rule:** {rule}. {RULES[rule]}\n"
-                f"**Reason:** {reason}\n"
-                f"**DM:** {dm_status}"
-            ),
-            color=LogColors.MOD,
-            timestamp=discord.utils.utcnow(),
-        )
-        mod_log_embed.set_thumbnail(url=user.display_avatar.url)
-        await self._log_to_mod_channel(mod_log_embed)
-
         try:
             await ctx.channel.send(
-                f"{user} has been warned.",
+                f"User has been warned for a Rule {rule} violation.",
                 allowed_mentions=discord.AllowedMentions.none(),
             )
         except discord.HTTPException:

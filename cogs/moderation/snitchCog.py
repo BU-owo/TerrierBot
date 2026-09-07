@@ -18,8 +18,8 @@ class SnitchCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="snitch", description="Silently alert mods without others knowing.")
-    @app_commands.describe(context="What you want to report (optional)")
-    async def snitch(self, interaction: discord.Interaction, context: str | None = None) -> None:
+    @app_commands.describe(context="What you want to report")
+    async def snitch(self, interaction: discord.Interaction, context: str) -> None:
         await interaction.response.send_message("Report sent to mods.", ephemeral=True)
 
         channel = interaction.channel
@@ -42,7 +42,7 @@ class SnitchCog(commands.Cog):
         )
         embed.add_field(
             name="Context",
-            value=context if context else "No context provided",
+            value=context,
             inline=False,
         )
 
