@@ -74,7 +74,17 @@ class AutomodWarnCog(
             moderator=moderator,
             rule=SLUR_WARN_RULE,
             reason=(
-                f'Automated warning: TerrierBot\'s AutoMod slur filter ("{rule.name}") blocked '
-                "a message from you. If you believe this is a mistake, you can appeal with /warnappeal."
+                "Automated warning: TerrierBot's AutoMod slur filter blocked a message from you. "
+                "If you believe this is a mistake, you can appeal with /warnappeal."
             ),
         )
+
+        channel = execution.channel
+        if isinstance(channel, discord.TextChannel):
+            try:
+                await channel.send(
+                    f"User has been warned for a Rule {SLUR_WARN_RULE} violation.",
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+            except discord.HTTPException:
+                pass
