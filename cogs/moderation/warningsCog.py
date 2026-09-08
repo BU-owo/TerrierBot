@@ -211,7 +211,7 @@ class WarningsCog(commands.Cog):
 
         try:
             await ctx.channel.send(
-                f"User has been warned for a Rule {rule} violation.",
+                f"{user.mention} has been warned for a Rule {rule} violation.",
                 allowed_mentions=discord.AllowedMentions.none(),
             )
         except discord.HTTPException:

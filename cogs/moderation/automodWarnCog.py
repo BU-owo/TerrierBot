@@ -83,7 +83,7 @@ class AutomodWarnCog(
         if isinstance(channel, discord.TextChannel):
             try:
                 await channel.send(
-                    f"User has been warned for a Rule {SLUR_WARN_RULE} violation.",
+                    f"{member.mention} has been warned for a Rule {SLUR_WARN_RULE} violation.",
                     allowed_mentions=discord.AllowedMentions.none(),
                 )
             except discord.HTTPException:
