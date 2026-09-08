@@ -396,23 +396,33 @@ class TerrierBot(commands.Bot):
     #Error Handling
     #============================================
 
+    @staticmethod
+    def _unwrap_invoke_error(error: commands.CommandError) -> BaseException:
+        """Get the real exception underneath a CommandInvokeError or
+        HybridCommandError. A hybrid command invoked as a slash command
+        fails inside the app_commands layer first, so
+        HybridCommandError.original is an app_commands.CommandInvokeError
+        wrapping the real exception, not the real exception itself — that
+        needs one more level of unwrapping than a plain CommandInvokeError
+        does. Returns `error` unchanged if it's neither."""
+        if isinstance(error, commands.CommandInvokeError):
+            return error.original
+        if isinstance(error, commands.HybridCommandError):
+            original = error.original
+            if isinstance(original, app_commands.AppCommandError):
+                original = getattr(original, "original", original)
+            return original
+        return error
+
     @override
     async def on_command_error(self, ctx : Context, error : commands.CommandError):
         http_error = None
         if isinstance(error, discord.HTTPException):
             http_error = error
-        elif isinstance(error, commands.CommandInvokeError) and isinstance(error.original, discord.HTTPException):
-            http_error = error.original
-        elif isinstance(error, commands.HybridCommandError):
-            # A hybrid command invoked as a slash command fails inside the
-            # app_commands layer first, so .original here is an
-            # app_commands.CommandInvokeError wrapping the real exception,
-            # not the real exception itself — unwrap one more level.
-            original = error.original
-            if isinstance(original, app_commands.AppCommandError):
-                original = getattr(original, "original", original)
-            if isinstance(original, discord.HTTPException):
-                http_error = original
+        elif isinstance(error, (commands.CommandInvokeError, commands.HybridCommandError)):
+            unwrapped = self._unwrap_invoke_error(error)
+            if isinstance(unwrapped, discord.HTTPException):
+                http_error = unwrapped
 
         if http_error is not None and http_error.status == 429:
             logging.warning("Discord rate limit hit (429) in command error handler; skipping ctx.send")
@@ -432,9 +442,10 @@ class TerrierBot(commands.Bot):
         if isinstance(error, commands.MaxConcurrencyReached):
             _ = await ctx.send("Too many people running this command at a time")
             return
-        if isinstance(error, commands.CommandInvokeError):
-            await self.report_exception(category="command", affected=ctx.command.qualified_name if ctx.command else "unknown", error=error.original)
-            _ = await ctx.send(f"{type(error.original).__name__}: {error.original}")
+        if isinstance(error, (commands.CommandInvokeError, commands.HybridCommandError)):
+            real_error = self._unwrap_invoke_error(error)
+            await self.report_exception(category="command", affected=ctx.command.qualified_name if ctx.command else "unknown", error=real_error)
+            _ = await ctx.send(f"{type(real_error).__name__}: {real_error}")
             return
         if isinstance(error, commands.NotOwner):
             _ = await ctx.send("Sorry, you can't run that!")
@@ -689,7 +700,7 @@ async def listCogs(ctx : Context):
 #Make bot go
 #============================================
 cogList = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.end", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday", "community.classChat", "moderation.automodWarn", "moderation.unserious", "utility.help"]
-defaultCogs = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday", "community.classChat", "moderation.automodWarn", "moderation.unserious", "utility.help"]
+defaultCogs = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday", "community.classChat", "moderation.automodWarn", "moderation.unserious", "utility.help"]
 
 
 def _get_token() -> str:

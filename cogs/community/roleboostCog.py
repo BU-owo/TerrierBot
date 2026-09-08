@@ -72,6 +72,13 @@ class RoleBoostCog(
             )
             return
 
+        # All checks passed — defer now. user.add_roles() below is a network
+        # call that can outrun Discord's 3-second interaction ack window and
+        # make ctx.send() below fail with a 404 Unknown interaction even
+        # though the role assignment itself went through. Not ephemeral —
+        # the success response below is public.
+        await ctx.defer()
+
         try:
             await user.add_roles(role, reason=f"roleboost by {author.display_name}")
         except discord.Forbidden:

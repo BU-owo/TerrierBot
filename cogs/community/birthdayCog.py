@@ -274,6 +274,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     @app_commands.describe(month="Your birth month", day="Your birth day")
     @app_commands.choices(month=MONTH_CHOICES)
     async def birthday_set(self, ctx: Context, month: str, day: app_commands.Range[int, 1, 31]) -> None:
+        # No permission checks here — defer immediately, before
+        # _set_birthday()'s shelve write. Ephemeral — its messages
+        # (validation errors and the success reply below) are too.
+        await ctx.defer(ephemeral=True)
+
         if await self._set_birthday(ctx, ctx.author, month, day):
             entry = self.birthdays[str(ctx.author.id)]
             await ctx.send(f"Thank you! Your birthday is set to {format_birthday(entry['month'], entry['day'])}. 🎂", ephemeral=True)
@@ -305,6 +310,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
             possessive = "You don't" if is_self else f"{target.display_name} doesn't"
             await ctx.send(f"{possessive} have a birthday here!", ephemeral=True)
             return
+
+        # All checks passed — defer now, before the shelve write below.
+        # Ephemeral matches the response for this branch (self-removal is
+        # ephemeral, a mod removing someone else's is public).
+        await ctx.defer(ephemeral=is_self)
 
         self._save_birthdays()
         if is_self:
@@ -387,6 +397,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
         if not self._is_mod(ctx.author):
             await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
             return
+
+        # All checks passed — defer now, before _set_birthday()'s shelve
+        # write. Not ephemeral — its messages (validation errors and the
+        # success reply below) are public for this mod-only override.
+        await ctx.defer()
 
         if await self._set_birthday(ctx, user, month, day, ephemeral=False):
             entry = self.birthdays[str(user.id)]
