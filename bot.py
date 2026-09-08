@@ -403,6 +403,16 @@ class TerrierBot(commands.Bot):
             http_error = error
         elif isinstance(error, commands.CommandInvokeError) and isinstance(error.original, discord.HTTPException):
             http_error = error.original
+        elif isinstance(error, commands.HybridCommandError):
+            # A hybrid command invoked as a slash command fails inside the
+            # app_commands layer first, so .original here is an
+            # app_commands.CommandInvokeError wrapping the real exception,
+            # not the real exception itself — unwrap one more level.
+            original = error.original
+            if isinstance(original, app_commands.AppCommandError):
+                original = getattr(original, "original", original)
+            if isinstance(original, discord.HTTPException):
+                http_error = original
 
         if http_error is not None and http_error.status == 429:
             logging.warning("Discord rate limit hit (429) in command error handler; skipping ctx.send")

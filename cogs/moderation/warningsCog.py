@@ -177,6 +177,12 @@ class WarningsCog(commands.Cog):
             await ctx.send(f"Invalid rule number. Valid rules: {valid}", ephemeral=True)
             return
 
+        # All checks passed — defer now. The DM send + DB write below are
+        # sequential network calls, which combined can outrun Discord's
+        # 3-second interaction ack window and make ctx.send() below fail with
+        # a 404 Unknown interaction even though the warning itself went through.
+        await ctx.defer(ephemeral=True)
+
         warn_id, dm_status = await self.issue_warning(
             user=user, moderator=ctx.author, rule=rule, reason=reason, send_dm=send_dm
         )
