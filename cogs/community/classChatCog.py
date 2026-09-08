@@ -33,7 +33,7 @@ EXCLUDED_CHANNEL_ID = 1412461313321603233
 # (via _extract_codes) to disambiguate the course lookup.
 _SCHOOL_ALTERNATION = "|".join(re.escape(school) for school in sorted(SCHOOL_SLUG, key=len, reverse=True))
 CODE_PATTERN = re.compile(
-    rf"\b(?:({_SCHOOL_ALTERNATION})\s?)?([A-Z]{{2,4}})\s?(\d{{3}})\b",
+    rf"\b(?:({_SCHOOL_ALTERNATION})\s?)?([A-Z]{{2}})\s?(\d{{3}})\b",
     re.IGNORECASE,
 )
 
@@ -53,13 +53,10 @@ DEPARTMENT_TAG_NAMES: dict[str, str] = {
     "EC": "Economics",
     "PO": "Political Science",
     "SM": "Business",
-    "QST": "Business",
-    "COM": "Communication",
     "EK": "Engineering",
     "ME": "Engineering",
     "EE": "Engineering",
     "BE": "Engineering",
-    "ENG": "Engineering",
 }
 
 
@@ -183,10 +180,19 @@ class ClassChatCog(
                 )
             return
 
+        # No existing thread — before tracking this toward the auto-create
+        # threshold at all, confirm it's a real BU course. Without this, a
+        # false-positive code match (or a typo'd one) could accumulate
+        # mentions and eventually spawn a thread for a class that doesn't
+        # exist.
+        embed = await self._lookup_course_embed(lookup_query)
+        if embed is None:
+            return
+
         if not self._record_mention(code, message.author.id):
             return
 
-        new_thread = await self._create_class_thread(forum, code, lookup_query)
+        new_thread = await self._create_class_thread(forum, code, lookup_query, embed)
         if new_thread is None:
             return
 
@@ -250,10 +256,25 @@ class ClassChatCog(
         unique_users = {uid for uid, _ in entries}
         return len(unique_users) >= MENTION_THRESHOLD
 
+    async def _lookup_course_embed(self, lookup_query: str) -> discord.Embed | None:
+        """Looks up `lookup_query` via classCog's course lookup. Returns the
+        embed on a valid match, or None if the Class cog isn't loaded, the
+        lookup errored, or no course was found — the shared "is this a real
+        class?" check for both the pre-threshold gate in _handle_code and
+        the starter message below, so the same code isn't looked up twice."""
+        class_cog = self.bot.get_cog("Class")
+        if class_cog is None:
+            return None
+        try:
+            embed, _view, _error = await class_cog.lookup_course(lookup_query)
+        except Exception:
+            return None
+        return embed
+
     async def _create_class_thread(
-        self, forum: discord.ForumChannel, code: str, lookup_query: str
+        self, forum: discord.ForumChannel, code: str, lookup_query: str, embed: discord.Embed | None
     ) -> discord.Thread | None:
-        content = await self._build_starter_content(lookup_query)
+        content = self._build_starter_content(lookup_query, embed)
         applied_tags = self._match_tag(forum, code)
 
         try:
@@ -268,23 +289,17 @@ class ClassChatCog(
 
         return result.thread
 
-    async def _build_starter_content(self, lookup_query: str) -> str:
-        class_cog = self.bot.get_cog("Class")
-        if class_cog is not None:
-            try:
-                embed, _view, _error = await class_cog.lookup_course(lookup_query)
-            except Exception:
-                embed = None
-
-            if embed is not None:
-                title = embed.title or lookup_query
-                description = next(
-                    (field.value for field in embed.fields if field.name == "Description"),
-                    None,
-                )
-                if description:
-                    return f"**{title}**\n\n{description}"
-                return f"**{title}**"
+    @staticmethod
+    def _build_starter_content(lookup_query: str, embed: discord.Embed | None) -> str:
+        if embed is not None:
+            title = embed.title or lookup_query
+            description = next(
+                (field.value for field in embed.fields if field.name == "Description"),
+                None,
+            )
+            if description:
+                return f"**{title}**\n\n{description}"
+            return f"**{title}**"
 
         return "This class kept coming up in the server, so here's a place to talk about it!"
 
