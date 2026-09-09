@@ -838,6 +838,13 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
         description="Track the MBTA Pride Train (Green Line car #3706), if it's out today.",
     )
     async def mbtgay(self, ctx: Context) -> None:
+        # No permission/validation checks here — defer immediately.
+        # _fetch_pride_train_vehicle() below hits the MBTA API (15s timeout),
+        # which can outrun Discord's 3-second interaction ack window and make
+        # ctx.send() below fail with a 404 Unknown interaction. Not ephemeral
+        # — both responses below are public.
+        await ctx.defer()
+
         status = await self._fetch_pride_train_vehicle()
         if status is None:
             await ctx.send("🏳️‍🌈🌈 No sign of the Pride Train right now.... MBTA homophobic? 🌈🏳️‍🌈")

@@ -134,14 +134,18 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
         now = datetime.now(EASTERN)
         today_str = now.date().isoformat()
 
-        if self.announced_today.get("date") != today_str:
+        is_new_day = self.announced_today.get("date") != today_str
+        if is_new_day:
             self.announced_today = {"date": today_str, "user_ids": []}
             self._save_task_state()
 
-        await self._assign_todays_birthdays(now)
-
-        if (now.hour, now.minute) >= (23, 59) and today_str != self.last_removed_date:
+        # Runs on the first tick of a new day rather than waiting for an exact
+        # 23:59 tick, since a 5-minute loop's tick offset depends on bot start
+        # time and may never land on :59.
+        if is_new_day and today_str != self.last_removed_date:
             await self._remove_expired_holders(today_str)
+
+        await self._assign_todays_birthdays(now)
 
     @birthday_task.before_loop
     async def before_birthday_task(self) -> None:
@@ -196,15 +200,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
             else:
                 intro = f"# {self._join_mentions(mentions)} are birthday terriers today! Please wish them a happy birthday!"
 
-            content = f"{intro}\n\n*Add your birthday with the command /birthday set month date*"
-
-            embed = discord.Embed()
-            embed.set_image(url=BIRTHDAY_GIF_URL)
+            content = f"{intro}\n\n*Add your birthday with the command /birthday set month date*\n\n{BIRTHDAY_GIF_URL}"
 
             try:
                 await channel.send(
                     content=content,
-                    embed=embed,
                     allowed_mentions=discord.AllowedMentions(users=True, everyone=False, roles=False),
                 )
             except discord.HTTPException:
@@ -274,6 +274,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     @app_commands.describe(month="Your birth month", day="Your birth day")
     @app_commands.choices(month=MONTH_CHOICES)
     async def birthday_set(self, ctx: Context, month: str, day: app_commands.Range[int, 1, 31]) -> None:
+        # No permission checks here — defer immediately, before
+        # _set_birthday()'s shelve write. Ephemeral — its messages
+        # (validation errors and the success reply below) are too.
+        await ctx.defer(ephemeral=True)
+
         if await self._set_birthday(ctx, ctx.author, month, day):
             entry = self.birthdays[str(ctx.author.id)]
             await ctx.send(f"Thank you! Your birthday is set to {format_birthday(entry['month'], entry['day'])}. 🎂", ephemeral=True)
@@ -305,6 +310,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
             possessive = "You don't" if is_self else f"{target.display_name} doesn't"
             await ctx.send(f"{possessive} have a birthday here!", ephemeral=True)
             return
+
+        # All checks passed — defer now, before the shelve write below.
+        # Ephemeral matches the response for this branch (self-removal is
+        # ephemeral, a mod removing someone else's is public).
+        await ctx.defer(ephemeral=is_self)
 
         self._save_birthdays()
         if is_self:
@@ -387,6 +397,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
         if not self._is_mod(ctx.author):
             await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
             return
+
+        # All checks passed — defer now, before _set_birthday()'s shelve
+        # write. Not ephemeral — its messages (validation errors and the
+        # success reply below) are public for this mod-only override.
+        await ctx.defer()
 
         if await self._set_birthday(ctx, user, month, day, ephemeral=False):
             entry = self.birthdays[str(user.id)]

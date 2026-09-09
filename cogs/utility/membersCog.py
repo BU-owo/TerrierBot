@@ -138,6 +138,7 @@ class MembersCog(commands.Cog, name="Members", description="Member exports and m
         writer = csv.writer(output)
         header = [
             "Discord Name",
+            "Discord ID",
             "Display Name",
             "Server Name",
             "Joined At",
@@ -168,6 +169,7 @@ class MembersCog(commands.Cog, name="Members", description="Member exports and m
 
             writer.writerow([
                 member.name,
+                member.id,
                 member.display_name,
                 member.nick or "",
                 joined,

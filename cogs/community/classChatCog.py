@@ -33,7 +33,7 @@ EXCLUDED_CHANNEL_ID = 1412461313321603233
 # (via _extract_codes) to disambiguate the course lookup.
 _SCHOOL_ALTERNATION = "|".join(re.escape(school) for school in sorted(SCHOOL_SLUG, key=len, reverse=True))
 CODE_PATTERN = re.compile(
-    rf"\b(?:({_SCHOOL_ALTERNATION})\s?)?([A-Z]{{2,4}})\s?(\d{{3}})\b",
+    rf"\b(?:({_SCHOOL_ALTERNATION})\s?)?([A-Z]{{2}})\s?(\d{{3}})\b",
     re.IGNORECASE,
 )
 
@@ -53,13 +53,10 @@ DEPARTMENT_TAG_NAMES: dict[str, str] = {
     "EC": "Economics",
     "PO": "Political Science",
     "SM": "Business",
-    "QST": "Business",
-    "COM": "Communication",
     "EK": "Engineering",
     "ME": "Engineering",
     "EE": "Engineering",
     "BE": "Engineering",
-    "ENG": "Engineering",
 }
 
 
@@ -75,7 +72,8 @@ class ClassChatCog(
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
         self.thread_cache: dict[str, int] = self._load(THREADS_KEY, {})
-        self.mentions: dict[str, list[float]] = self._load(MENTIONS_KEY, {})
+        self.mentions: dict[str, list[tuple[int, float]]] = self._load(MENTIONS_KEY, {})
+        self._cleanup_legacy_mentions()
         self.last_notified: dict[tuple[str, int], float] = self._load(LAST_NOTIFIED_KEY, {})
 
     # ---------- storage helpers ----------
@@ -97,6 +95,27 @@ class ClassChatCog(
 
     def _save_last_notified(self) -> None:
         self._save(LAST_NOTIFIED_KEY, self.last_notified)
+
+    @staticmethod
+    def _filter_valid_entries(entries) -> list[tuple[int, float]]:
+        """Keeps only well-formed (user_id, timestamp) tuples, discarding
+        legacy bare-float entries (from before mentions were tracked
+        per-user) that can't be attributed to a user."""
+        return [entry for entry in entries if isinstance(entry, tuple) and len(entry) == 2]
+
+    def _cleanup_legacy_mentions(self) -> None:
+        """One-time migration on cog load: strips any legacy bare-float
+        entries out of self.mentions and persists the cleaned data, so the
+        defensive filter in _record_mention doesn't keep tripping on the
+        same stale data every message."""
+        changed = False
+        for code, entries in self.mentions.items():
+            cleaned = self._filter_valid_entries(entries)
+            if len(cleaned) != len(entries):
+                self.mentions[code] = cleaned
+                changed = True
+        if changed:
+            self._save_mentions()
 
     # ---------- listener ----------
 
@@ -153,17 +172,27 @@ class ClassChatCog(
         if thread is not None:
             self.thread_cache[code] = thread.id
             self._save_thread_cache()
-            await self._maybe_notify(
-                message,
-                code,
-                f"There's a class chat for {code} where you can connect with your classmates! → {thread.jump_url}",
-            )
+            if message.channel.id != thread.id:
+                await self._maybe_notify(
+                    message,
+                    code,
+                    f"There's a class chat for {code} where you can connect with your classmates! → {thread.jump_url}",
+                )
             return
 
-        if not self._record_mention(code):
+        # No existing thread — before tracking this toward the auto-create
+        # threshold at all, confirm it's a real BU course. Without this, a
+        # false-positive code match (or a typo'd one) could accumulate
+        # mentions and eventually spawn a thread for a class that doesn't
+        # exist.
+        embed = await self._lookup_course_embed(lookup_query)
+        if embed is None:
             return
 
-        new_thread = await self._create_class_thread(forum, code, lookup_query)
+        if not self._record_mention(code, message.author.id):
+            return
+
+        new_thread = await self._create_class_thread(forum, code, lookup_query, embed)
         if new_thread is None:
             return
 
@@ -213,21 +242,39 @@ class ClassChatCog(
 
     # ---------- mention tracking / auto-create ----------
 
-    def _record_mention(self, code: str) -> bool:
-        """Records a mention timestamp for `code`, prunes entries older than the
-        30-day window, and returns True once the code has hit the creation threshold."""
+    def _record_mention(self, code: str, user_id: int) -> bool:
+        """Records a mention of `code` by `user_id`, prunes entries older than the
+        30-day window, and returns True once the code has been mentioned by at
+        least MENTION_THRESHOLD unique users within that window."""
         now = time.time()
         cutoff = now - MENTION_WINDOW_SECONDS
-        timestamps = [t for t in self.mentions.get(code, []) if t >= cutoff]
-        timestamps.append(now)
-        self.mentions[code] = timestamps
+        valid = self._filter_valid_entries(self.mentions.get(code, []))
+        entries = [(uid, t) for uid, t in valid if t >= cutoff]
+        entries.append((user_id, now))
+        self.mentions[code] = entries
         self._save_mentions()
-        return len(timestamps) >= MENTION_THRESHOLD
+        unique_users = {uid for uid, _ in entries}
+        return len(unique_users) >= MENTION_THRESHOLD
+
+    async def _lookup_course_embed(self, lookup_query: str) -> discord.Embed | None:
+        """Looks up `lookup_query` via classCog's course lookup. Returns the
+        embed on a valid match, or None if the Class cog isn't loaded, the
+        lookup errored, or no course was found — the shared "is this a real
+        class?" check for both the pre-threshold gate in _handle_code and
+        the starter message below, so the same code isn't looked up twice."""
+        class_cog = self.bot.get_cog("Class")
+        if class_cog is None:
+            return None
+        try:
+            embed, _view, _error = await class_cog.lookup_course(lookup_query)
+        except Exception:
+            return None
+        return embed
 
     async def _create_class_thread(
-        self, forum: discord.ForumChannel, code: str, lookup_query: str
+        self, forum: discord.ForumChannel, code: str, lookup_query: str, embed: discord.Embed | None
     ) -> discord.Thread | None:
-        content = await self._build_starter_content(lookup_query)
+        content = self._build_starter_content(lookup_query, embed)
         applied_tags = self._match_tag(forum, code)
 
         try:
@@ -235,30 +282,24 @@ class ClassChatCog(
                 name=code,
                 content=content,
                 applied_tags=applied_tags,
-                reason=f"Auto-created class chat for {code} (3+ mentions in 30 days)",
+                reason=f"Auto-created class chat for {code} (3+ unique users in 30 days)",
             )
         except (discord.Forbidden, discord.HTTPException):
             return None
 
         return result.thread
 
-    async def _build_starter_content(self, lookup_query: str) -> str:
-        class_cog = self.bot.get_cog("Class")
-        if class_cog is not None:
-            try:
-                embed, _view, _error = await class_cog.lookup_course(lookup_query)
-            except Exception:
-                embed = None
-
-            if embed is not None:
-                title = embed.title or lookup_query
-                description = next(
-                    (field.value for field in embed.fields if field.name == "Description"),
-                    None,
-                )
-                if description:
-                    return f"**{title}**\n\n{description}"
-                return f"**{title}**"
+    @staticmethod
+    def _build_starter_content(lookup_query: str, embed: discord.Embed | None) -> str:
+        if embed is not None:
+            title = embed.title or lookup_query
+            description = next(
+                (field.value for field in embed.fields if field.name == "Description"),
+                None,
+            )
+            if description:
+                return f"**{title}**\n\n{description}"
+            return f"**{title}**"
 
         return "This class kept coming up in the server, so here's a place to talk about it!"
 

@@ -82,6 +82,13 @@ class LockdownCog(
             await ctx.send("This channel is already locked.", ephemeral=True)
             return
 
+        # All checks passed — defer now. channel.set_permissions() below is a
+        # network call that can outrun Discord's 3-second interaction ack
+        # window and make ctx.send() below fail with a 404 Unknown
+        # interaction even though the lockdown itself went through. Not
+        # ephemeral — the success response below is public.
+        await ctx.defer()
+
         everyone = channel.guild.default_role
         existing = channel.overwrites.get(everyone)
         existed_before = existing is not None
@@ -137,6 +144,10 @@ class LockdownCog(
         if snapshot is None:
             await ctx.send("This channel isn't locked (per my tracking).", ephemeral=True)
             return
+
+        # All checks passed — defer now, same reasoning as =lockdown above.
+        # Not ephemeral — the success response below is public.
+        await ctx.defer()
 
         everyone = channel.guild.default_role
         try:

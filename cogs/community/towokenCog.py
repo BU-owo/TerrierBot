@@ -100,6 +100,12 @@ class TowokenCog(commands.Cog, name="Towoken", description="Silly towoken usage 
             await ctx.send("You don't have permission to use this command.", ephemeral=True)
             return
 
+        # All checks passed — defer now. _save_state() below is a shelve
+        # write that could in principle outrun Discord's 3-second interaction
+        # ack window and make ctx.send() below fail with a 404 Unknown
+        # interaction. Ephemeral — the response below is too.
+        await ctx.defer(ephemeral=True)
+
         self.enabled = state == "enable"
         self._save_state()
         await ctx.send(
