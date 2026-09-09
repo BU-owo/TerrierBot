@@ -20,6 +20,7 @@ TerrierBot currently supports:
 - A button + modal ban-appeal flow in a dedicated appeals server, forwarding appeals to the mod log
 - Permanent warnings (no auto-expiry) with a `warnappeal` select-and-modal flow for mods to accept/reject
 - Self-service birthday tracking through `birthday`, with automatic daily role assignment/removal and a server announcement
+- Roleless, self-service "soft ping" lists through `softping`, letting anyone spin up a new opt-in ping group (e.g. `joinbadminton` / `pingbadminton`) without creating a server role
 - Automatic class chat discovery: mentioning a BU class code (e.g. "CH 109") points members to that class's forum thread, or spins one up automatically once a code comes up enough
 
 ## Requirements
@@ -116,6 +117,10 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=birthday nearest` / `/birthday nearest` | Show birthdays coming up in the next two weeks |
 | `/birthday export` | Export every saved birthday to a text file (mod role required) |
 | `/birthday override` | Set another member's birthday (mod role required) |
+| `/softping <name> <description>` | Create a new roleless soft-ping list, registering matching `/join<name>`, `/leave<name>`, `/ping<name>` commands |
+| `/softpinglist` | List every soft-ping list with its description and member count |
+| `/joinbadminton` / `/leavebadminton` | Join or leave the badminton soft-ping list |
+| `/pingbadminton` | Ping everyone on the badminton soft-ping list |
 
 ### Moderation, feedback, and management
 
