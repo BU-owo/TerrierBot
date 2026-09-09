@@ -467,7 +467,14 @@ class TerrierBot(commands.Bot):
         if isinstance(error, commands.MissingRequiredArgument):
             _ = await ctx.send(f"Missing argument {error.param}")
             return
-        
+        # NotOwner is a CheckFailure subclass but is already handled above
+        # with its own message/logging, so this only catches the rest —
+        # has_permissions/has_role/custom checks failing is an expected user
+        # mistake, not a bug worth paging the error channel over.
+        if isinstance(error, commands.CheckFailure):
+            _ = await ctx.send("You don't have permission to use this command.")
+            return
+
         if isinstance(ctx.channel, discord.DMChannel):
             logging.error(f"{type(error).__name__}: {error} on command \"{ctx.message.content}\" from \"{ctx.author.display_name}\" in a DM")
         else:
@@ -511,11 +518,34 @@ bot.help_command = None
 
 
 
+async def _send_app_command_reply(interaction: discord.Interaction, msg: str) -> None:
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(msg, ephemeral=True)
+        else:
+            await interaction.response.send_message(msg, ephemeral=True)
+    except Exception:
+        pass
+
+
 @bot.tree.error
 async def on_app_command_error(
     interaction: discord.Interaction,
     error: app_commands.AppCommandError,
 ) -> None:
+    # CommandOnCooldown is a CheckFailure subclass on the app_commands side,
+    # so it's checked first for its own retry_after-based message; anything
+    # else under CheckFailure (has_permissions/has_role/custom checks failing)
+    # is an expected user mistake, not a bug worth paging the error channel
+    # over — most commands already have their own local .error handler for
+    # this, but this is the safety net for ones that don't.
+    if isinstance(error, app_commands.CommandOnCooldown):
+        await _send_app_command_reply(interaction, f"You're on cooldown. Try again in {error.retry_after:.0f}s.")
+        return
+    if isinstance(error, app_commands.CheckFailure):
+        await _send_app_command_reply(interaction, "You don't have permission to use this command.")
+        return
+
     msg = (
         f"{type(error.original).__name__}: {error.original}"
         if isinstance(error, app_commands.CommandInvokeError)
@@ -528,13 +558,7 @@ async def on_app_command_error(
         affected=interaction.command.qualified_name if interaction.command else "unknown",
         error=underlying_error,
     )
-    try:
-        if interaction.response.is_done():
-            await interaction.followup.send(msg, ephemeral=True)
-        else:
-            await interaction.response.send_message(msg, ephemeral=True)
-    except Exception:
-        pass
+    await _send_app_command_reply(interaction, msg)
 
 
 @bot.tree.command(name="status", description="Show TerrierBot runtime status.")

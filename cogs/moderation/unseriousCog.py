@@ -78,14 +78,17 @@ class UnseriousCog(
         if guild is None:
             return []
 
+        # `user` can be autocompleted before `mode` is chosen (Discord doesn't
+        # enforce fill order), so mode may still be unset here — fall back to
+        # the broader "enable" candidate list rather than assuming disable.
         mode = interaction.namespace.mode
 
-        if mode == "disable":
+        if mode is None or mode == "enable":
+            candidates = guild.members
+        else:
             candidates = [
                 member for uid in self.enabled_ids if (member := guild.get_member(uid)) is not None
             ]
-        else:
-            candidates = guild.members
 
         current_lower = current.lower()
         choices = []

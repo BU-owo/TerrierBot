@@ -141,6 +141,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=joinpolitics` / `/joinpolitics` | Post the #politics channel application (Politics mod role required) |
 | `/modvote start` | Start an anonymous timed vote on disciplining a member, with custom options (mod role required) |
 | `/modvote close` | Manually close an open modvote early and post results (mod role required) |
+| `/unserious mode: user:` | Toggle a member's access to the Serious category (mod role required) |
 
 ### Utility and maintenance
 

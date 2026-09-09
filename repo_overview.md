@@ -59,6 +59,7 @@ Format: `path — description — commands — loaded?`. "Loaded?" reflects `bot
 - **snitchCog.py** (`moderation.snitch`, `"SnitchCog"`) — anonymous mod alert to the mod queue. `/snitch [context]` (slash only). **In defaultCogs.**
 - **ticketCog.py** (`moderation.ticket`, `"TicketCog"`) — auto-handles TicketTool mod-application channels (renames, posts welcome). No commands (listener only). **In defaultCogs.**
 - **timeoutCog.py** (`moderation.timeout`, `"Timeout"`) — manual timeout/untimeout with duration parsing. `=timeout <member> <duration>`, `=untimeout <member>` (hybrid). **In defaultCogs.**
+- **unseriousCog.py** (`moderation.unserious`, `"Unserious"`) — toggles a member's access to the Serious category via a per-member permission overwrite. `/unserious mode: user:` (slash only, mod-gated). **In defaultCogs.**
 - **warnAppealCog.py** (`moderation.warnAppeal`, `"WarnAppeal"`) — appeal one's own active warning via select+modal, mod accept/reject buttons. `/warnappeal` (slash only). **In defaultCogs.**
 - **warningsCog.py** (`moderation.warnings`, `"WarningsCog"`) — core warning system (issue/list/inspect/remove), owns the canonical `warnings.db`. `=warn`, `=warncount`, `=warninfo`, `=mywarns`, `=warnremove` (hybrid). **In defaultCogs.**
 

@@ -4,7 +4,15 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from ..logging.logConfig import MOD_ROLE_ID
+
 TROLL_ROLE_ID = 1529519978976379061
+
+
+def _is_mod(interaction: discord.Interaction) -> bool:
+    return isinstance(interaction.user, discord.Member) and any(
+        r.id == MOD_ROLE_ID for r in interaction.user.roles
+    )
 
 EMOTICONS = [
     "fwendo", "._.", ";-;", ";_;", "（；ω；）", "ÙωÙ", "UwU",
@@ -260,13 +268,16 @@ class TrollCog(commands.Cog):
         if guild is None:
             return []
 
+        # `user` can be autocompleted before `mode` is chosen (Discord doesn't
+        # enforce fill order), so mode may still be unset here — fall back to
+        # the broader "enable" candidate list rather than assuming disable.
         mode = interaction.namespace.mode
         role = guild.get_role(TROLL_ROLE_ID)
 
-        if mode == "disable":
-            candidates = role.members if role is not None else []
-        else:
+        if mode is None or mode == "enable":
             candidates = guild.members
+        else:
+            candidates = role.members if role is not None else []
 
         current_lower = current.lower()
         choices = []
@@ -284,7 +295,7 @@ class TrollCog(commands.Cog):
         app_commands.Choice(name="disable", value="disable"),
     ])
     @app_commands.autocomplete(user=_troll_user_autocomplete)
-    @app_commands.checks.has_permissions(manage_roles=True)
+    @app_commands.check(_is_mod)
     async def troll(self, interaction: discord.Interaction, mode: app_commands.Choice[str], user: str):
         role = interaction.guild.get_role(TROLL_ROLE_ID)
         if role is None:
@@ -324,7 +335,7 @@ class TrollCog(commands.Cog):
 
     @troll.error
     async def troll_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.MissingPermissions):
+        if isinstance(error, app_commands.CheckFailure):
             await interaction.response.send_message(
                 "You don't have permission to use this command.", ephemeral=True
             )
