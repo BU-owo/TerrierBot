@@ -26,6 +26,11 @@ _FIELDS = [
         "For rule violations that don't need removal from the server; warnings build the paper trail modlogs surfaces later. Members can self-appeal via `/warnappeal` — you'll get an accept/reject prompt in response when they do.",
     ),
     (
+        "🗑️ Warn Nullify",
+        "`/warnnullify <warn_id> <reason>`",
+        "Permanently deletes a warning row — unlike `=warnremove` (which just deactivates it), this can't be undone and the warning stops showing up anywhere, including modlogs. Use only for warnings issued in error, not routine removal.",
+    ),
+    (
         "🔇 Timeout / Untimeout",
         "`=timeout <member> <duration> [reason]` / `=untimeout <member> [reason]`",
         "Quick cooldown for minor or heated behavior; untimeout lifts it early once things calm down.",
@@ -69,6 +74,16 @@ _FIELDS = [
         "🚀 Roleboost",
         "`=roleboost <user> <role>`",
         "Grants a role tied to someone's booster status (they must already have the booster role); auto-removed if they lose it later.",
+    ),
+    (
+        "😐 Unserious Mode",
+        "`/unserious <enable|disable> <member>`",
+        "Toggles a member's access to the Serious category on/off — a lighter, non-punitive way to keep someone out of serious-discussion channels without a full role change.",
+    ),
+    (
+        "🐾 Troll Mode",
+        "`/troll <enable|disable> <member>`",
+        "Toggles owo-troll mode (webhook-repost uwu-ify) on a member — lighthearted and reversible, not a disciplinary action.",
     ),
 ]
 

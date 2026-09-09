@@ -61,7 +61,7 @@ Format: `path — description — commands — loaded?`. "Loaded?" reflects `bot
 - **timeoutCog.py** (`moderation.timeout`, `"Timeout"`) — manual timeout/untimeout with duration parsing. `=timeout <member> <duration>`, `=untimeout <member>` (hybrid). **In defaultCogs.**
 - **unseriousCog.py** (`moderation.unserious`, `"Unserious"`) — toggles a member's access to the Serious category via a per-member permission overwrite. `/unserious mode: user:` (slash only, mod-gated). **In defaultCogs.**
 - **warnAppealCog.py** (`moderation.warnAppeal`, `"WarnAppeal"`) — appeal one's own active warning via select+modal, mod accept/reject buttons. `/warnappeal` (slash only). **In defaultCogs.**
-- **warningsCog.py** (`moderation.warnings`, `"WarningsCog"`) — core warning system (issue/list/inspect/remove), owns the canonical `warnings.db`. `=warn`, `=warncount`, `=warninfo`, `=mywarns`, `=warnremove` (hybrid). **In defaultCogs.**
+- **warningsCog.py** (`moderation.warnings`, `"WarningsCog"`) — core warning system (issue/list/inspect/soft-remove/hard-delete), owns the canonical `warnings.db`. `=warn`, `=warncount`, `=warninfo`, `=mywarns`, `=warnremove` (hybrid); `/warnnullify` (slash only, mod-gated, permanently deletes a warning row regardless of `active` status — irreversible, distinct from `/warnremove`'s soft-delete). **In defaultCogs.**
 
 ### utility/
 - **embedCog.py** (`utility.embed`, `"Embed"`) — owner-only rich embed composer + several hardcoded "campaign" embed sequences (registration/housing/mod handbook/rules). `/embed [channel]` (owner, modal); `embed`, `embedreg`, `embedhousing`, `embedmodhandbook`, `embedrules` (prefix). **In defaultCogs.**

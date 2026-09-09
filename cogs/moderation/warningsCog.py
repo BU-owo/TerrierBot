@@ -10,6 +10,13 @@ from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_cha
 DB_DIR = os.path.expanduser("~/terrierbot_data")
 DB_PATH = os.path.join(DB_DIR, "warnings.db")
 
+
+def _is_mod(interaction: discord.Interaction) -> bool:
+    return isinstance(interaction.user, discord.Member) and any(
+        r.id == MOD_ROLE_ID for r in interaction.user.roles
+    )
+
+
 RULES = {
     1: "No Harassment or Insults",
     2: "No Hate Speech or Slurs",
@@ -349,6 +356,77 @@ class WarningsCog(commands.Cog):
             timestamp=discord.utils.utcnow(),
         )
         await self._log_to_mod_channel(mod_log_embed)
+
+    # ---------- /warnnullify ----------
+    @app_commands.command(
+        name="warnnullify",
+        description="Permanently and irreversibly delete a warning by ID (mod only)",
+    )
+    @app_commands.describe(
+        warn_id="Warning ID to permanently delete",
+        reason="Why this warning is being nullified",
+    )
+    @app_commands.check(_is_mod)
+    async def warnnullify(self, interaction: discord.Interaction, warn_id: int, reason: str) -> None:
+        conn = self._conn()
+        # No `active` filter — this has to find a warning regardless of
+        # whether it's still active, already soft-removed via /warnremove,
+        # or already resolved through warnAppealCog's accept flow (which
+        # also just flips active=0 on this same table).
+        row = conn.execute("SELECT user_id FROM warnings WHERE id = ?", (warn_id,)).fetchone()
+        if row is None:
+            conn.close()
+            await interaction.response.send_message(
+                f"No warning #{warn_id} found — nothing to nullify.", ephemeral=True
+            )
+            return
+
+        (user_id,) = row
+
+        # Hard delete — unlike /warnremove (UPDATE ... SET active = 0), this
+        # permanently removes the row and can't be undone.
+        cur = conn.execute("DELETE FROM warnings WHERE id = ?", (warn_id,))
+        conn.commit()
+        conn.close()
+
+        if cur.rowcount == 0:
+            # Deleted by someone else between the SELECT and DELETE above.
+            await interaction.response.send_message(
+                f"Warning #{warn_id} was already deleted.", ephemeral=True
+            )
+            return
+
+        # warnAppealCog keeps no persistent record of its own tied to a
+        # warn_id — an appeal lives entirely in the Discord message it posts
+        # (the id is only encoded in that message's button custom_ids), so
+        # there's nothing else to clean up. If a mod later clicks
+        # Accept/Reject on a stale appeal message for this id, that just
+        # becomes a no-op UPDATE (0 rows matched).
+
+        audit_embed = discord.Embed(
+            title=f"🗑️ Warning #{warn_id} nullified",
+            description=(
+                f"**Target:** <@{user_id}> (`{user_id}`)\n"
+                f"**Moderator:** {user_line(interaction.user)}\n"
+                f"**Reason:** {reason}"
+            ),
+            color=LogColors.MOD,
+            timestamp=discord.utils.utcnow(),
+        )
+        await self._log_to_mod_channel(audit_embed)
+
+        await interaction.response.send_message(
+            f"Warning #{warn_id} permanently deleted.", ephemeral=True
+        )
+
+    @warnnullify.error
+    async def warnnullify_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if isinstance(error, app_commands.CheckFailure):
+            await interaction.response.send_message(
+                "You don't have permission to use this command.", ephemeral=True
+            )
+        else:
+            raise error
 
 
 async def setup(bot: commands.Bot):

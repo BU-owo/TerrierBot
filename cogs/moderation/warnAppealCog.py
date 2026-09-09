@@ -121,8 +121,35 @@ class _WarnAppealResponseModal(discord.ui.Modal):
         self.approve = approve
         self.original_message = original_message
 
+    async def _warning_gone(self, interaction: discord.Interaction) -> None:
+        """Response for when this appeal's warning no longer exists — e.g.
+        nullified via /warnnullify after the appeal was posted but before a
+        mod acted on it. Without this, an accept silently no-ops its UPDATE
+        and still tells everyone the appeal succeeded."""
+        field_value = "⚠️ This warning no longer exists — it may have been nullified. No action was taken."
+        if self.original_message.embeds:
+            embed = self.original_message.embeds[0]
+            embed.add_field(name="Decision", value=field_value, inline=False)
+        else:
+            embed = discord.Embed(description=field_value, color=discord.Color.orange())
+        try:
+            await self.original_message.edit(embed=embed, view=None)
+        except discord.HTTPException:
+            pass
+        await interaction.followup.send(
+            "This warning no longer exists — it may have been nullified. No action was taken.",
+            ephemeral=True,
+        )
+
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
+
+        conn = sqlite3.connect(DB_PATH)
+        exists = conn.execute("SELECT 1 FROM warnings WHERE id = ?", (self.warn_id,)).fetchone() is not None
+        conn.close()
+        if not exists:
+            await self._warning_gone(interaction)
+            return
 
         mod_message = self.message_input.value.strip()
 
@@ -130,11 +157,16 @@ class _WarnAppealResponseModal(discord.ui.Modal):
             # Same removal path =warnremove uses, but tagged so caseLogCog
             # can show this was removed via appeal rather than manually.
             conn = sqlite3.connect(DB_PATH)
-            conn.execute(
+            cur = conn.execute(
                 "UPDATE warnings SET active = 0, removed_via = 'appeal' WHERE id = ?", (self.warn_id,)
             )
             conn.commit()
             conn.close()
+            if cur.rowcount == 0:
+                # Nullified in the narrow window between the existence check
+                # above and this UPDATE — treat it the same as "gone".
+                await self._warning_gone(interaction)
+                return
 
         outcome_field = (
             f"✅ Accepted by {interaction.user}\n{mod_message}"

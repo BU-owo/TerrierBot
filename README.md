@@ -136,6 +136,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=warninfo` / `/warninfo` | Show a user's warning history |
 | `=mywarns` / `/mywarns` | Show your own active warnings |
 | `=warnremove` / `/warnremove` | Remove a warning |
+| `/warnnullify warn_id: reason:` | Permanently and irreversibly delete a warning by ID — unlike `/warnremove`, this can't be undone (mod role required) |
 | `/warnappeal` | Appeal one of your own active warnings — mods accept/reject with a response |
 | `=modlogs` / `/modlogs` | View a member's full moderation case history: warns, kicks, timeouts, bans (mod only) |
 | `=joinpolitics` / `/joinpolitics` | Post the #politics channel application (Politics mod role required) |
