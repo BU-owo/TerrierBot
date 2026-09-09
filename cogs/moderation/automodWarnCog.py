@@ -16,6 +16,49 @@ log = logging.getLogger(__name__)
 SLUR_RULE_NAME_PREFIX = "Slurs Part"
 SLUR_WARN_RULE = 2
 
+# Reason ends up in a Discord embed field (1024-char cap) alongside
+# boilerplate text, so the blocked content itself has to stay well under that.
+_CONTENT_PREVIEW_LIMIT = 300
+
+
+def _alert_jump_link(execution: discord.AutoModAction, rule: discord.AutoModRule) -> str | None:
+    """Best-effort link to view the blocked message in context. A blocked
+    message is never actually sent, so there's normally nothing in the
+    channel to link to — message_id is only populated when the trigger was
+    an edit to an existing (already-sent) message. Otherwise, fall back to
+    the rule's own AutoMod alert-channel post, if the rule has one
+    configured; Discord's alert message quotes the full blocked content."""
+    if execution.message_id is not None and execution.channel_id is not None:
+        return f"https://discord.com/channels/{execution.guild_id}/{execution.channel_id}/{execution.message_id}"
+
+    if execution.alert_system_message_id is not None:
+        alert_channel_id = next(
+            (a.channel_id for a in rule.actions if a.type is discord.AutoModRuleActionType.send_alert_message),
+            None,
+        )
+        if alert_channel_id is not None:
+            return f"https://discord.com/channels/{execution.guild_id}/{alert_channel_id}/{execution.alert_system_message_id}"
+
+    return None
+
+
+def _format_warn_reason(execution: discord.AutoModAction, rule: discord.AutoModRule) -> str:
+    lines = [
+        "Automated warning: TerrierBot's AutoMod slur filter blocked a message from you.",
+    ]
+
+    content = execution.content.strip()
+    if content:
+        preview = content if len(content) <= _CONTENT_PREVIEW_LIMIT else content[:_CONTENT_PREVIEW_LIMIT] + "…"
+        lines.append(f'Blocked message: "{preview}"')
+
+    link = _alert_jump_link(execution, rule)
+    if link:
+        lines.append(f"Context: {link}")
+
+    lines.append("If you believe this is a mistake, you can appeal with /warnappeal.")
+    return "\n".join(lines)
+
 
 async def setup(bot: TerrierBot):
     await bot.add_cog(AutomodWarnCog(bot))
@@ -73,10 +116,7 @@ class AutomodWarnCog(
             user=member,
             moderator=moderator,
             rule=SLUR_WARN_RULE,
-            reason=(
-                "Automated warning: TerrierBot's AutoMod slur filter blocked a message from you. "
-                "If you believe this is a mistake, you can appeal with /warnappeal."
-            ),
+            reason=_format_warn_reason(execution, rule),
         )
 
         channel = execution.channel
