@@ -51,6 +51,31 @@ class UnseriousCog(
 
     # ── Shared helpers ───────────────────────────────────────────────────────
 
+    async def _apply_overwrite(
+        self,
+        *,
+        category: discord.CategoryChannel,
+        member: discord.Member,
+        view_channel: bool | None,
+        reason: str,
+    ) -> None:
+        # Editing only the category's overwrite doesn't propagate to child
+        # channels — that copy-down only happens client-side when a human
+        # edits permissions from the category's settings page in the Discord
+        # app. Doing it here via the API leaves already-"synced" channels
+        # holding a stale overwrite list, which both looks wrong (Discord
+        # flags them "not synced") and can leave the channel still visible
+        # if it already carries its own overwrites for the member's roles.
+        # So set the same overwrite on the category AND every channel in it.
+        if view_channel is None:
+            await category.set_permissions(member, overwrite=None, reason=reason)
+            for channel in category.channels:
+                await channel.set_permissions(member, overwrite=None, reason=reason)
+        else:
+            await category.set_permissions(member, view_channel=view_channel, reason=reason)
+            for channel in category.channels:
+                await channel.set_permissions(member, view_channel=view_channel, reason=reason)
+
     async def _log_action(
         self, *, title: str, member: discord.Member, moderator: discord.abc.User
     ) -> None:
@@ -146,8 +171,9 @@ class UnseriousCog(
                     )
                     return
 
-                await category.set_permissions(
-                    member,
+                await self._apply_overwrite(
+                    category=category,
+                    member=member,
                     view_channel=False,
                     reason=f"Unserious mode enabled by {interaction.user} ({interaction.user.id})",
                 )
@@ -179,9 +205,10 @@ class UnseriousCog(
                     )
                     return
 
-                await category.set_permissions(
-                    member,
-                    overwrite=None,
+                await self._apply_overwrite(
+                    category=category,
+                    member=member,
+                    view_channel=None,
                     reason=f"Unserious mode disabled by {interaction.user} ({interaction.user.id})",
                 )
                 self.enabled_ids.discard(member.id)
