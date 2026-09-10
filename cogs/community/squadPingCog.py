@@ -191,8 +191,41 @@ class SquadPingCog(
 
     # ── /squadpinglist ───────────────────────────────────────────────────────
 
-    @commands.hybrid_command(name="squadpinglist", description="List all squad-ping lists.")
-    async def squadpinglist(self, ctx: Context) -> None:
+    @commands.hybrid_command(name="squadpinglist", description="List all squad-ping lists, or see who's in one.")
+    @app_commands.describe(name="Optional — see this squad's members instead of the full list overview")
+    @app_commands.autocomplete(name=_list_name_autocomplete)
+    async def squadpinglist(self, ctx: Context, name: str | None = None) -> None:
+        if name is not None:
+            key = name.strip().lower()
+            if key not in self.lists:
+                await ctx.send(self._unknown_list_message(key), ephemeral=True)
+                return
+
+            entry = self.lists[key]
+            ids = entry["members"]
+            embed = discord.Embed(
+                title=f"📋 {key}",
+                description=entry["description"] or None,
+                color=discord.Color.blurple(),
+            )
+            if not ids:
+                members_value = "No one has joined yet."
+            else:
+                mentions = [f"<@{uid}>" for uid in ids]
+                members_value = "\n".join(mentions)
+                if len(members_value) > 1024:
+                    shown: list[str] = []
+                    length = 0
+                    for mention in mentions:
+                        if length + len(mention) + 1 > 950:
+                            break
+                        shown.append(mention)
+                        length += len(mention) + 1
+                    members_value = "\n".join(shown) + f"\n…and {len(mentions) - len(shown)} more"
+            embed.add_field(name=f"{len(ids)} member(s)", value=members_value, inline=False)
+            await ctx.send(embed=embed)
+            return
+
         embed = discord.Embed(title="📋 Squad-ping lists", color=discord.Color.blurple())
         if not self.lists:
             embed.description = "No squad-ping lists yet — create one with `/squadpingcreate`."

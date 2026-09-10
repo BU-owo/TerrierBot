@@ -5,10 +5,26 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
+from ..logging.logConfig import LogChannels
 
 STAR_EMOJI = "⭐"
 DEFAULT_THRESHOLD = 3
 LEADERBOARD_SIZE = 10
+
+# "👮Moderation / Logs👮" — blacklisting the whole category covers every mod
+# and log channel in it (including ones with no LogChannels constant, like
+# #moderator-discussion and #ticket-logs) without needing to list each one.
+MOD_LOG_CATEGORY_ID = 1441884565873496177
+
+# Explicitly blacklisted on top of the category above: LogChannels.ANNOUNCE
+# lives in the public Info category (not the mod/log one) but is still a
+# log-purpose channel, and these three are called out by ID directly.
+STARBOARD_BLACKLISTED_CHANNEL_IDS = frozenset({
+    LogChannels.ANNOUNCE,
+    1446304077213597807,
+    1431031698510053427,
+    1528830713682460723,
+})
 
 
 async def setup(bot: TerrierBot):
@@ -113,6 +129,10 @@ class StarboardCog(commands.Cog, name="Starboard", description="Starboard and st
 
         channel = guild.get_channel(channel_id)
         if not isinstance(channel, discord.TextChannel):
+            return
+
+        # Don't star messages from mod/log-only channels
+        if channel.id in STARBOARD_BLACKLISTED_CHANNEL_IDS or channel.category_id == MOD_LOG_CATEGORY_ID:
             return
 
         try:

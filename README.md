@@ -118,7 +118,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `/birthday export` | Export every saved birthday to a text file (mod role required) |
 | `/birthday override` | Set another member's birthday (mod role required) |
 | `=squadpingcreate <name> <description>` / `/squadpingcreate` | Create a new roleless squad-ping list |
-| `=squadpinglist` / `/squadpinglist` | List every squad-ping list with its description and member count |
+| `=squadpinglist` / `/squadpinglist [name]` | List every squad-ping list, or pass a name to see that squad's members without pinging them |
 | `=squadpingmanage <add\|remove> <name>` / `/squadpingmanage` | Join or leave a squad-ping list |
 | `=squadping <name>` / `/squadping` | Ping everyone on a squad-ping list you're a member of (30s per-user cooldown) |
 

@@ -50,8 +50,8 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
             name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Squad Ping ✧",
             value=(
                 "**Make your own group for classes, hobbies, meetups, and more!**\n"
-                "1️⃣ See the squads: `/squadpinglist` or `=squadpinglist`\n"
-                "2️⃣ Join a squad: `/squadpingmanage add <name>` or `=squadpingmanage add <name>`\n"
+                "1️⃣ See the squads: `/squadpinglist` or `=squadpinglist` (add a name to see who's in it)\n"
+                "2️⃣ Join a squad: `/squadpingmanage add <name>` or `=squadpingmanage add <name>` — required before you can ping it\n"
                 "3️⃣ Ping the squad: `/squadping <name>` or `=squadping <name>`\n"
                 "4️⃣ Create your own squad: `/squadpingcreate <name> <description>` or `=squadpingcreate <name> <description>`"
             ),

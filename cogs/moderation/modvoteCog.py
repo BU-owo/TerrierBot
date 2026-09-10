@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 MODVOTE_RESULTS_CHANNEL_ID = LogChannels.MOD
 
 MAX_OPTIONS = 10  # buttons must stay under Discord's 25-component cap
+ABSTAIN_OPTION = "Abstain"  # appended to every vote automatically, not counted toward the outcome
 CHECK_INTERVAL_SECONDS = 45
 
 _DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
@@ -195,10 +196,17 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             f"**{opt}** — {counts[i]} vote(s)" for i, opt in enumerate(options)
         )
 
-        max_count = max(counts) if counts else 0
-        leaders = [options[i] for i, c in enumerate(counts) if c == max_count]
+        # Abstain is tallied and shown above like any other option, but never
+        # decides the outcome — a vote "won" by Abstain isn't an actionable
+        # moderation decision.
+        decisive_counts = [c for i, c in enumerate(counts) if options[i].lower() != ABSTAIN_OPTION.lower()]
+        max_count = max(decisive_counts) if decisive_counts else 0
+        leaders = [
+            options[i] for i, c in enumerate(counts)
+            if c == max_count and options[i].lower() != ABSTAIN_OPTION.lower()
+        ]
         if max_count == 0:
-            outcome = "No votes were cast for any option."
+            outcome = "Everyone abstained — no decisive votes." if total > 0 else "No votes were cast for any option."
         elif len(leaders) > 1:
             outcome = "Tied — no clear outcome, mod judgment required."
         else:
@@ -285,7 +293,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
     @modvote.command(name="start", description="Start an anonymous mod vote on disciplining a member.")
     @app_commands.describe(
         target="The member the vote concerns",
-        options="Comma-separated choices, e.g. \"Warn, Timeout, No action\"",
+        options="Comma-separated choices, e.g. \"Warn, Timeout, No action\" — an Abstain option is added automatically",
         duration_minutes="How long the vote stays open, in minutes",
     )
     async def modvote_start(
@@ -303,15 +311,22 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
 
         parsed_options = [o.strip() for o in options.split(",")]
         parsed_options = [o for o in parsed_options if o]
+        # Abstain is added automatically below — drop a redundant one the mod
+        # may have typed themselves rather than ending up with two.
+        parsed_options = [o for o in parsed_options if o.lower() != ABSTAIN_OPTION.lower()]
         if len(parsed_options) < 2:
             await interaction.followup.send("Provide at least two comma-separated options.", ephemeral=True)
             return
-        if len(parsed_options) > MAX_OPTIONS:
-            await interaction.followup.send(f"Too many options — max {MAX_OPTIONS}.", ephemeral=True)
+        if len(parsed_options) > MAX_OPTIONS - 1:
+            await interaction.followup.send(
+                f"Too many options — max {MAX_OPTIONS - 1} (an \"{ABSTAIN_OPTION}\" option is added automatically).",
+                ephemeral=True,
+            )
             return
         if duration_minutes < 1:
             await interaction.followup.send("Duration must be at least 1 minute.", ephemeral=True)
             return
+        parsed_options.append(ABSTAIN_OPTION)
 
         channel = interaction.channel
         ch_key = str(channel.id)
