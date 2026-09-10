@@ -91,13 +91,16 @@ class UnseriousCog(
             ]
 
         current_lower = current.lower()
-        choices = []
-        for member in candidates:
-            if current_lower in member.display_name.lower():
-                choices.append(app_commands.Choice(name=member.display_name, value=str(member.id)))
-            if len(choices) >= 25:
-                break
-        return choices
+        matches = [m for m in candidates if current_lower in m.display_name.lower()]
+        # Prefix matches first (most likely what the searcher means), then
+        # alphabetical — otherwise a common search term fills all 25 slots
+        # with whatever order guild.members happens to be cached in before
+        # the person being searched for is ever reached.
+        matches.sort(key=lambda m: (not m.display_name.lower().startswith(current_lower), m.display_name.lower()))
+        return [
+            app_commands.Choice(name=member.display_name, value=str(member.id))
+            for member in matches[:25]
+        ]
 
     @app_commands.command(name="unserious", description="Toggle a user's access to the Serious category (mod only)")
     @app_commands.describe(mode="enable or disable", user="The user to toggle Unserious mode for")
