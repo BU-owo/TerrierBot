@@ -89,7 +89,12 @@ class SquadPingCog(
     ) -> list[app_commands.Choice[str]]:
         current_lower = current.strip().lower()
         matches = sorted(name for name in self.lists if current_lower in name.lower())
-        return [app_commands.Choice(name=name, value=name) for name in matches[:25]]
+        choices = []
+        for name in matches[:25]:
+            description = self.lists[name]["description"]
+            label = f"{name} — {description}" if description else name
+            choices.append(app_commands.Choice(name=label[:100], value=name))
+        return choices
 
     async def _join(self, ctx: Context, key: str) -> None:
         ids = self.lists[key]["members"]
@@ -135,6 +140,12 @@ class SquadPingCog(
         key = name.strip().lower()
         if key not in self.lists:
             await ctx.send(self._unknown_list_message(key), ephemeral=True)
+            return
+        if ctx.author.id not in self.lists[key]["members"]:
+            await ctx.send(
+                f"You need to be in that squad to ping it! Join with `/squadpingmanage add {key}`.",
+                ephemeral=True,
+            )
             return
         await self._ping(ctx, key)
 
