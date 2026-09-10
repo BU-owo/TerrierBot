@@ -39,13 +39,21 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
                 "🚋 `=mbta` / `/mbta` — check how far Green Line trains are from a station (leave blank for the BU stops)\n"
                 "🌈 `=mbtgay` / `/mbtgay` — track down the MBTA Pride Train (car #3706), if it's out riding today\n"
                 "📣 `/pingrole` — ping one of our community roles — events, food, gaming, and more — with a message\n"
-                "🏓 `=squadpingcreate` / `/squadpingcreate` — create your own roleless squad-ping list\n"
-                "🙋 `=squadpingmanage` / `/squadpingmanage` — join or leave a squad-ping list\n"
-                "📣 `=squadping` / `/squadping` — ping everyone on a squad-ping list\n"
-                "📋 `=squadpinglist` / `/squadpinglist` — see every squad-ping list and how many people are on each\n"
                 "🔒 `=lockin` / `/lockin` — lock yourself out of the server for a set time to focus (can't be undone early)\n"
                 "⏳ `=lockinleft` / `/lockinleft` — check how much time is left on your lock-in\n"
                 "🥰 `=uwu` / `/uwu` — uwu-ify your own message"
+            ),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Squad Ping ✧",
+            value=(
+                "**Make your own group for classes, hobbies, meetups, and more!**\n"
+                "1️⃣ See the squads: `/squadpinglist` or `=squadpinglist`\n"
+                "2️⃣ Join a squad: `/squadpingmanage add <name>` or `=squadpingmanage add <name>`\n"
+                "3️⃣ Ping the squad: `/squadping <name>` or `=squadping <name>`\n"
+                "4️⃣ Create your own squad: `/squadpingcreate <name> <description>` or `=squadpingcreate <name> <description>`"
             ),
             inline=False,
         )

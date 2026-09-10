@@ -143,7 +143,7 @@ class SquadPingCog(
             return
         if ctx.author.id not in self.lists[key]["members"]:
             await ctx.send(
-                f"You need to be in that squad to ping it! Join with `/squadpingmanage add {key}`.",
+                f"You need to be in that squad to ping it! Join with `=squadpingmanage add {key}`",
                 ephemeral=True,
             )
             return
