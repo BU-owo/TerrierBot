@@ -4,8 +4,11 @@ from discord.ext import commands
 import sqlite3
 import os
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
+
+EASTERN = ZoneInfo("America/New_York")
 
 DB_DIR = os.path.expanduser("~/terrierbot_data")
 DB_PATH = os.path.join(DB_DIR, "warnings.db")
@@ -272,7 +275,7 @@ class WarningsCog(commands.Cog):
 
         embed = discord.Embed(title=f"Warning history — {user.display_name}", color=discord.Color.orange())
         for warn_id, rule, reason, warned_at, active in rows:
-            date_str = datetime.fromisoformat(warned_at).strftime("%Y-%m-%d")
+            date_str = datetime.fromisoformat(warned_at).astimezone(EASTERN).strftime("%Y-%m-%d")
             status_str = "Active" if active else "Removed"
             embed.add_field(
                 name=f"#{warn_id} — Rule {rule} ({date_str})",
@@ -298,7 +301,7 @@ class WarningsCog(commands.Cog):
 
         embed = discord.Embed(title="Your active warnings", color=discord.Color.orange())
         for warn_id, rule, reason, warned_at in rows:
-            date_str = datetime.fromisoformat(warned_at).strftime("%Y-%m-%d")
+            date_str = datetime.fromisoformat(warned_at).astimezone(EASTERN).strftime("%Y-%m-%d")
             embed.add_field(
                 name=f"#{warn_id} — Rule {rule}: {RULES.get(rule, 'Unknown')} ({date_str})",
                 value=reason,

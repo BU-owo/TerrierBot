@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from .warningsCog import DB_PATH, RULES
+from .warningsCog import DB_PATH, EASTERN, RULES
 from ..logging.logConfig import LogChannels, MOD_ROLE_ID, user_line
 
 
@@ -84,7 +84,7 @@ class _WarnSelect(discord.ui.Select):
         self._by_id = {w[0]: w for w in warnings}
         options = []
         for warn_id, rule, reason, warned_at, _moderator_id in warnings:
-            date_str = datetime.fromisoformat(warned_at).strftime("%Y-%m-%d")
+            date_str = datetime.fromisoformat(warned_at).astimezone(EASTERN).strftime("%Y-%m-%d")
             rule_name = RULES.get(rule, "Unknown rule")
             options.append(
                 discord.SelectOption(
