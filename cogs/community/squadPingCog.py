@@ -204,7 +204,7 @@ class SquadPingCog(
                     value=f"{entry['description'] or '*No description*'}\n{len(entry['members'])} member(s)",
                     inline=False,
                 )
-        await ctx.send(embed=embed, ephemeral=True)
+        await ctx.send(embed=embed)
 
     # ── /squadpingmanage ─────────────────────────────────────────────────────
 
