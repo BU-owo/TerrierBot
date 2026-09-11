@@ -1,8 +1,12 @@
 import csv
 import io
+from zoneinfo import ZoneInfo
+
 import discord
 from discord.ext import commands
 from bot import TerrierBot, Context
+
+EASTERN = ZoneInfo("America/New_York")
 
 
 def _normalize_role_name(value: str) -> str:
@@ -54,7 +58,7 @@ class MembersCog(commands.Cog, name="Members", description="Member exports and m
 
         async for member in ctx.guild.fetch_members(limit=None):
             roles = [r.name for r in member.roles if r.name != "@everyone"]
-            joined = member.joined_at.strftime("%Y-%m-%d %H:%M:%S") if member.joined_at else ""
+            joined = member.joined_at.astimezone(EASTERN).strftime("%Y-%m-%d %H:%M:%S") if member.joined_at else ""
             writer.writerow([
                 member.name,
                 member.global_name or "",
@@ -97,7 +101,7 @@ class MembersCog(commands.Cog, name="Members", description="Member exports and m
             if not (has_no_extra_roles or has_only_prune_role):
                 continue
 
-            joined = member.joined_at.strftime("%Y-%m-%d %H:%M:%S") if member.joined_at else ""
+            joined = member.joined_at.astimezone(EASTERN).strftime("%Y-%m-%d %H:%M:%S") if member.joined_at else ""
             writer.writerow([
                 member.name,
                 member.global_name or "",
@@ -153,7 +157,7 @@ class MembersCog(commands.Cog, name="Members", description="Member exports and m
             }
 
             joined = (
-                member.joined_at.strftime("%Y-%m-%d %H:%M:%S (%A)")
+                member.joined_at.astimezone(EASTERN).strftime("%Y-%m-%d %H:%M:%S (%A)")
                 if member.joined_at
                 else ""
             )

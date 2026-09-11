@@ -17,10 +17,28 @@ import asyncio
 import aiohttp
 import shelve
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from cogs.logging.logConfig import LogChannels, MOD_ROLE_ID
 
-logging.basicConfig(level=logging.INFO)
+# Eastern time (auto-handles EST/EDT) — every log line and any timestamp text
+# shown to users should be in this zone rather than the host's local time
+# (which may be UTC or anything else depending on where the bot is deployed).
+EASTERN = ZoneInfo("America/New_York")
+
+
+class _EasternFormatter(logging.Formatter):
+    """logging.Formatter that renders %(asctime)s in US Eastern time
+    (EST/EDT) regardless of the host machine's own timezone."""
+
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
+        dt = datetime.fromtimestamp(record.created, EASTERN)
+        return dt.strftime(datefmt) if datefmt else dt.strftime("%Y-%m-%d %H:%M:%S %Z")
+
+
+_log_handler = logging.StreamHandler()
+_log_handler.setFormatter(_EasternFormatter("%(asctime)s %(levelname)s:%(name)s:%(message)s"))
+logging.basicConfig(level=logging.INFO, handlers=[_log_handler])
 
 ERROR_CHANNEL_ID = LogChannels.DOOMER
 STATUS_ROLE_ID = MOD_ROLE_ID
@@ -144,7 +162,7 @@ class TerrierBot(commands.Bot):
 
     def _record_recent_error(self, *, category: str, affected: str, error: BaseException) -> None:
         entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "timestamp": datetime.now(EASTERN).strftime("%Y-%m-%d %H:%M:%S %Z"),
             "category": category,
             "affected": affected,
             "error": self._redact_secrets(f"{type(error).__name__}: {error}"),
@@ -184,7 +202,7 @@ class TerrierBot(commands.Bot):
         repeat_count: int,
         high_priority: bool,
     ) -> str:
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(EASTERN).strftime("%Y-%m-%d %H:%M:%S %Z")
         safe_error = self._redact_secrets(f"{type(error).__name__}: {error}")
         safe_tb = self._redact_secrets(tb_text)
         if len(safe_tb) > 1400:
@@ -197,7 +215,7 @@ class TerrierBot(commands.Bot):
 
         return (
             f"🚨 TerrierBot {priority_label}\n"
-            f"Timestamp (UTC): {timestamp}\n"
+            f"Timestamp (ET): {timestamp}\n"
             f"Category: {category}\n"
             f"Affected: {affected}\n"
             f"Git commit: {self._commit_hash}\n"
@@ -608,7 +626,11 @@ async def status_command(interaction: discord.Interaction) -> None:
     embed.add_field(name="Uptime % (UptimeRobot)", value=uptime_display, inline=False)
     embed.add_field(name="Git Commit", value=bot._commit_hash, inline=True)
     embed.add_field(name="Python", value=sys.version.split()[0], inline=True)
-    embed.add_field(name="Last Restart (UTC)", value=bot._started_at.isoformat(timespec="seconds"), inline=False)
+    embed.add_field(
+        name="Last Restart (ET)",
+        value=bot._started_at.astimezone(EASTERN).strftime("%Y-%m-%d %H:%M:%S %Z"),
+        inline=False,
+    )
     embed.add_field(name="Loaded Cogs", value=loaded_display[:1024], inline=False)
     embed.add_field(name="Recent Errors", value=(recent_display[:1021] + "...") if len(recent_display) > 1024 else recent_display, inline=False)
 
@@ -723,8 +745,8 @@ async def listCogs(ctx : Context):
 #============================================
 #Make bot go
 #============================================
-cogList = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.end", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday", "community.classChat", "moderation.automodWarn", "moderation.unserious", "community.softPing", "utility.help"]
-defaultCogs = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday", "community.classChat", "moderation.automodWarn", "moderation.unserious", "community.softPing", "utility.help"]
+cogList = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "campus.end", "campus.start", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday", "community.classChat", "moderation.automodWarn", "moderation.unserious", "community.squadPing", "utility.help"]
+defaultCogs = ["utility.test", "community.hello", "community.love", "community.boost", "community.positivity", "utility.members", "community.banner", "community.reaction", "campus.rmp", "campus.class", "utility.embed", "community.starboard", "community.towoken", "campus.club", "campus.mbta", "moderation.scamImage", "community.feedback", "community.pingrole", "community.troll", "moderation.warnings", "community.roleboost", "moderation.ticket", "community.lockin", "logging.joinLeave", "logging.memberLog", "logging.serverLog", "logging.messageLog", "logging.modLog", "community.leavePolitics", "community.joinPolitics", "moderation.modvote", "moderation.lockdown", "logging.caseLog", "moderation.modCommands", "moderation.purge", "moderation.timeout", "moderation.ban", "moderation.kick", "moderation.snitch", "community.reactionRole", "moderation.appealServer", "moderation.warnAppeal", "moderation.hardmute", "community.birthday", "community.classChat", "moderation.automodWarn", "moderation.unserious", "community.squadPing", "utility.help"]
 
 
 def _get_token() -> str:

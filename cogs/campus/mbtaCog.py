@@ -3,6 +3,7 @@ from __future__ import annotations
 import difflib
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import aiohttp
 import discord
@@ -10,6 +11,8 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
+
+EASTERN = ZoneInfo("America/New_York")
 
 MBTA_PREDICTIONS_URL = "https://api-v3.mbta.com/predictions"
 MBTA_SCHEDULES_URL = "https://api-v3.mbta.com/schedules"
@@ -671,7 +674,7 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
                 inline=False,
             )
 
-        now_local = datetime.now().strftime("%I:%M %p").lstrip("0")
+        now_local = datetime.now(EASTERN).strftime("%I:%M %p").lstrip("0")
         embed.set_footer(text=f"Source: MBTA v3 API • Updated {now_local}")
         return embed
 
@@ -746,7 +749,7 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
                 inline=False,
             )
 
-        now_local = datetime.now().strftime("%I:%M %p").lstrip("0")
+        now_local = datetime.now(EASTERN).strftime("%I:%M %p").lstrip("0")
         embed.set_footer(text=f"Source: MBTA v3 API • Updated {now_local}")
         return embed
 
