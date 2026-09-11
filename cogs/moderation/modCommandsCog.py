@@ -15,7 +15,7 @@ from ..logging.logConfig import LogColors, MOD_ROLE_ID
 _FIELDS = [
     (
         "📋 Case History",
-        "`=modlogs <member_or_id>` / `/modlogs`",
+        "`=modlogs <member>` / `/modlogs`",
         "Check a member's full history (warns, kicks, timeouts, hardmutes, bans) before deciding how to escalate.",
     ),
     (

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
@@ -35,8 +34,6 @@ CASE_LABELS = {
 }
 _UNKNOWN_CASE_EMOJI = "•"
 _REASON_MAX_LEN = 60
-
-_MENTION_RE = re.compile(r"^<@!?(\d+)>$")
 
 
 def _init_db() -> None:
@@ -143,32 +140,6 @@ def _fetch_warnings(user_id: int) -> list[dict]:
             }
         )
     return entries
-
-
-def _parse_user_id(raw: str) -> int | None:
-    raw = raw.strip()
-    match = _MENTION_RE.match(raw)
-    if match:
-        raw = match.group(1)
-    return int(raw) if raw.isdigit() else None
-
-
-def _resolve_target(guild: discord.Guild, raw: str) -> tuple[int, discord.Member | None] | None:
-    """Resolve a mention, raw ID, or username to (user_id, member-or-None)."""
-    user_id = _parse_user_id(raw)
-    if user_id is not None:
-        return user_id, guild.get_member(user_id)
-
-    needle = raw.strip().lower()
-    if not needle:
-        return None
-    for member in guild.members:
-        if member.name.lower() == needle or member.display_name.lower() == needle:
-            return member.id, member
-    for member in guild.members:
-        if needle in member.name.lower() or needle in member.display_name.lower():
-            return member.id, member
-    return None
 
 
 def _format_entry(entry: dict) -> str:
@@ -304,23 +275,13 @@ class CaseLogCog(
     @commands.hybrid_command(
         name="modlogs", description="View a member's full moderation case history."
     )
-    @app_commands.describe(member_or_id="Member mention, user ID, or username")
-    async def modlogs(self, ctx: Context, *, member_or_id: str):
+    @app_commands.describe(member="Member to look up")
+    async def modlogs(self, ctx: Context, member: discord.Member):
         if not await self._require_mod(ctx):
             return
-        guild = ctx.guild
-        if guild is None:
-            await ctx.send("This command can only be used in a server.", ephemeral=True)
-            return
 
-        resolved = _resolve_target(guild, member_or_id)
-        if resolved is None:
-            await ctx.send(f"Couldn't find a member matching `{member_or_id}`.", ephemeral=True)
-            return
-        user_id, member = resolved
-
-        target_display = member.mention if member else f"<@{user_id}>"
-        target_line = f"{target_display} (`{user_id}`)"
+        user_id = member.id
+        target_line = f"{member.mention} (`{user_id}`)"
 
         entries = sorted(
             _fetch_cases(user_id) + _fetch_warnings(user_id),
