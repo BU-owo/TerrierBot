@@ -10,7 +10,7 @@ TerrierBot currently supports:
 - BU club discovery through `club`
 - RateMyProfessors lookups through `rmp`
 - Live MBTA Green Line ETA checks through `mbta`, plus MBTA Pride Train (car #3706) tracking through `mbtgay`
-- Community features such as `hello`, `love`, `banner`, `boost`, and `pride`
+- Community features such as `hello`, `goodbye`, `love`, `banner`, `boost`, and `pride`
 - Anonymous feedback and moderation tools such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
 - A shared moderation case log across kicks, timeouts, and bans, viewable per-member with `modlogs`
 - Server management features such as the starboard, Positivity Tuesday automation, ping roles, and preset reaction roles through `reactionrole`
@@ -103,6 +103,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | Command | Description |
 | --- | --- |
 | `=hello` / `/hello` | Say hello to the bot |
+| `=goodbye` / `/goodbye` | Say goodbye to the bot |
 | `=love` / `/love` | Share some Terrier love |
 | `=banner` / `/banner` | Learn about banner submissions |
 | `=boost` / `/boost` | See server boost perks |

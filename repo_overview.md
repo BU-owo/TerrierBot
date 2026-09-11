@@ -22,6 +22,7 @@ Format: `path — description — commands — loaded?`. "Loaded?" reflects `bot
 - **birthdayCog.py** (`community.birthday`, `"Birthday"`) — self-service birthday tracking, auto role assign/remove, daily announcement, mod export/override. Hybrid group `birthday`: `set`, `get`, `remove`, `nearest`, `export` (mod), `override` (mod). **In defaultCogs.**
 - **boostCog.py** (`community.boost`, `"Boost"`) — announces server boosts, lists booster perks. `=boost` / `/boost`. **In defaultCogs.**
 - **feedbackCog.py** (`community.feedback`, `"Feedback"`) — anonymous feedback via persistent button+modal to mod queue. `=feedbacksetup` / `/feedbacksetup` (Manage Server). **In defaultCogs.**
+- **goodbyeCog.py** (`community.goodbye`, `"Goodbye"`) — trivial farewell, mirrors helloCog. `=goodbye` / `/goodbye`. **In defaultCogs.**
 - **helloCog.py** (`community.hello`, `"Hello"`) — trivial greeting. `=hello` / `/hello`. **In defaultCogs.**
 - **joinPoliticsCog.py** (`community.joinPolitics`, `"JoinPolitics"`) — application flow (button→modal→mod approve/deny) for #politics access. `=joinpolitics` / `/joinpolitics` (mod-only, posts the start embed). **In defaultCogs.**
 - **leavePoliticsCog.py** (`community.leavePolitics`, `"LeavePoliticsCog"`) — voluntary leave-#politics confirm/cancel flow. `=leavepolitics` / `/leavepolitics`. **In defaultCogs.**
