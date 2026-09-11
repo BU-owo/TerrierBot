@@ -11,7 +11,6 @@ PINGROLES = {
     1425108753086287903: ("StudyBuddy", "ping this when you are studying and don't want to be alone"),
     1458528619482710047: ("MC", "ping this to invite others to play Minecraft"),
     1475971319366549534: ("Val", "ping this to invite others to play Valorant"),
-    1503410327352508587: ("SummerLocal", "ping to hang out with people over the summer"),
 }
 
 
