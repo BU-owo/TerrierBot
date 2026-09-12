@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import os
 import shelve
 import sqlite3
@@ -118,20 +117,29 @@ class ModTrackerCog(
             entry["last"] = ("warn", warned_at)
         return result
 
-    def _build_report(self) -> list[str]:
+    def _build_report_embeds(self) -> list[discord.Embed]:
         case_data = self._query_case_actions()
         warn_data = self._query_warn_actions()
 
         all_mod_ids = set(case_data) | set(warn_data) | {int(k) for k in self.message_counts}
 
+        embed = discord.Embed(
+            title="Mod Activity Report",
+            description=(
+                "Action counts are retroactive. Message counts only cover "
+                "activity since this tracker went live."
+            ),
+            color=discord.Color.blurple(),
+            timestamp=datetime.now(timezone.utc),
+        )
+
         if not all_mod_ids:
-            return ["No mod activity found yet — no case log, warning, or message data."]
+            embed.description += "\n\nNo mod activity found yet."
+            return [embed]
 
-        lines: list[str] = []
-        for mod_id in sorted(all_mod_ids):
-            user = self.bot.get_user(mod_id)
-            display = f"{user}" if user else f"User ID {mod_id}"
-
+        # Rank by total logged actions, most active first.
+        rows: list[tuple[int, str, str, str]] = []
+        for mod_id in all_mod_ids:
             counts: defaultdict[str, int] = defaultdict(int)
             last: tuple[str, str] | None = None
             for source in (case_data.get(mod_id), warn_data.get(mod_id)):
@@ -143,19 +151,46 @@ class ModTrackerCog(
                     if last is None or source["last"][1] > last[1]:
                         last = source["last"]
 
+            total = sum(counts.values())
             action_summary = ", ".join(f"{v} {k}" for k, v in sorted(counts.items())) or "no logged actions"
-            last_summary = f"{last[0]} at {last[1]}" if last else "none"
+
+            last_summary = "none"
+            if last is not None:
+                action_type, raw_ts = last
+                try:
+                    unix_ts = int(datetime.fromisoformat(raw_ts).timestamp())
+                    last_summary = f"{action_type} <t:{unix_ts}:R>"
+                except ValueError:
+                    last_summary = f"{action_type} at {raw_ts}"
 
             msg_entry = self.message_counts.get(str(mod_id), {"category": 0, "rest": 0})
-
-            lines.append(
-                f"**{display}** (`{mod_id}`)\n"
-                f"Actions: {action_summary}\n"
-                f"Most recent action: {last_summary}\n"
-                f"Messages — tracked category: {msg_entry.get('category', 0)}, "
-                f"rest of server: {msg_entry.get('rest', 0)}\n"
+            msg_total = msg_entry.get("category", 0) + msg_entry.get("rest", 0)
+            msg_summary = (
+                f"{msg_entry.get('category', 0)} in category, {msg_entry.get('rest', 0)} elsewhere"
+                if msg_total
+                else "none tracked yet"
             )
-        return lines
+
+            user = self.bot.get_user(mod_id)
+            display = f"{user}" if user else f"User ID {mod_id}"
+
+            field_value = f"{action_summary}\nLast: {last_summary}\nMessages: {msg_summary}"
+            rows.append((total, display, str(mod_id), field_value))
+
+        rows.sort(key=lambda r: r[0], reverse=True)
+
+        embeds = [embed]
+        current = embed
+        field_count = 0
+        for _total, display, mod_id, field_value in rows:
+            if field_count >= 25:
+                current = discord.Embed(color=discord.Color.blurple())
+                embeds.append(current)
+                field_count = 0
+            current.add_field(name=f"{display} ({mod_id})", value=field_value, inline=False)
+            field_count += 1
+
+        return embeds
 
     # ── Command ──────────────────────────────────────────────────────────
 
@@ -163,23 +198,7 @@ class ModTrackerCog(
     @commands.is_owner()
     async def modtracker(self, ctx: Context):
         """Owner only. DMs a report of mod action and message activity."""
-        lines = self._build_report()
-
-        header = (
-            f"**Mod Activity Report** — generated {datetime.now(timezone.utc).isoformat(timespec='seconds')}\n"
-            f"Action counts are retroactive (from casedb.sqlite3 / warnings.db). "
-            f"Message counts only cover activity since this tracker went live.\n\n"
-        )
-
-        chunks: list[str] = []
-        current = header
-        for line in lines:
-            if len(current) + len(line) > 1900:
-                chunks.append(current)
-                current = ""
-            current += line + "\n"
-        if current:
-            chunks.append(current)
+        embeds = self._build_report_embeds()
 
         # Delete the invoking message first regardless of DM outcome — it
         # should never sit visible in-channel either way.
@@ -189,10 +208,11 @@ class ModTrackerCog(
             pass
 
         try:
-            for chunk in chunks:
-                await ctx.author.send(chunk)
+            # Discord allows up to 10 embeds per message.
+            for i in range(0, len(embeds), 10):
+                await ctx.author.send(embeds=embeds[i : i + 10])
         except (discord.Forbidden, discord.HTTPException):
             # No ephemeral option exists for a prefix-only command, and this
             # command must not surface anything in-channel — so a failed DM
-            # (e.g. DMs closed) just logs server-side instead.
-            logging.warning("modtracker: failed to DM report to %s (%d)", ctx.author, ctx.author.id)
+            # just fails silently.
+            pass

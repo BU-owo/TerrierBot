@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 from bot import Context, TerrierBot
+from ..logging.caseLogCog import record_case
 from ..logging.logConfig import LogChannels, get_log_channel, register_queue_item, resolve_queue_item
 from cogs.logging.logConfig import MOD_ROLE_ID
 
@@ -204,6 +205,18 @@ async def _handle_decision(interaction: discord.Interaction, applicant_id: int, 
         await interaction.response.edit_message(embed=embed, view=None)
     except discord.HTTPException:
         pass
+
+    try:
+        record_case(
+            user_id=applicant_id,
+            moderator_id=reviewer.id,
+            case_type="politics_approve" if approved else "politics_deny",
+            reason=None,
+        )
+    except Exception:
+        log.exception(
+            "joinPoliticsCog: failed to record case log entry for politics decision on %d", applicant_id
+        )
 
     guild = interaction.guild
     if guild is None:

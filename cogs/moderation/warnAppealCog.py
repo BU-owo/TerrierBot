@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import sqlite3
 from datetime import datetime
@@ -10,6 +11,7 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from .warningsCog import DB_PATH, EASTERN, RULES
+from ..logging.caseLogCog import record_case
 from ..logging.logConfig import LogChannels, MOD_ROLE_ID, register_queue_item, resolve_queue_item, user_line
 
 
@@ -169,6 +171,18 @@ class _WarnAppealResponseModal(discord.ui.Modal):
                 # above and this UPDATE — treat it the same as "gone".
                 await self._warning_gone(interaction)
                 return
+
+        try:
+            record_case(
+                user_id=self.appellant_id,
+                moderator_id=interaction.user.id,
+                case_type="warn_appeal_accept" if self.approve else "warn_appeal_reject",
+                reason=mod_message,
+            )
+        except Exception:
+            logging.exception(
+                "Failed to record case log entry for warn appeal decision on warning %s", self.warn_id
+            )
 
         resolve_queue_item(self.original_message.id)
         outcome_field = (
