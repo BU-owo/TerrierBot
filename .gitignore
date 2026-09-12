@@ -9,6 +9,7 @@ data/scam_hashes.json
 data/modvotes.json
 data/tempbans.json
 data/softpings.json
+data/mod_queue_reminders.json
 sheets_service_account.json
 .DS_Store
 sheets_service_account.json

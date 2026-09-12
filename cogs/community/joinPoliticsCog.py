@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from ..logging.logConfig import LogChannels, get_log_channel
+from ..logging.logConfig import LogChannels, get_log_channel, register_queue_item, resolve_queue_item
 from cogs.logging.logConfig import MOD_ROLE_ID
 
 log = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ async def _post_application_for_review(applicant: discord.Member) -> None:
         return
 
     try:
-        await channel.send(
+        queue_message = await channel.send(
             content=applicant.mention,
             embed=embed,
             view=view,
@@ -78,6 +78,9 @@ async def _post_application_for_review(applicant: discord.Member) -> None:
         )
     except discord.HTTPException:
         log.exception("joinPoliticsCog: failed to post application review message")
+        return
+
+    register_queue_item(message_id=queue_message.id, channel_id=channel.id)
 
 
 # ── Application modal (native radio-button questions) ───────────────────────
@@ -182,6 +185,9 @@ async def _handle_decision(interaction: discord.Interaction, applicant_id: int, 
             "This application has already been handled.", ephemeral=True
         )
         return
+
+    if message is not None:
+        resolve_queue_item(message.id)
 
     embed = message.embeds[0] if message and message.embeds else None
     if embed is not None:

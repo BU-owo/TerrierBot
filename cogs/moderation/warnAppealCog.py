@@ -10,7 +10,7 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from .warningsCog import DB_PATH, EASTERN, RULES
-from ..logging.logConfig import LogChannels, MOD_ROLE_ID, user_line
+from ..logging.logConfig import LogChannels, MOD_ROLE_ID, register_queue_item, resolve_queue_item, user_line
 
 
 def _is_mod(user: discord.abc.User) -> bool:
@@ -64,7 +64,7 @@ class _WarnAppealTextModal(discord.ui.Modal, title="Appeal Warning"):
         )
 
         try:
-            await log_channel.send(
+            queue_message = await log_channel.send(
                 embed=embed,
                 view=_build_decision_view(warn_id, interaction.user.id),
                 allowed_mentions=discord.AllowedMentions.none(),
@@ -76,6 +76,7 @@ class _WarnAppealTextModal(discord.ui.Modal, title="Appeal Warning"):
             )
             return
 
+        register_queue_item(message_id=queue_message.id, channel_id=log_channel.id)
         await interaction.followup.send("Your appeal has been sent to the moderators.", ephemeral=True)
 
 
@@ -126,6 +127,7 @@ class _WarnAppealResponseModal(discord.ui.Modal):
         nullified via /warnnullify after the appeal was posted but before a
         mod acted on it. Without this, an accept silently no-ops its UPDATE
         and still tells everyone the appeal succeeded."""
+        resolve_queue_item(self.original_message.id)
         field_value = "⚠️ This warning no longer exists — it may have been nullified. No action was taken."
         if self.original_message.embeds:
             embed = self.original_message.embeds[0]
@@ -168,6 +170,7 @@ class _WarnAppealResponseModal(discord.ui.Modal):
                 await self._warning_gone(interaction)
                 return
 
+        resolve_queue_item(self.original_message.id)
         outcome_field = (
             f"✅ Accepted by {interaction.user}\n{mod_message}"
             if self.approve
@@ -237,6 +240,21 @@ async def _handle_decision_click(
             "Couldn't find the original appeal message.", ephemeral=True
         )
         return
+
+    if not approve:
+        # The issuing mod can still Accept their own warning's appeal, but
+        # not Reject it — that call needs a second, less-invested set of eyes.
+        conn = sqlite3.connect(DB_PATH)
+        row = conn.execute("SELECT moderator_id FROM warnings WHERE id = ?", (warn_id,)).fetchone()
+        conn.close()
+        if row is not None and row[0] == interaction.user.id:
+            await interaction.response.send_message(
+                "You can't reject the appeal for a warning you issued yourself — "
+                "another moderator needs to review this one.",
+                ephemeral=True,
+            )
+            return
+
     await interaction.response.send_modal(
         _WarnAppealResponseModal(
             warn_id, appellant_id, approve=approve, original_message=interaction.message

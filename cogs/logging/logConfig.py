@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import time
 from datetime import timedelta
 
@@ -193,3 +195,75 @@ def get_purger(message_id: int) -> int | None:
     if (now - ts) > _PURGE_TTL_SECONDS:
         return None
     return deleter_id
+
+
+# ── Mod-queue stale-item reminder ────────────────────────────────────────────
+# Any cog that posts an actionable item to LogChannels.QUEUE — something a mod
+# must approve/deny/accept/reject (warn appeals, ban appeals, politics
+# applications, and any future addition) — registers it here right after
+# posting, and resolves it the moment a decision is made. Unlike the
+# suppression registries above, this has to survive a restart (a mod could be
+# sitting on a decision for most of the hour), so it's backed by a small JSON
+# file rather than just an in-memory dict — same pattern as modvoteCog's
+# modvotes.json. ModQueueReminderCog owns the periodic scan (see
+# cogs/logging/modQueueReminderCog.py) and pings the mod role, once, for
+# anything still unresolved an hour after it was registered.
+
+_QUEUE_ITEMS_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "mod_queue_reminders.json"
+)
+STALE_QUEUE_ITEM_SECONDS = 60 * 60  # 1 hour
+
+
+def _load_queue_items() -> dict[str, dict]:
+    if not os.path.exists(_QUEUE_ITEMS_FILE):
+        return {}
+    with open(_QUEUE_ITEMS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_queue_items(items: dict[str, dict]) -> None:
+    os.makedirs(os.path.dirname(_QUEUE_ITEMS_FILE), exist_ok=True)
+    with open(_QUEUE_ITEMS_FILE, "w", encoding="utf-8") as f:
+        json.dump(items, f, indent=2)
+
+
+def register_queue_item(*, message_id: int, channel_id: int) -> None:
+    """Call right after successfully posting an actionable item to the mod
+    queue, with the id of the message that was posted (the one carrying the
+    decision buttons)."""
+    items = _load_queue_items()
+    items[str(message_id)] = {
+        "channel_id": channel_id,
+        "posted_ts": int(time.time()),
+        "reminded": False,
+    }
+    _save_queue_items(items)
+
+
+def resolve_queue_item(message_id: int) -> None:
+    """Call the moment a decision is made (approve/deny/accept/reject, or the
+    item becomes moot, e.g. its underlying warning was nullified) — stops the
+    stale-item reminder from ever firing for this item."""
+    items = _load_queue_items()
+    if items.pop(str(message_id), None) is not None:
+        _save_queue_items(items)
+
+
+def get_stale_queue_items(now_ts: int) -> list[tuple[int, int]]:
+    """Returns (message_id, channel_id) for every registered item posted more
+    than an hour ago that hasn't been resolved or already reminded about —
+    and marks them reminded, so this only ever fires once per item."""
+    items = _load_queue_items()
+    stale: list[tuple[int, int]] = []
+    changed = False
+    for key, entry in items.items():
+        if entry.get("reminded"):
+            continue
+        if now_ts - entry["posted_ts"] >= STALE_QUEUE_ITEM_SECONDS:
+            stale.append((int(key), entry["channel_id"]))
+            entry["reminded"] = True
+            changed = True
+    if changed:
+        _save_queue_items(items)
+    return stale

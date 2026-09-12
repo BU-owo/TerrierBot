@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from ..logging.caseLogCog import record_case
-from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID
+from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, register_queue_item, resolve_queue_item
 
 # Dedicated appeals server — TerrierBot is a member of both this and the main
 # Terrier Hub server, so a banned user can still interact with the button
@@ -71,13 +71,15 @@ class _AppealModal(discord.ui.Modal, title="Ban Appeal"):
                 timestamp=discord.utils.utcnow(),
             )
             try:
-                await log_channel.send(
+                queue_message = await log_channel.send(
                     embed=embed,
                     view=_build_decision_view(interaction.user.id),
                     allowed_mentions=discord.AllowedMentions.none(),
                 )
             except discord.HTTPException:
-                pass
+                queue_message = None
+            if queue_message is not None:
+                register_queue_item(message_id=queue_message.id, channel_id=log_channel.id)
 
         await interaction.followup.send(
             "Your appeal has been sent to the moderators.", ephemeral=True
@@ -147,6 +149,8 @@ class _AppealDecisionModal(discord.ui.Modal):
                     f"Failed to unban that user: {exc}", ephemeral=True
                 )
                 return
+
+        resolve_queue_item(self.original_message.id)
 
         # ── Update the original appeal embed so it can't be double-processed ──
         outcome_field = (
