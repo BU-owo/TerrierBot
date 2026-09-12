@@ -166,7 +166,7 @@ class ModTrackerCog(
             msg_entry = self.message_counts.get(str(mod_id), {"category": 0, "rest": 0})
             msg_total = msg_entry.get("category", 0) + msg_entry.get("rest", 0)
             msg_summary = (
-                f"{msg_entry.get('category', 0)} in category, {msg_entry.get('rest', 0)} elsewhere"
+                f"{msg_entry.get('category', 0)} in Mod Channels, {msg_entry.get('rest', 0)} elsewhere"
                 if msg_total
                 else "none tracked yet"
             )
