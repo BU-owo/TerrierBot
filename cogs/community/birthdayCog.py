@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 BIRTHDAY_ROLE_ID = 1404879458992914484
 BIRTHDAY_ANNOUNCE_CHANNEL_ID = 1396542256445391069
 EASTERN = ZoneInfo("America/New_York")
-BIRTHDAY_GIF_URL = "https://media1.tenor.com/m/Hq-zbjBKsRYAAAAC/happy-birthday-cute.gif"
+BIRTHDAY_GIF_URL = "https://tenor.com/view/happy-birthday-cute-dog-puppy-gif-16118582"
 SHELVE_FILE = "terrierbot.shelve"
 # One-time (repeatable, no-op after first success) import of birthdays collected
 # by the old birthday bot before it was replaced by this cog.
@@ -196,11 +196,11 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
         if isinstance(channel, discord.TextChannel):
             mentions = [member.mention for member in members_today]
             if len(members_today) == 1:
-                intro = f"# {mentions[0]} is a birthday terrier today! Please wish them a happy birthday!"
+                intro = f"# {mentions[0]} is a birthday terrier today! Please wish them a happy birthday! 🎂"
             else:
-                intro = f"# {self._join_mentions(mentions)} are birthday terriers today! Please wish them a happy birthday!"
+                intro = f"# {self._join_mentions(mentions)} are birthday terriers today! Please wish them a happy birthday! 🎂"
 
-            content = f"{intro}\n\n*Add your birthday with the command /birthday set month date*\n\n{BIRTHDAY_GIF_URL}"
+            content = f"{intro}\n\n*Add your birthday with the command `/birthday set month: date:`[.]({BIRTHDAY_GIF_URL})*"
 
             try:
                 await channel.send(

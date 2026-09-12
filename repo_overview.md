@@ -22,12 +22,13 @@ Format: `path — description — commands — loaded?`. "Loaded?" reflects `bot
 - **birthdayCog.py** (`community.birthday`, `"Birthday"`) — self-service birthday tracking, auto role assign/remove, daily announcement, mod export/override. Hybrid group `birthday`: `set`, `get`, `remove`, `nearest`, `export` (mod), `override` (mod). **In defaultCogs.**
 - **boostCog.py** (`community.boost`, `"Boost"`) — announces server boosts, lists booster perks. `=boost` / `/boost`. **In defaultCogs.**
 - **feedbackCog.py** (`community.feedback`, `"Feedback"`) — anonymous feedback via persistent button+modal to mod queue. `=feedbacksetup` / `/feedbacksetup` (Manage Server). **In defaultCogs.**
+- **goodbyeCog.py** (`community.goodbye`, `"Goodbye"`) — trivial farewell, mirrors helloCog. `=goodbye` / `/goodbye`. **In defaultCogs.**
 - **helloCog.py** (`community.hello`, `"Hello"`) — trivial greeting. `=hello` / `/hello`. **In defaultCogs.**
 - **joinPoliticsCog.py** (`community.joinPolitics`, `"JoinPolitics"`) — application flow (button→modal→mod approve/deny) for #politics access. `=joinpolitics` / `/joinpolitics` (mod-only, posts the start embed). **In defaultCogs.**
 - **leavePoliticsCog.py** (`community.leavePolitics`, `"LeavePoliticsCog"`) — voluntary leave-#politics confirm/cancel flow. `=leavepolitics` / `/leavepolitics`. **In defaultCogs.**
 - **lockinCog.py** (`community.lockin`, `"LockinCog"`) — self-service focus mode: strips roles for a duration, auto-restores. `=lockin <duration>` / `/lockin`, `=lockinleft` / `/lockinleft`. **In defaultCogs.**
 - **loveCog.py** (`community.love`, `"Love"`) — placeholder "coming soon". `=love` / `/love`. **In defaultCogs.**
-- **pingroleCog.py** (`"PingRoleCog"`) — ping one of 8 self-serve interest roles with a message, rate-limited. `/pingrole role: message:` (slash only). **In defaultCogs (`community.pingrole`).**
+- **pingroleCog.py** (`"PingRoleCog"`) — ping one of 7 self-serve interest roles with a message, rate-limited. `/pingrole role: message:` (slash only). **In defaultCogs (`community.pingrole`).**
 - **positivityCog.py** (`community.positivity`, `"Positivity"`) — "Positivity Tuesday" random-chatter shoutouts, per-guild config, auto on/off at midnight ET. Prefix/slash group `positivity`: `enable`, `disable`, `interval`, `cooldown`, `status`. **In defaultCogs.**
 - **prideCog.py** (`"Pride"`) — posts a Pride-flag celebration message every 500 messages or on demand. `=pride` / `/pride`. **Not in cogList or defaultCogs at all — orphaned, never loaded by the bot.**
 - **reactionCog.py** (`community.reaction`, `"Reaction"`) — sentiment-based auto-reaction when the bot is mentioned/replied to. No commands (listener only). **In defaultCogs.**
@@ -133,7 +134,7 @@ No central `config.py`/`constants.py`. IDs are defined per-cog as module-level (
 - `HARDMUTE_ROLE_ID = 1441111071715758171` (hardmuteCog)
 - `PRESETS["Freshmen"]["role_id"] = 1541770660710191134` (reactionRoleCog)
 - `prune_role_id = 1474070492548956170` (membersCog)
-- `pingroleCog.PINGROLES` — 8 role IDs: `1405219077693243434` (Eventee), `1412441490591842354` (Foodee), `1416190981102895136` (HungryLonger), `1422358773657243678` (FitnessFriend), `1425108753086287903` (StudyBuddy), `1458528619482710047` (MC), `1475971319366549534` (Val), `1503410327352508587` (SummerLocal)
+- `pingroleCog.PINGROLES` — 7 role IDs: `1405219077693243434` (Eventee), `1412441490591842354` (Foodee), `1416190981102895136` (HungryLonger), `1422358773657243678` (FitnessFriend), `1425108753086287903` (StudyBuddy), `1458528619482710047` (MC), `1475971319366549534` (Val)
 
 **Channel IDs**
 - `logConfig.LogChannels`: `JOIN_LEAVE=1441888109359796275`, `MEMBER=1441888363639603340`, `SERVER=1441888428735070400`, `MOD=1441889164898341098`, `MESSAGE=1441888579147141170`, `QUEUE=1541936565151080519` (consolidated mod-queue inbox — appeals, snitch reports, scam-hash confirms, politics apps), `ANNOUNCE=1470061524394709083`.
