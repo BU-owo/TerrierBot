@@ -275,8 +275,8 @@ class CaseLogCog(
     @commands.hybrid_command(
         name="modlogs", description="View a member's full moderation case history."
     )
-    @app_commands.describe(member="Member to look up")
-    async def modlogs(self, ctx: Context, member: discord.Member):
+    @app_commands.describe(member="Member to look up (works even if they've left the server)")
+    async def modlogs(self, ctx: Context, member: discord.User):
         if not await self._require_mod(ctx):
             return
 
