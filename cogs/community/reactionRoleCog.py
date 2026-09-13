@@ -59,15 +59,6 @@ class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assig
 
         await interaction.followup.send("Reaction role posted.", ephemeral=True)
 
-    @reactionrole.error
-    async def reactionrole_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.MissingPermissions):
-            await interaction.response.send_message(
-                "You don't have permission to use this command.", ephemeral=True
-            )
-        else:
-            raise error
-
     def _preset_for_role(self, role_id: int) -> dict | None:
         for data in PRESETS.values():
             if data["role_id"] == role_id:

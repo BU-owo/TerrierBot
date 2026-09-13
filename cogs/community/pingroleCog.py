@@ -56,15 +56,11 @@ class PingRoleCog(commands.Cog):
     @pingrole.error
     async def pingrole_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.CommandOnCooldown):
-            await interaction.response.send_message(
-                f"Slow down! You can use /pingrole again in {error.retry_after:.0f}s.",
-                ephemeral=True,
-            )
-        else:
-            await interaction.response.send_message(
-                "Something went wrong running that command.", ephemeral=True
-            )
             raise error
+        await interaction.response.send_message(
+            "Something went wrong running that command.", ephemeral=True
+        )
+        raise error
 
 
 async def setup(bot: commands.Bot):

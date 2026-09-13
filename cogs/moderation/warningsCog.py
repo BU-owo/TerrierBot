@@ -422,15 +422,6 @@ class WarningsCog(commands.Cog):
             f"Warning #{warn_id} permanently deleted.", ephemeral=True
         )
 
-    @warnnullify.error
-    async def warnnullify_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.CheckFailure):
-            await interaction.response.send_message(
-                "You don't have permission to use this command.", ephemeral=True
-            )
-        else:
-            raise error
-
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(WarningsCog(bot))

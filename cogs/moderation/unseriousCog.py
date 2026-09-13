@@ -236,12 +236,3 @@ class UnseriousCog(
             await interaction.response.send_message(
                 "I don't have permission to modify that category's permissions.", ephemeral=True
             )
-
-    @unserious.error
-    async def unserious_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.CheckFailure):
-            await interaction.response.send_message(
-                "You don't have permission to use this command.", ephemeral=True
-            )
-        else:
-            raise error

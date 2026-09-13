@@ -333,15 +333,6 @@ class TrollCog(commands.Cog):
                 "I don't have permission to modify that user's roles.", ephemeral=True
             )
 
-    @troll.error
-    async def troll_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.CheckFailure):
-            await interaction.response.send_message(
-                "You don't have permission to use this command.", ephemeral=True
-            )
-        else:
-            raise error
-
     @commands.hybrid_command(name="uwu", description="uwu-ify your own message")
     @app_commands.describe(text="The text to uwu-ify")
     async def uwu(self, ctx: commands.Context, *, text: str):
