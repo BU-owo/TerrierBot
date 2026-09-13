@@ -117,7 +117,11 @@ class _DeleteHistoryArg(commands.Converter[str]):
 # expiry loop, which the case log's append-only `cases` table isn't shaped
 # for — so this stays a standalone gitignored JSON file rather than a table.
 # Keyed by "guild_id:user_id" for O(1) lookup/removal.
-_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+# banCog.py is two folders below the repo root (cogs/moderation/) — three
+# dirname() calls are needed to reach it, matching every other cog's own
+# _DATA_DIR (e.g. squadPingCog.py). This used to be two, which quietly
+# pointed at a nonexistent cogs/data/ instead of the shared data/ folder.
+_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
 _TEMPBANS_FILE = os.path.join(_DATA_DIR, "tempbans.json")
 
 

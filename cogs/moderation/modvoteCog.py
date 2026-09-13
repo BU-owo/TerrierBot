@@ -21,7 +21,11 @@ MAX_OPTIONS = 10  # buttons must stay under Discord's 25-component cap
 ABSTAIN_OPTION = "Abstain"  # appended to every vote automatically, not counted toward the outcome
 CHECK_INTERVAL_SECONDS = 45
 
-_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+# modvoteCog.py is two folders below the repo root (cogs/moderation/) — three
+# dirname() calls are needed to reach it, matching every other cog's own
+# _DATA_DIR (e.g. squadPingCog.py). This used to be two, which quietly
+# pointed at a nonexistent cogs/data/ instead of the shared data/ folder.
+_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
 _VOTES_FILE = os.path.join(_DATA_DIR, "modvotes.json")
 
 

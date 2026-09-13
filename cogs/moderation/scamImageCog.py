@@ -36,7 +36,11 @@ SCAMCATCHER_ROLE_ID = MOD_ROLE_ID
 SPAM_CHANNEL_THRESHOLD = 3   # distinct channels within the window to trigger spam alert
 SPAM_WINDOW_SECONDS = 60     # rolling window for cross-channel spam detection
 
-_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+# scamImageCog.py is two folders below the repo root (cogs/moderation/) —
+# three dirname() calls are needed to reach it, matching every other cog's
+# own _DATA_DIR (e.g. squadPingCog.py). This used to be two, which quietly
+# pointed at a nonexistent cogs/data/ instead of the shared data/ folder.
+_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
 _HASHES_FILE = os.path.join(_DATA_DIR, "scam_hashes.json")
 
 

@@ -12,7 +12,12 @@ from bot import TerrierBot, Context
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "bu_courses_all.csv")
+# searchCog.py is two folders below the repo root (cogs/campus/) — three
+# dirname() calls are needed to reach it, matching every other cog's own
+# data-dir path (e.g. squadPingCog.py). This used to be two, which quietly
+# pointed at a nonexistent cogs/data/ instead of the shared, committed data/
+# folder this CSV actually lives in.
+CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "bu_courses_all.csv")
 
 PAGE_SIZE = 25      # Discord select max options
 
