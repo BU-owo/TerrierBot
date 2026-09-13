@@ -28,6 +28,29 @@ _WARNINGS_DB = os.path.join(_DATA_DIR, "warnings.db")
 SHELVE_FILE = "terrierbot.shelve"
 SHELVE_KEY = "modtracker_message_counts"
 
+# Matches the emoji each source cog already uses for that action in its own
+# embeds (banCog, kickCog, timeoutCog, hardmuteCog, warningsCog, unseriousCog,
+# warnAppealCog) — timeout/hardmute and untimeout/unmute share 🔇/🔊 because
+# the cogs themselves do. politics_approve/deny and warn_appeal_accept/reject
+# aren't given their own emoji upstream, so they fall back to the ✅/❌
+# convention warnAppealCog uses for the same accept/reject shape.
+_ACTION_EMOJI: dict[str, str] = {
+    "ban": "🔨",
+    "unban": "🔓",
+    "kick": "👢",
+    "timeout": "🔇",
+    "untimeout": "🔊",
+    "hardmute": "🔇",
+    "unmute": "🔊",
+    "warn": "⚠️",
+    "unserious": "😐",
+    "politics_approve": "✅",
+    "politics_deny": "❌",
+    "warn_appeal_accept": "✅",
+    "warn_appeal_reject": "❌",
+}
+_DEFAULT_ACTION_EMOJI = "▪️"
+
 
 async def setup(bot: TerrierBot):
     await bot.add_cog(ModTrackerCog(bot))
@@ -122,6 +145,10 @@ class ModTrackerCog(
         warn_data = self._query_warn_actions()
 
         all_mod_ids = set(case_data) | set(warn_data) | {int(k) for k in self.message_counts}
+        # Automated actions (e.g. a temp-ban expiring) get attributed to the
+        # bot's own account in the case log — that's not moderator activity.
+        if self.bot.user is not None:
+            all_mod_ids.discard(self.bot.user.id)
 
         embed = discord.Embed(
             title="Mod Activity Report",
@@ -138,7 +165,7 @@ class ModTrackerCog(
             return [embed]
 
         # Rank by total logged actions, most active first.
-        rows: list[tuple[int, str, str, str]] = []
+        rows: list[tuple[int, str, str]] = []
         for mod_id in all_mod_ids:
             counts: defaultdict[str, int] = defaultdict(int)
             last: tuple[str, str] | None = None
@@ -152,42 +179,53 @@ class ModTrackerCog(
                         last = source["last"]
 
             total = sum(counts.values())
-            action_summary = ", ".join(f"{v} {k}" for k, v in sorted(counts.items())) or "no logged actions"
+            if counts:
+                ordered = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+                action_summary = "\n".join(
+                    f"{_ACTION_EMOJI.get(k, _DEFAULT_ACTION_EMOJI)} **{v}** {k}" for k, v in ordered
+                )
+            else:
+                action_summary = "*no logged actions*"
 
-            last_summary = "none"
+            last_summary = "*none*"
             if last is not None:
                 action_type, raw_ts = last
+                emoji = _ACTION_EMOJI.get(action_type, _DEFAULT_ACTION_EMOJI)
                 try:
                     unix_ts = int(datetime.fromisoformat(raw_ts).timestamp())
-                    last_summary = f"{action_type} <t:{unix_ts}:R>"
+                    last_summary = f"{emoji} {action_type} <t:{unix_ts}:R>"
                 except ValueError:
-                    last_summary = f"{action_type} at {raw_ts}"
+                    last_summary = f"{emoji} {action_type} at {raw_ts}"
 
             msg_entry = self.message_counts.get(str(mod_id), {"category": 0, "rest": 0})
             msg_total = msg_entry.get("category", 0) + msg_entry.get("rest", 0)
             msg_summary = (
-                f"{msg_entry.get('category', 0)} in Mod Channels, {msg_entry.get('rest', 0)} elsewhere"
+                f"**{msg_entry.get('category', 0)}** in Mod Channels • **{msg_entry.get('rest', 0)}** elsewhere"
                 if msg_total
-                else "none tracked yet"
+                else "*none tracked yet*"
             )
 
             user = self.bot.get_user(mod_id)
             display = f"{user}" if user else f"User ID {mod_id}"
 
-            field_value = f"{action_summary}\nLast: {last_summary}\nMessages: {msg_summary}"
-            rows.append((total, display, str(mod_id), field_value))
+            field_value = (
+                f"{action_summary}\n"
+                f"🕘 **Last:** {last_summary}\n"
+                f"💬 **Messages:** {msg_summary}"
+            )
+            rows.append((total, display, field_value))
 
         rows.sort(key=lambda r: r[0], reverse=True)
 
         embeds = [embed]
         current = embed
         field_count = 0
-        for _total, display, mod_id, field_value in rows:
+        for _total, display, field_value in rows:
             if field_count >= 25:
                 current = discord.Embed(color=discord.Color.blurple())
                 embeds.append(current)
                 field_count = 0
-            current.add_field(name=f"{display} ({mod_id})", value=field_value, inline=False)
+            current.add_field(name=display, value=field_value, inline=False)
             field_count += 1
 
         return embeds

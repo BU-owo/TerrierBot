@@ -28,8 +28,11 @@ _MENTION_RE = re.compile(r"^<@!?(\d+)>$")
 # Rule 8 (scams / unapproved self-promo) bans purge the target's recent
 # messages server-wide via Discord's native delete_message_seconds — scam
 # links/pings tend to be spammed across multiple channels right before the
-# ban, so a scoped purge catches those without a manual mod sweep.
+# ban, so a scoped purge catches those without a manual mod sweep. This is
+# just the default for that one rule — =ban's own `delete_history` param lets
+# a mod pick any window up to Discord's hard cap (below) for any ban.
 _RULE_8_PURGE_SECONDS = 4 * 60 * 60
+_MAX_DELETE_HISTORY_SECONDS = 7 * 24 * 60 * 60  # Discord's own cap on delete_message_seconds
 
 
 
@@ -80,6 +83,33 @@ class _DurationArg(commands.Converter[str]):
         if _parse_duration_seconds(argument) is None:
             raise commands.BadArgument(f"Couldn't parse `{argument}` as a duration. {_DURATION_FORMAT_HELP}")
         return argument
+
+
+class _DeleteHistoryArg(commands.Converter[str]):
+    """Validates =ban's delete_history token. This can't reuse _DurationArg
+    as-is: =ban already has one bare duration-shaped optional positional
+    param (temp-ban length) immediately before this one, and a prefix parser
+    consumes tokens left-to-right — a second bare `3d`-shaped token would
+    always get greedily eaten by `duration` first, leaving no way to set
+    delete_history alone (e.g. "permanent ban + purge their spam") without
+    it silently turning into a temp ban instead. So prefix invocations must
+    write this one as `purge:3d` to disambiguate; slash invocations get a
+    separate, unambiguous labeled input box, so a plain `3d` works there.
+    """
+
+    async def convert(self, ctx: Context, argument: str) -> str:
+        if ctx.interaction is not None:
+            if _parse_duration_seconds(argument) is None:
+                raise commands.BadArgument(f"Couldn't parse `{argument}` as a duration. {_DURATION_FORMAT_HELP}")
+            return argument
+
+        match = re.match(r"^purge:(.+)$", argument.strip(), re.IGNORECASE)
+        if not match:
+            raise commands.BadArgument("Not a delete_history token.")
+        duration_str = match.group(1)
+        if _parse_duration_seconds(duration_str) is None:
+            raise commands.BadArgument(f"Couldn't parse `{duration_str}` as a duration. {_DURATION_FORMAT_HELP}")
+        return duration_str
 
 
 # ── Temp-ban persistence ─────────────────────────────────────────────────────
@@ -308,6 +338,7 @@ class BanCog(
         reason: str,
         dm_delivered: bool,
         unban_at: float | None = None,
+        purge_seconds: int = 0,
     ) -> None:
         log_channel = get_log_channel(self.bot, LogChannels.MOD)
         if log_channel is None:
@@ -321,8 +352,8 @@ class BanCog(
         if rule is not None:
             lines.append(f"**Rule:** {rule}. {RULES[rule]}")
         lines.append(f"**Reason:** {reason}")
-        if rule == 8:
-            lines.append("**Message purge:** last 4 hours, server-wide")
+        if purge_seconds > 0:
+            lines.append(f"**Message purge:** last {format_duration(timedelta(seconds=purge_seconds))}, server-wide")
         if unban_at is not None:
             lines.append(f"**Expires:** <t:{int(unban_at)}:R> (temporary ban)")
 
@@ -408,6 +439,7 @@ class BanCog(
         member="The member to ban",
         rule="Rule being violated",
         duration="Optional: e.g. 30m, 2h, 1d — omit for a permanent ban. Prefix: must be the first word to count.",
+        delete_history="Optional: delete this member's messages server-wide from the last e.g. 2h, 3d — up to 7d. Overrides the automatic rule-8 purge. Prefix: write it as purge:3d.",
         reason="Reason for the ban (prefix: just type it normally, no special phrasing needed)",
     )
     @app_commands.choices(
@@ -419,6 +451,7 @@ class BanCog(
         member: discord.Member,
         rule: int | None = None,
         duration: _DurationArg | None = None,
+        delete_history: _DeleteHistoryArg | None = None,
         *,
         reason: str | None = None,
     ):
@@ -441,9 +474,15 @@ class BanCog(
             await ctx.send(f"Invalid rule number. Valid rules: {valid}", ephemeral=True)
             return
 
-        # duration has already been validated by _DurationArg's converter by
-        # this point (or is None) — no error branch needed here.
+        # duration/delete_history have already been validated as parseable by
+        # _DurationArg's converter by this point (or are None) — no
+        # "couldn't parse" branch needed here.
         duration_seconds = _parse_duration_seconds(duration) if duration is not None else None
+
+        delete_history_seconds = _parse_duration_seconds(delete_history) if delete_history is not None else None
+        if delete_history_seconds is not None and delete_history_seconds > _MAX_DELETE_HISTORY_SECONDS:
+            await ctx.send("Message deletion window can't exceed 7 days.", ephemeral=True)
+            return
 
         if member.id == guild.owner_id:
             await ctx.send("I can't ban the server owner.", ephemeral=True)
@@ -497,7 +536,12 @@ class BanCog(
         target_display = str(member)
         target_id = member.id
 
-        delete_message_seconds = _RULE_8_PURGE_SECONDS if rule == 8 else 0
+        if delete_history_seconds is not None:
+            delete_message_seconds = delete_history_seconds
+        elif rule == 8:
+            delete_message_seconds = _RULE_8_PURGE_SECONDS
+        else:
+            delete_message_seconds = 0
 
         try:
             await guild.ban(
@@ -535,8 +579,13 @@ class BanCog(
             if duration_seconds
             else ""
         )
+        purge_note = (
+            f" Purged their messages from the last {format_duration(timedelta(seconds=delete_message_seconds))} server-wide."
+            if delete_message_seconds > 0
+            else ""
+        )
         await ctx.send(
-            f"Banned {target_display} (`{target_id}`).{duration_note}{dm_note} Reason: {reason_text}",
+            f"Banned {target_display} (`{target_id}`).{duration_note}{dm_note} Reason: {reason_text}{purge_note}",
             ephemeral=True,
         )
 
@@ -548,6 +597,7 @@ class BanCog(
             reason=reason_text,
             dm_delivered=dm_delivered,
             unban_at=unban_at,
+            purge_seconds=delete_message_seconds,
         )
 
         await self._announce_ban(

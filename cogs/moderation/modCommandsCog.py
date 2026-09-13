@@ -23,7 +23,7 @@ _FIELDS = [
         "`=warn <member> <rule> <reason> [send_dm]` — issue a formal warning; warnings are permanent until removed\n"
         "`=warncount` / `=warninfo <member>` — see who has active warnings, or one member's full history\n"
         "`=warnremove <warn_id>` — remove a warning",
-        "For rule violations that don't need removal from the server; warnings build the paper trail modlogs surfaces later. Members can self-appeal via `/warnappeal` — you'll get an accept/reject prompt in response when they do.",
+        "For rule violations that don't need removal from the server; warnings build the paper trail modlogs surfaces later. Members can self-appeal via `/warnappeal` — you'll get an accept/reject prompt in response when they do. If you issued the warning yourself, you can still Accept its appeal but not Reject it — another mod has to make that call.",
     ),
     (
         "🗑️ Warn Nullify",
@@ -47,13 +47,13 @@ _FIELDS = [
     ),
     (
         "🔨 Ban / Unban",
-        "`=ban <member> [rule] [duration] [reason]` / `=unban <user_id> [reason]`",
-        "For serious or repeated violations; `/ban` requires picking a rule from the dropdown, `=ban` can skip it. Add a duration (e.g. `2h`) right after the member for a temp ban, omit it for permanent — everything else is just the reason, no special phrasing needed. Unban reverses it by ID. Banned users get pointed to the appeals server in their DM; approve/deny shows up as buttons on the appeal post in mod-log.",
+        "`=ban <member> [rule] [duration] [purge:Xd] [reason]` / `=unban <user_id> [reason]`",
+        "For serious or repeated violations; `/ban` requires picking a rule from the dropdown, `=ban` can skip it. Add a duration (e.g. `2h`) right after the member for a temp ban, omit it for permanent. To also delete that member's messages server-wide on ban (up to 7d), add `purge:3d` — via `/ban` it's just a plain duration in its own box, e.g. `3d`. Rule 8 (scams) purges the last 4h automatically even if you don't set one. Everything else is just the reason, no special phrasing needed. Unban reverses it by ID. Banned users get pointed to the appeals server in their DM; approve/deny shows up as buttons on the appeal post in mod-log.",
     ),
     (
         "🧹 Purge",
-        "`=purge <amount>` (1-100) / `=purgeafter [target]`",
-        "Purge bulk-deletes recent messages. Purgeafter deletes everything after a target message (reply to it, or pass its ID/link) in the current channel, capped at 200.",
+        "`=purge <amount>` (1-100) / `=purgeafter [target]` / `=purgeuser <member> <amount>` (1-100)",
+        "Purge bulk-deletes recent messages. Purgeafter deletes everything after a target message (reply to it, or pass its ID/link) in the current channel, capped at 200. Purgeuser deletes just that member's messages in the current channel, searching back up to 500 messages to find them.",
     ),
     (
         "🔒 Lockdown / Unlock",
@@ -63,7 +63,7 @@ _FIELDS = [
     (
         "🗳️ Modvote",
         "`/modvote start <target> <options> <duration_minutes>` / `/modvote close [vote_id]`",
-        "For a discipline call that shouldn't rest on one mod alone — anonymous team vote.",
+        "For a discipline call that shouldn't rest on one mod alone — anonymous team vote. An Abstain option is added automatically to whatever options you type; it's tallied but never decides the outcome.",
     ),
     (
         "🏛️ Politics Application",

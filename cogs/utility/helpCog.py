@@ -33,6 +33,7 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
         embed.add_field(
             name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Tools ✧",
             value=(
+                "📜 `=rule` / `/rule` `<number>` — show a server rule by number, or leave blank to see them all\n"
                 "📚 `=class` / `/class` — look up a BU course from the Bulletin\n"
                 "⭐ `=rmp` / `/rmp` — look up a professor on RateMyProfessors\n"
                 "🐾 `=club` / `/club` — search for BU clubs on Terrier Central\n"

@@ -20,6 +20,10 @@ _MESSAGE_LINK_RE = re.compile(
 # one call, even if the target message is far back in channel history.
 PURGE_AFTER_CAP = 200
 
+# Safety cap for =purgeuser — how far back through channel history to search
+# for that user's messages before giving up, even if `amount` wasn't reached.
+PURGEUSER_SCAN_LIMIT = 500
+
 
 async def setup(bot: TerrierBot):
     await bot.add_cog(PurgeCog(bot))
@@ -204,3 +208,60 @@ class PurgeCog(
         if contradiction_note:
             lines.append(contradiction_note)
         await ctx.send("\n".join(lines), ephemeral=True)
+
+    @commands.hybrid_command(
+        name="purgeuser",
+        description="Delete a specific member's most recent messages in this channel.",
+    )
+    @app_commands.describe(
+        user="Whose messages to delete",
+        amount="How many of their messages to delete (1-100)",
+    )
+    async def purgeuser(self, ctx: Context, user: discord.Member, amount: commands.Range[int, 1, 100]):
+        if not await self._require_mod(ctx):
+            return
+        if not isinstance(ctx.channel, (discord.TextChannel, discord.Thread, discord.VoiceChannel)):
+            await ctx.send("This command can only be used in a text channel.", ephemeral=True)
+            return
+
+        await ctx.defer(ephemeral=True)
+
+        # Prefix invocations post a "=purgeuser <user> <amount>" message of
+        # their own — exclude it, same as =purge does with its own invoking
+        # message. `matched` bounds how many of the user's messages we let
+        # through the check to exactly `amount`, since `purge`'s own `limit`
+        # caps how many messages are *scanned*, not how many are deleted.
+        invoking_id = ctx.message.id if ctx.interaction is None else None
+        matched = 0
+
+        def check(message: discord.Message) -> bool:
+            nonlocal matched
+            if message.id == invoking_id or message.author.id != user.id:
+                return False
+            if matched >= amount:
+                return False
+            matched += 1
+            return True
+
+        try:
+            deleted = await ctx.channel.purge(limit=PURGEUSER_SCAN_LIMIT, check=check, bulk=True)
+        except discord.Forbidden:
+            await ctx.send("I don't have permission to delete messages here.", ephemeral=True)
+            return
+        except discord.HTTPException as exc:
+            await ctx.send(f"Failed to purge messages: {exc}", ephemeral=True)
+            return
+
+        if ctx.interaction is None:
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                pass
+
+        if deleted:
+            register_purge([m.id for m in deleted], ctx.author.id, ctx.channel.id)
+
+        note = ""
+        if len(deleted) < amount:
+            note = f" (only found {len(deleted)} within the last {PURGEUSER_SCAN_LIMIT} messages scanned)"
+        await ctx.send(f"🗑️ Purged {len(deleted)} message(s) from {user.mention}.{note}", ephemeral=True)

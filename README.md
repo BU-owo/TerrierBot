@@ -22,6 +22,7 @@ TerrierBot currently supports:
 - Self-service birthday tracking through `birthday`, with automatic daily role assignment/removal and a server announcement
 - Roleless, self-service "squad ping" lists through `squadpingcreate`, letting anyone spin up a new opt-in ping group and join/leave/ping it with `squadpingmanage` and `squadping`
 - Automatic class chat discovery: mentioning a BU class code (e.g. "CH 109") points members to that class's forum thread, or spins one up automatically once a code comes up enough
+- Server rule lookup through `rule`, showing a single rule by number or the full numbered list
 
 ## Requirements
 
@@ -122,6 +123,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=squadpinglist` / `/squadpinglist [name]` | List every squad-ping list, or pass a name to see that squad's members without pinging them |
 | `=squadpingmanage <add\|remove> <name>` / `/squadpingmanage` | Join or leave a squad-ping list |
 | `=squadping <name>` / `/squadping` | Ping everyone on a squad-ping list you're a member of (30s per-user cooldown) |
+| `=rule [number]` / `/rule [number]` | Show a server rule by number, or the full numbered list if left blank |
 
 ### Moderation, feedback, and management
 
