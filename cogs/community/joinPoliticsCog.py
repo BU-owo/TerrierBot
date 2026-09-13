@@ -20,21 +20,22 @@ POLITICS_ROLE_ID = 1477468718127775824
 
 MIN_TENURE_DAYS = 7
 
-CONDUCT_TEXT = (
-    "I agree to not use charged/loaded language like \"evil\" to describe things or groups, "
-    "and to not stereotype or generalize a group of people.\n\n"
-    "I agree to remain respectful and civil towards your fellow Terrier Hub members by assuming "
-    "good intentions, not accusing others, and not personally attacking others."
-)
-PUNISHMENTS_TEXT = (
-    "I understand that participating in #politics is a privilege, and violating any rules will "
-    "result in 3 immediate warnings and removal from the channel."
+AGREEMENT_TEXT = (
+    "Politics Channel Agreement:\n\n"
+    "1. I agree to be respectful and civil towards your fellow Terrier Hub members by assuming "
+    "good intentions, not accusing others, and not personally attacking others.\n"
+    "2. I understand that adherence to radical ideologies that call for harm against others is "
+    "unwelcome in this channel.\n"
+    "3. I understand that general rules of Terrier Hub apply to this channel as well.\n"
+    "4. I understand that breaches in rules 1 and 2 are punishable by moderators of this channel, "
+    "with potential forms of punishment being warnings and mutes. Obtaining three warnings equals "
+    "expulsion from this channel.\n"
+    "5. I understand that I may leave the channel on my own discretion, using the command "
+    "`/leavepolitics`."
 )
 
 AGREE_VALUE = "agree"
 DISAGREE_VALUE = "disagree"
-UNDERSTAND_VALUE = "understand"
-NOT_UNDERSTAND_VALUE = "not_understand"
 
 APPROVE_TEMPLATE = re.compile(r"joinpoliticscog:approve:(?P<user_id>[0-9]+)")
 DENY_TEMPLATE = re.compile(r"joinpoliticscog:deny:(?P<user_id>[0-9]+)")
@@ -57,8 +58,7 @@ async def _post_application_for_review(applicant: discord.Member) -> None:
         timestamp=discord.utils.utcnow(),
     )
     embed.add_field(name="Applicant", value=applicant.mention, inline=False)
-    embed.add_field(name="Politics Channel Conduct Code", value="I agree", inline=False)
-    embed.add_field(name="Punishments", value="I understand", inline=False)
+    embed.add_field(name="Politics Channel Agreement", value="I agree", inline=False)
     embed.set_footer(text=f"Applicant ID: {applicant.id}")
 
     view = discord.ui.View(timeout=None)
@@ -87,23 +87,13 @@ async def _post_application_for_review(applicant: discord.Member) -> None:
 # ── Application modal (native radio-button questions) ───────────────────────
 
 class PoliticsApplicationModal(discord.ui.Modal, title="Politics Channel Application"):
-    conduct_text = discord.ui.TextDisplay(CONDUCT_TEXT)
-    conduct_field = discord.ui.Label(
-        text="Politics Channel Conduct Code",
+    agreement_text = discord.ui.TextDisplay(AGREEMENT_TEXT)
+    agreement_field = discord.ui.Label(
+        text="Politics Channel Agreement",
         component=discord.ui.RadioGroup(
             options=[
                 discord.RadioGroupOption(label="I agree", value=AGREE_VALUE),
                 discord.RadioGroupOption(label="I do not agree", value=DISAGREE_VALUE),
-            ],
-        ),
-    )
-    punishments_text = discord.ui.TextDisplay(PUNISHMENTS_TEXT)
-    punishments_field = discord.ui.Label(
-        text="Punishments",
-        component=discord.ui.RadioGroup(
-            options=[
-                discord.RadioGroupOption(label="I understand", value=UNDERSTAND_VALUE),
-                discord.RadioGroupOption(label="I do not understand", value=NOT_UNDERSTAND_VALUE),
             ],
         ),
     )
@@ -113,15 +103,13 @@ class PoliticsApplicationModal(discord.ui.Modal, title="Politics Channel Applica
         self.applicant = applicant
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        conduct_radio = self.conduct_field.component
-        punishments_radio = self.punishments_field.component
-        assert isinstance(conduct_radio, discord.ui.RadioGroup)
-        assert isinstance(punishments_radio, discord.ui.RadioGroup)
+        agreement_radio = self.agreement_field.component
+        assert isinstance(agreement_radio, discord.ui.RadioGroup)
 
-        if conduct_radio.value != AGREE_VALUE or punishments_radio.value != UNDERSTAND_VALUE:
+        if agreement_radio.value != AGREE_VALUE:
             await interaction.response.send_message(
-                "You must agree to the Conduct Code and acknowledge the Punishments policy to "
-                "submit an application. Feel free to start over any time.",
+                "You must agree to the Politics Channel Agreement to submit an application. "
+                "Feel free to start over any time.",
                 ephemeral=True,
             )
             return
@@ -235,8 +223,8 @@ async def _handle_decision(interaction: discord.Interaction, applicant_id: int, 
     if approved:
         dm_text = (
             f"{mention} has been accepted to the #politics channel of Terrier Hub.\n\n"
-            "Please consult the moderators for any questions. If you would like to be removed "
-            "from the channel, please run /leavepolitics"
+            "Please consult the moderators for any questions.\n\n"
+            f"{AGREEMENT_TEXT}"
         )
     else:
         dm_text = (

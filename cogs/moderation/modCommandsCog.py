@@ -71,6 +71,11 @@ _FIELDS = [
         "Members apply through the embed's button. Approve trustworthy users",
     ),
     (
+        "🏛️ Kick from Politics",
+        "`/kickpolitics <user>`",
+        "Removes the Politics role from a member. Also usable by the Politics Mod role.",
+    ),
+    (
         "😐 Unserious Mode",
         "`/unserious <enable|disable> <member>`",
         "Toggles a member's access to the Serious category on/off.",
