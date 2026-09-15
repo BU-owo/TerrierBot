@@ -134,7 +134,7 @@ async def setup(bot: TerrierBot):
 class BanCog(
     commands.Cog,
     name="Ban",
-    description="Bans/unbans a member, with a DM reply-to-appeal flow for banned users.",
+    description="Bans/unbans a member.",
 ):
     def __init__(self, bot: TerrierBot):
         self.bot = bot
@@ -143,70 +143,6 @@ class BanCog(
 
     def cog_unload(self) -> None:
         self._tempban_check.cancel()
-
-    # ── Ban appeals ──────────────────────────────────────────────────────────
-    # A banned user no longer shares a guild with the bot, and Discord
-    # silently drops component interactions (buttons/modals) from a DM back
-    # to a bot the sender doesn't share a guild with — confirmed via
-    # diagnostic logging, not fixable on our end. Plain messages and message
-    # events still work fine post-ban, so appeals are collected as an
-    # ordinary DM reply instead of a button/modal.
-
-    async def _find_ban(self, user_id: int) -> tuple[discord.Guild | None, discord.BanEntry | None]:
-        """Find a guild the bot is in where `user_id` is currently banned.
-        Confirms a DM is an actual appeal before treating it as one — without
-        this, every random DM the bot receives would get forwarded to the
-        mod log as if it were one."""
-        target = discord.Object(id=user_id)
-        for guild in self.bot.guilds:
-            try:
-                ban_entry = await guild.fetch_ban(target)
-            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-                continue
-            return guild, ban_entry
-        return None, None
-
-    @commands.Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
-        if message.author.bot:
-            return
-        if not isinstance(message.channel, discord.DMChannel):
-            return
-
-        _guild, ban_entry = await self._find_ban(message.author.id)
-        if ban_entry is None:
-            return  # not currently banned anywhere the bot can see — not an appeal
-
-        log_channel = get_log_channel(self.bot, LogChannels.MOD)
-        if log_channel is None:
-            await message.channel.send(
-                "Couldn't deliver your appeal right now — please contact a moderator another way."
-            )
-            return
-
-        embed = discord.Embed(
-            title="📨 Ban appeal received",
-            description=(
-                f"**Appealing user:** {message.author} (`{message.author.id}`)\n"
-                f"**Original ban reason:** {ban_entry.reason or '*Unknown — could not be looked up*'}\n\n"
-                f"**Appeal:**\n{message.content or '*No text content*'}"
-            ),
-            color=LogColors.MOD,
-            timestamp=discord.utils.utcnow(),
-        )
-        try:
-            await log_channel.send(
-                content=f"<@&{MOD_ROLE_ID}>",
-                embed=embed,
-                allowed_mentions=discord.AllowedMentions(roles=True, users=False, everyone=False),
-            )
-        except discord.HTTPException:
-            await message.channel.send(
-                "Something went wrong sending your appeal — please try again later or contact a moderator another way."
-            )
-            return
-
-        await message.channel.send("Your appeal has been sent to the moderators. Thank you.")
 
     # ── Shared helpers ───────────────────────────────────────────────────────
 
