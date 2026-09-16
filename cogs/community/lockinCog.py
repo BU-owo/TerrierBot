@@ -7,11 +7,19 @@ import shelve
 import time
 from typing import Any
 
-from ..logging.logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel
+from ..logging.logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel, suppress_role_log
 
 LOCKIN_ROLE_ID = 1410344839718895716
+LOCKIN_ANNOUNCE_CHANNEL_ID = 1410345159186714796
 SHELVE_FILE = "terrierbot.shelve"
 SHELVE_KEY = "lockins"
+
+# The Nitro-booster role is Discord-managed — a bot can't add/remove it via
+# the API at all (the request fails outright), and since current_roles is
+# stripped in one batched remove_roles() call, including it there fails the
+# *entire* call and the lock-in never happens for boosters. Exclude it from
+# what gets stashed/stripped so it's simply left alone, same as @everyone.
+BOOST_ROLE_ID = 1415488019435098152
 
 MIN_SECONDS = 5 * 60          # 5 minutes
 MAX_SECONDS = 7 * 24 * 60 * 60  # 7 days
@@ -77,9 +85,65 @@ class LockinCog(commands.Cog):
         with shelve.open(SHELVE_FILE) as sh:
             sh[SHELVE_KEY] = self.lockins
 
+    # ---------- announcement ----------
+
+    async def _get_announce_channel(self) -> discord.TextChannel | None:
+        channel = self.bot.get_channel(LOCKIN_ANNOUNCE_CHANNEL_ID)
+        if isinstance(channel, discord.TextChannel):
+            return channel
+
+        try:
+            fetched_channel = await self.bot.fetch_channel(LOCKIN_ANNOUNCE_CHANNEL_ID)
+        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+            return None
+
+        return fetched_channel if isinstance(fetched_channel, discord.TextChannel) else None
+
+    async def _announce_lockin(self, member: discord.Member, *, seconds: int) -> None:
+        channel = await self._get_announce_channel()
+        if channel is None:
+            return
+        try:
+            await channel.send(
+                f"{member.mention} is locked in under {format_duration(seconds)}.",
+                allowed_mentions=discord.AllowedMentions(users=True),
+            )
+        except discord.HTTPException:
+            pass
+
     # ---------- member-log ----------
 
-    async def _log_lockin_start(self, member: discord.Member, *, seconds: int, end_ts: int) -> None:
+    async def _log_lockin_start(
+        self, member: discord.Member, *, seconds: int, end_ts: int, removed_roles: list[discord.Role]
+    ) -> None:
+        if member.guild.id != MAIN_GUILD_ID:
+            return
+
+        channel = get_log_channel(self.bot, LogChannels.MEMBER)
+        if channel is None:
+            return
+
+        lines = [
+            f"{member.mention} (`{member.id}`)",
+            f"**Duration:** {format_duration(seconds)}",
+            f"**Roles removed:** {', '.join(r.mention for r in removed_roles) if removed_roles else '*None*'}",
+            f"**Roles restored:** <t:{end_ts}:F> (<t:{end_ts}:R>)",
+        ]
+
+        embed = discord.Embed(
+            title="🔒 Lock-in started",
+            description="\n".join(lines),
+            color=LogColors.MEMBER,
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+
+        try:
+            await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            pass
+
+    async def _log_lockin_end(self, member: discord.Member, *, restored_roles: list[discord.Role]) -> None:
         if member.guild.id != MAIN_GUILD_ID:
             return
 
@@ -88,11 +152,10 @@ class LockinCog(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="🔒 Lock-in started",
+            title="🔓 Lock-in ended",
             description=(
                 f"{member.mention} (`{member.id}`)\n"
-                f"**Duration:** {format_duration(seconds)}\n"
-                f"**Ends:** <t:{end_ts}:F> (<t:{end_ts}:R>)"
+                f"**Roles restored:** {', '.join(r.mention for r in restored_roles) if restored_roles else '*None*'}"
             ),
             color=LogColors.MEMBER,
             timestamp=discord.utils.utcnow(),
@@ -129,6 +192,7 @@ class LockinCog(commands.Cog):
 
             role = guild.get_role(entry["role_id"])
             if role and role in member.roles:
+                suppress_role_log(member.id)
                 try:
                     await member.remove_roles(role, reason="Lock-in period ended")
                 except discord.HTTPException:
@@ -142,10 +206,13 @@ class LockinCog(commands.Cog):
                 r for rid in saved_role_ids if (r := guild.get_role(rid)) is not None
             ]
             if roles_to_restore:
+                suppress_role_log(member.id)
                 try:
                     await member.add_roles(*roles_to_restore, reason="Lock-in period ended — restoring roles")
                 except discord.HTTPException:
                     pass
+
+            await self._log_lockin_end(member, restored_roles=roles_to_restore)
 
             try:
                 await member.send("WOO HOO! Your lock-in is over-- welcome back! 🔓")
@@ -208,17 +275,22 @@ class LockinCog(commands.Cog):
         end_ts = int(time.time() + seconds)
 
         # Stash the member's current roles (minus @everyone, which can't be
-        # assigned/removed directly) so they can be restored when the
-        # lock-in ends, then strip them — otherwise other roles' channel
-        # access would defeat the point of locking out server access.
-        current_roles = [r for r in ctx.author.roles if not r.is_default()]
+        # assigned/removed directly, and minus the booster role, which is
+        # Discord-managed and can't be touched by a bot at all — including it
+        # here would fail the whole batched remove_roles() call below) so
+        # they can be restored when the lock-in ends, then strip them —
+        # otherwise other roles' channel access would defeat the point of
+        # locking out server access.
+        current_roles = [r for r in ctx.author.roles if not r.is_default() and r.id != BOOST_ROLE_ID]
         saved_role_ids = [r.id for r in current_roles]
 
         try:
             if current_roles:
+                suppress_role_log(ctx.author.id)
                 await ctx.author.remove_roles(
                     *current_roles, reason="Lock-in requested — roles stashed until lock-in ends"
                 )
+            suppress_role_log(ctx.author.id)
             await ctx.author.add_roles(role, reason="Lock-in requested")
         except discord.HTTPException:
             await ctx.send("couldn't assign the role — ping a mod.", ephemeral=True)
@@ -232,7 +304,8 @@ class LockinCog(commands.Cog):
         }
         self._save_lockins()
 
-        await self._log_lockin_start(ctx.author, seconds=seconds, end_ts=end_ts)
+        await self._log_lockin_start(ctx.author, seconds=seconds, end_ts=end_ts, removed_roles=current_roles)
+        await self._announce_lockin(ctx.author, seconds=seconds)
 
         await ctx.send(
             f"locked in for {format_duration(seconds)}. ends <t:{end_ts}:F> (<t:{end_ts}:R>). "

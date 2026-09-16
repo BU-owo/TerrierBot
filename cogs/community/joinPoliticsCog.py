@@ -219,6 +219,18 @@ async def _handle_decision(interaction: discord.Interaction, applicant_id: int, 
             except (discord.Forbidden, discord.HTTPException):
                 log.exception("joinPoliticsCog: failed to add politics role to %d", applicant_id)
 
+        politics_channel = guild.get_channel(POLITICS_CHANNEL_ID)
+        if isinstance(politics_channel, discord.TextChannel):
+            try:
+                await politics_channel.send(
+                    f"{applicant.mention} has joined the political side of the server!",
+                    allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False),
+                )
+            except discord.HTTPException:
+                log.exception("joinPoliticsCog: failed to post welcome message for %d", applicant_id)
+        else:
+            log.warning("joinPoliticsCog: politics channel %d not found or is not a TextChannel", POLITICS_CHANNEL_ID)
+
     mention = applicant.mention if applicant is not None else f"<@{applicant_id}>"
     if approved:
         dm_text = (
