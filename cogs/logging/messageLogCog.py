@@ -4,7 +4,17 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel, get_purger, is_suppressed
+from .logConfig import (
+    LogChannels,
+    LogColors,
+    MAIN_GUILD_ID,
+    edit_history_fields,
+    get_edit_history,
+    get_log_channel,
+    get_purger,
+    is_suppressed,
+    user_line,
+)
 
 # How recent an audit log entry must be to count as "this deletion" — Discord
 # only creates a message_delete audit entry when someone deletes another
@@ -69,21 +79,32 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
 
         deleter: discord.Member | discord.User | None = None
         guild = self.bot.get_guild(payload.guild_id)
+        # A record here means the message was edited at least once before it
+        # was deleted — show the whole chain instead of just the content it
+        # was deleted with. Tracked by ViewEditsCog's on_raw_message_edit,
+        # independent of the message cache, so this can be populated even
+        # when `message` (cached_message) below is None.
+        edit_record = get_edit_history(payload.message_id)
 
         if message is not None:
-            content = message.content or "*(no text content)*"
-            if len(content) > 900:
-                content = content[:897] + "..."
-
             source_channel_mention = message.channel.mention
 
             if guild is not None:
                 deleter = await self._find_deleter(guild, payload.channel_id, message.author.id)
 
-            description_lines = [
-                f"**Message deleted in {source_channel_mention}**",
-                content,
-            ]
+            description_lines = [f"**Message deleted in {source_channel_mention}**"]
+            if edit_record is None:
+                content = message.content or "*(no text content)*"
+                if len(content) > 900:
+                    content = content[:897] + "..."
+                description_lines.append(content)
+            else:
+                edit_count = len(edit_record.snapshots) - 1
+                description_lines.append(
+                    f"✏️ Edited {edit_count} time{'s' if edit_count != 1 else ''} before deletion — full history below:"
+                )
+                if edit_record.truncated:
+                    description_lines.append("-# ⚠️ Only the most recent revisions are shown — earlier history aged out.")
             if message.attachments:
                 description_lines.append(
                     "**Attachments:** " + ", ".join(a.filename for a in message.attachments)
@@ -101,6 +122,36 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
                 icon_url=message.author.display_avatar.url,
             )
             embed.set_footer(text=f"User ID: {message.author.id} • Message ID: {payload.message_id}")
+            if edit_record is not None:
+                for name, value in edit_history_fields(edit_record):
+                    embed.add_field(name=name, value=value, inline=False)
+        elif edit_record is not None:
+            # Not in the message cache, but we still tracked its edits — use
+            # that instead of falling back to "content unavailable".
+            source_channel = self.bot.get_channel(payload.channel_id)
+            location = source_channel.mention if source_channel else f"<#{payload.channel_id}>"
+            member = guild.get_member(edit_record.author_id) if guild is not None else None
+            author_line = (
+                user_line(member) if member is not None else f"**{edit_record.author_display}** (`{edit_record.author_id}`)"
+            )
+            edit_count = len(edit_record.snapshots) - 1
+
+            description_lines = [
+                f"**Message deleted in {location}**",
+                author_line,
+                f"✏️ Edited {edit_count} time{'s' if edit_count != 1 else ''} before deletion — full history below:",
+            ]
+            if edit_record.truncated:
+                description_lines.append("-# ⚠️ Only the most recent revisions are shown — earlier history aged out.")
+
+            embed = discord.Embed(
+                description="\n".join(description_lines),
+                color=LogColors.MESSAGE,
+                timestamp=discord.utils.utcnow(),
+            )
+            embed.set_footer(text=f"User ID: {edit_record.author_id} • Message ID: {payload.message_id}")
+            for name, value in edit_history_fields(edit_record):
+                embed.add_field(name=name, value=value, inline=False)
         else:
             source_channel = self.bot.get_channel(payload.channel_id)
             location = source_channel.mention if source_channel else f"<#{payload.channel_id}>"

@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import os
 import time
-from datetime import timedelta
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 
 import discord
 
@@ -268,3 +270,96 @@ def get_stale_queue_items(now_ts: int) -> list[tuple[int, int]]:
     if changed:
         _save_queue_items(items)
     return stale
+
+
+# ── Cross-cog edit history ───────────────────────────────────────────────────
+# ViewEditsCog records every content edit here (silently — nothing gets
+# auto-posted to a log channel) so mods can look up a message's edit chain
+# on demand via =viewedits/=viewedits, and so MessageLogCog can show the
+# *whole* edit chain — not just the latest cached content — when a message
+# that was edited gets deleted. In-memory only, same tradeoff as the
+# suppression registries above: doesn't survive a restart, which is fine for
+# a lookup/logging aid.
+
+MAX_TRACKED_EDITED_MESSAGES = 2000  # oldest-tracked message evicted first past this
+MAX_SNAPSHOTS_PER_MESSAGE = 12  # oldest revisions dropped first past this
+
+
+@dataclass
+class EditSnapshot:
+    content: str
+    at: datetime
+
+
+@dataclass
+class MessageEditRecord:
+    channel_id: int
+    author_id: int
+    author_display: str
+    snapshots: list[EditSnapshot] = field(default_factory=list)
+    truncated: bool = False  # True once older revisions have been dropped for the cap above
+
+
+_edit_history: OrderedDict[int, MessageEditRecord] = OrderedDict()
+
+
+def record_edit(
+    message_id: int,
+    *,
+    channel_id: int,
+    author_id: int,
+    author_display: str,
+    before_content: str,
+    new_content: str,
+    created_at: datetime,
+    edited_at: datetime,
+) -> None:
+    """Append one revision to a message's tracked edit chain, seeding the
+    chain with `before_content` if this is the first edit seen for it.
+    Call on every content edit (ViewEditsCog's on_raw_message_edit)."""
+    record = _edit_history.get(message_id)
+    if record is None:
+        record = MessageEditRecord(
+            channel_id=channel_id,
+            author_id=author_id,
+            author_display=author_display,
+            snapshots=[EditSnapshot(content=before_content, at=created_at)],
+        )
+        _edit_history[message_id] = record
+    else:
+        _edit_history.move_to_end(message_id)
+
+    record.snapshots.append(EditSnapshot(content=new_content, at=edited_at))
+    if len(record.snapshots) > MAX_SNAPSHOTS_PER_MESSAGE:
+        record.snapshots = record.snapshots[-MAX_SNAPSHOTS_PER_MESSAGE:]
+        record.truncated = True
+
+    while len(_edit_history) > MAX_TRACKED_EDITED_MESSAGES:
+        _edit_history.popitem(last=False)
+
+
+def get_edit_history(message_id: int) -> MessageEditRecord | None:
+    """Peek at a message's tracked edit chain, if any. Non-destructive —
+    unlike the suppression registries above, this isn't a one-shot flag, so
+    both ViewEditsCog and MessageLogCog can read the same record."""
+    return _edit_history.get(message_id)
+
+
+def edit_history_fields(record: MessageEditRecord, *, max_len: int = 400) -> list[tuple[str, str]]:
+    """Formats a MessageEditRecord's revisions as (name, value) pairs ready
+    for embed.add_field(name=n, value=v, inline=False). Each revision's
+    content is capped at max_len chars so a long chain stays comfortably
+    under Discord's 6000-char combined embed limit."""
+    total = len(record.snapshots)
+    fields: list[tuple[str, str]] = []
+    for i, snap in enumerate(record.snapshots, start=1):
+        content = snap.content
+        if len(content) > max_len:
+            content = content[: max_len - 1].rstrip() + "…"
+        label = f"Revision {i}/{total}"
+        if i == total:
+            label += " — current"
+        elif i == 1 and not record.truncated:
+            label += " — original"
+        fields.append((f"{label} • <t:{int(snap.at.timestamp())}:f>", content))
+    return fields

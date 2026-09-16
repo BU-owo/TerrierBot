@@ -1,31 +1,29 @@
 from __future__ import annotations
 
 import re
-from collections import OrderedDict
-from dataclasses import dataclass, field
-from datetime import datetime
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from ..logging.logConfig import LogChannels, LogColors, MAIN_GUILD_ID, MOD_ROLE_ID, get_log_channel, user_line
+from ..logging.logConfig import (
+    LogChannels,
+    LogColors,
+    MAIN_GUILD_ID,
+    MAX_SNAPSHOTS_PER_MESSAGE,
+    MOD_ROLE_ID,
+    MessageEditRecord,
+    edit_history_fields,
+    get_edit_history,
+    get_log_channel,
+    record_edit,
+    user_line,
+)
 
-# How many tracked messages (each with its own edit chain) to keep in memory
-# at once — bounds memory use on a busy server. Oldest-tracked message is
-# evicted first once this is exceeded; a freshly-edited message is bumped
-# back to "newest" so actively-discussed messages survive longest.
-MAX_TRACKED_MESSAGES = 2000
-
-# How many revisions of a single message to keep. Past this, the oldest
-# revisions are dropped (keeping the most recent chain) — mostly a guard
-# against a message getting edited dozens of times.
-MAX_SNAPSHOTS_PER_MESSAGE = 12
-
-# Per-revision content preview cap for the embed — keeps the total embed
-# comfortably under Discord's 6000-char combined-embed limit even with
-# MAX_SNAPSHOTS_PER_MESSAGE fields all populated.
+# Per-revision content preview cap for this cog's own embed — logConfig's
+# edit_history_fields() defaults to the same value, passed explicitly here
+# so the two stay obviously in sync.
 _CONTENT_FIELD_MAX_LEN = 400
 
 # Matches a full Discord message link, same pattern purgeCog uses.
@@ -38,21 +36,6 @@ async def setup(bot: TerrierBot):
     await bot.add_cog(ViewEditsCog(bot))
 
 
-@dataclass
-class EditSnapshot:
-    content: str
-    at: datetime
-
-
-@dataclass
-class MessageEditRecord:
-    channel_id: int
-    author_id: int
-    author_display: str
-    snapshots: list[EditSnapshot] = field(default_factory=list)
-    truncated: bool = False
-
-
 class ViewEditsCog(
     commands.Cog,
     name="ViewEdits",
@@ -60,12 +43,11 @@ class ViewEditsCog(
 ):
     def __init__(self, bot: TerrierBot):
         self.bot = bot
-        # In-memory only, same tradeoff messageLogCog makes with its cached
-        # deletes — edit history doesn't survive a restart, and that's fine
-        # for a mod lookup tool.
-        self._edit_history: OrderedDict[int, MessageEditRecord] = OrderedDict()
 
     # ── Silent tracking ──────────────────────────────────────────────────────
+    # The actual store lives in logConfig.py (record_edit/get_edit_history) so
+    # MessageLogCog can show a deleted message's full edit chain too, not just
+    # its own /=viewedits lookup.
 
     @commands.Cog.listener()
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
@@ -80,34 +62,21 @@ class ViewEditsCog(
         if message.author.bot:
             return
 
-        record = self._edit_history.get(payload.message_id)
-        if record is None:
-            if payload.cached_message is not None:
-                before_content = payload.cached_message.content or "*(no text content)*"
-            else:
-                before_content = "*(original content unknown — not cached before this edit)*"
-            record = MessageEditRecord(
-                channel_id=payload.channel_id,
-                author_id=message.author.id,
-                author_display=str(message.author),
-                snapshots=[EditSnapshot(content=before_content, at=message.created_at)],
-            )
-            self._edit_history[payload.message_id] = record
+        if payload.cached_message is not None:
+            before_content = payload.cached_message.content or "*(no text content)*"
         else:
-            self._edit_history.move_to_end(payload.message_id)
+            before_content = "*(original content unknown — not cached before this edit)*"
 
-        record.snapshots.append(
-            EditSnapshot(
-                content=message.content or "*(no text content)*",
-                at=message.edited_at or discord.utils.utcnow(),
-            )
+        record_edit(
+            payload.message_id,
+            channel_id=payload.channel_id,
+            author_id=message.author.id,
+            author_display=str(message.author),
+            before_content=before_content,
+            new_content=message.content or "*(no text content)*",
+            created_at=message.created_at,
+            edited_at=message.edited_at or discord.utils.utcnow(),
         )
-        if len(record.snapshots) > MAX_SNAPSHOTS_PER_MESSAGE:
-            record.snapshots = record.snapshots[-MAX_SNAPSHOTS_PER_MESSAGE:]
-            record.truncated = True
-
-        while len(self._edit_history) > MAX_TRACKED_MESSAGES:
-            self._edit_history.popitem(last=False)
 
     # ── Lookup command ───────────────────────────────────────────────────────
 
@@ -155,17 +124,8 @@ class ViewEditsCog(
             timestamp=discord.utils.utcnow(),
         )
 
-        total = len(record.snapshots)
-        for i, snap in enumerate(record.snapshots, start=1):
-            content = snap.content
-            if len(content) > _CONTENT_FIELD_MAX_LEN:
-                content = content[: _CONTENT_FIELD_MAX_LEN - 1].rstrip() + "…"
-            label = f"Revision {i}/{total}"
-            if i == total:
-                label += " — current"
-            elif i == 1 and not record.truncated:
-                label += " — original"
-            embed.add_field(name=f"{label} • <t:{int(snap.at.timestamp())}:f>", value=content, inline=False)
+        for name, value in edit_history_fields(record, max_len=_CONTENT_FIELD_MAX_LEN):
+            embed.add_field(name=name, value=value, inline=False)
 
         embed.set_footer(text=f"Message ID: {message_id} • Looked up by {requested_by}")
         return embed
@@ -196,7 +156,7 @@ class ViewEditsCog(
             )
             return
 
-        record = self._edit_history.get(target_message_id)
+        record = get_edit_history(target_message_id)
         if record is None:
             await ctx.send(
                 "No edit history recorded for that message — it either hasn't been edited, "
