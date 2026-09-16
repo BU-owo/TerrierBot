@@ -99,13 +99,13 @@ class LockinCog(commands.Cog):
 
         return fetched_channel if isinstance(fetched_channel, discord.TextChannel) else None
 
-    async def _announce_lockin(self, member: discord.Member, *, seconds: int) -> None:
+    async def _announce_lockin(self, member: discord.Member, *, end_ts: int) -> None:
         channel = await self._get_announce_channel()
         if channel is None:
             return
         try:
             await channel.send(
-                f"{member.mention} is locked in under {format_duration(seconds)}.",
+                f"{member.mention} is locked in until <t:{end_ts}:F> (<t:{end_ts}:R>).",
                 allowed_mentions=discord.AllowedMentions(users=True),
             )
         except discord.HTTPException:
@@ -305,7 +305,7 @@ class LockinCog(commands.Cog):
         self._save_lockins()
 
         await self._log_lockin_start(ctx.author, seconds=seconds, end_ts=end_ts, removed_roles=current_roles)
-        await self._announce_lockin(ctx.author, seconds=seconds)
+        await self._announce_lockin(ctx.author, end_ts=end_ts)
 
         await ctx.send(
             f"locked in for {format_duration(seconds)}. ends <t:{end_ts}:F> (<t:{end_ts}:R>). "
