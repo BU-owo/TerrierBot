@@ -134,6 +134,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=feedbacksetup` / `/feedbacksetup` | Post the anonymous feedback prompt |
 | `/starboard ...` | Configure the starboard (Manage Server required) |
 | `/pingrole` | Ping one of the community roles |
+| `/pollee message:` | Ping the Pollee role with a message (restricted to a specific role) |
 | `/reactionrole <preset>` | Post a reaction role message from a preset (Manage Roles required) |
 | `=warn` / `/warn` | Warn a member |
 | `=warncount` / `/warncount` | List active warnings |
