@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
@@ -70,10 +71,17 @@ class LockinCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.lockins: dict[str, dict[str, Any]] = self._load_lockins()
+        # Per-user locks so two concurrent /lockin invocations for the same
+        # user can't both pass the "already locked in" check before either
+        # has written to self.lockins — see _lockin_lock().
+        self._lockin_locks: dict[str, asyncio.Lock] = {}
         self.check_lockins.start()
 
     def cog_unload(self):
         self.check_lockins.cancel()
+
+    def _lockin_lock(self, user_id: str) -> asyncio.Lock:
+        return self._lockin_locks.setdefault(user_id, asyncio.Lock())
 
     # ---------- storage helpers ----------
 
@@ -236,73 +244,79 @@ class LockinCog(commands.Cog):
     async def lockin(self, ctx: commands.Context, duration: str):
         user_id = str(ctx.author.id)
 
-        if user_id in self.lockins:
-            end_ts = int(self.lockins[user_id]["end_timestamp"])
-            await ctx.reply(
-                f"you're already locked in — ends <t:{end_ts}:R> (<t:{end_ts}:F>). "
-                f"can't stack or extend it, gotta ride it out.",
-                ephemeral=True
-            )
-            return
-
-        seconds = parse_duration(duration)
-        if seconds is None:
-            await ctx.reply(
-                "couldn't understand that duration. try something like `30m`, `2h`, `1d`, or `1d2h30m`.",
-                ephemeral=True
-            )
-            return
-
-        if seconds < MIN_SECONDS:
-            await ctx.reply("minimum lock-in is 5 minutes.", ephemeral=True)
-            return
-        if seconds > MAX_SECONDS:
-            await ctx.reply("maximum lock-in is 7 days.", ephemeral=True)
-            return
-
-        role = ctx.guild.get_role(LOCKIN_ROLE_ID)
-        if role is None:
-            await ctx.reply("lock-in role not found on this server — ping a mod.", ephemeral=True)
-            return
-
-        # All checks passed — defer now. The role-strip, role-add, shelve
-        # write, and member-log send below are several sequential network
-        # calls, which combined can outrun Discord's 3-second interaction ack
-        # window and make the final reply below fail with a 404 Unknown
-        # interaction even though the lock-in itself went through.
-        await ctx.defer(ephemeral=True)
-
-        end_ts = int(time.time() + seconds)
-
-        # Stash the member's current roles (minus @everyone, which can't be
-        # assigned/removed directly, and minus the booster role, which is
-        # Discord-managed and can't be touched by a bot at all — including it
-        # here would fail the whole batched remove_roles() call below) so
-        # they can be restored when the lock-in ends, then strip them —
-        # otherwise other roles' channel access would defeat the point of
-        # locking out server access.
-        current_roles = [r for r in ctx.author.roles if not r.is_default() and r.id != BOOST_ROLE_ID]
-        saved_role_ids = [r.id for r in current_roles]
-
-        try:
-            if current_roles:
-                suppress_role_log(ctx.author.id)
-                await ctx.author.remove_roles(
-                    *current_roles, reason="Lock-in requested — roles stashed until lock-in ends"
+        # Held from the "already locked in" check through the write to
+        # self.lockins below, so two concurrent /lockin invocations for the
+        # same user can't both pass the check before either has written —
+        # without this, the second call's shorter saved_role_ids would
+        # overwrite the first's, losing roles on restore.
+        async with self._lockin_lock(user_id):
+            if user_id in self.lockins:
+                end_ts = int(self.lockins[user_id]["end_timestamp"])
+                await ctx.reply(
+                    f"you're already locked in — ends <t:{end_ts}:R> (<t:{end_ts}:F>). "
+                    f"can't stack or extend it, gotta ride it out.",
+                    ephemeral=True
                 )
-            suppress_role_log(ctx.author.id)
-            await ctx.author.add_roles(role, reason="Lock-in requested")
-        except discord.HTTPException:
-            await ctx.send("couldn't assign the role — ping a mod.", ephemeral=True)
-            return
+                return
 
-        self.lockins[user_id] = {
-            "guild_id": ctx.guild.id,
-            "role_id": LOCKIN_ROLE_ID,
-            "end_timestamp": end_ts,
-            "saved_role_ids": saved_role_ids,
-        }
-        self._save_lockins()
+            seconds = parse_duration(duration)
+            if seconds is None:
+                await ctx.reply(
+                    "couldn't understand that duration. try something like `30m`, `2h`, `1d`, or `1d2h30m`.",
+                    ephemeral=True
+                )
+                return
+
+            if seconds < MIN_SECONDS:
+                await ctx.reply("minimum lock-in is 5 minutes.", ephemeral=True)
+                return
+            if seconds > MAX_SECONDS:
+                await ctx.reply("maximum lock-in is 7 days.", ephemeral=True)
+                return
+
+            role = ctx.guild.get_role(LOCKIN_ROLE_ID)
+            if role is None:
+                await ctx.reply("lock-in role not found on this server — ping a mod.", ephemeral=True)
+                return
+
+            # All checks passed — defer now. The role-strip, role-add, shelve
+            # write, and member-log send below are several sequential network
+            # calls, which combined can outrun Discord's 3-second interaction
+            # ack window and make the final reply below fail with a 404
+            # Unknown interaction even though the lock-in itself went through.
+            await ctx.defer(ephemeral=True)
+
+            end_ts = int(time.time() + seconds)
+
+            # Stash the member's current roles (minus @everyone, which can't
+            # be assigned/removed directly, and minus the booster role, which
+            # is Discord-managed and can't be touched by a bot at all —
+            # including it here would fail the whole batched remove_roles()
+            # call below) so they can be restored when the lock-in ends, then
+            # strip them — otherwise other roles' channel access would defeat
+            # the point of locking out server access.
+            current_roles = [r for r in ctx.author.roles if not r.is_default() and r.id != BOOST_ROLE_ID]
+            saved_role_ids = [r.id for r in current_roles]
+
+            try:
+                if current_roles:
+                    suppress_role_log(ctx.author.id)
+                    await ctx.author.remove_roles(
+                        *current_roles, reason="Lock-in requested — roles stashed until lock-in ends"
+                    )
+                suppress_role_log(ctx.author.id)
+                await ctx.author.add_roles(role, reason="Lock-in requested")
+            except discord.HTTPException:
+                await ctx.send("couldn't assign the role — ping a mod.", ephemeral=True)
+                return
+
+            self.lockins[user_id] = {
+                "guild_id": ctx.guild.id,
+                "role_id": LOCKIN_ROLE_ID,
+                "end_timestamp": end_ts,
+                "saved_role_ids": saved_role_ids,
+            }
+            self._save_lockins()
 
         await self._log_lockin_start(ctx.author, seconds=seconds, end_ts=end_ts, removed_roles=current_roles)
         await self._announce_lockin(ctx.author, end_ts=end_ts)
