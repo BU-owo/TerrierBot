@@ -53,6 +53,7 @@ class LogColors:
     MOD = discord.Color.dark_red()
     MESSAGE = discord.Color.dark_grey()
     MOD_DELETE = discord.Color.orange()
+    EDIT = discord.Color.blurple()
 
 
 def get_log_channel(bot: discord.Client, channel_id: int) -> discord.TextChannel | None:

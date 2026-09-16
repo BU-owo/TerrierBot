@@ -23,6 +23,7 @@ TerrierBot currently supports:
 - Roleless, self-service "squad ping" lists through `squadpingcreate`, letting anyone spin up a new opt-in ping group and join/leave/ping it with `squadpingmanage` and `squadping`
 - Automatic class chat discovery: mentioning a BU class code (e.g. "CH 109") points members to that class's forum thread, or spins one up automatically once a code comes up enough
 - Server rule lookup through `rule`, showing a single rule by number or the full numbered list
+- Silent message-edit tracking, viewable on demand by mods through `viewedits` (reply, ID, or link) without auto-posting every edit to the logs
 
 ## Requirements
 
@@ -147,6 +148,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `/modvote start` | Start an anonymous timed vote on disciplining a member, with custom options (mod role required) |
 | `/modvote close` | Manually close an open modvote early and post results (mod role required) |
 | `/unserious mode: user:` | Toggle a member's access to the Serious category (mod role required) |
+| `=viewedits [target]` / `/viewedits [message]` | View a message's edit history — silently tracked in the background; `=viewedits` (reply or ID/link) self-deletes and posts to #message-logs, `/viewedits` replies ephemerally and also posts a copy there (mod role required) |
 
 ### Utility and maintenance
 

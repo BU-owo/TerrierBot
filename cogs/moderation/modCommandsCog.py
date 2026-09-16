@@ -80,6 +80,12 @@ _FIELDS = [
         "`/unserious <enable|disable> <member>`",
         "Toggles a member's access to the Serious category on/off.",
     ),
+    (
+        "📝 View Edits",
+        "`=viewedits [target]` / `/viewedits [message]`",
+        "Shows a message's edit history. =viewedits (reply to the message, or pass its ID/link) deletes itself "
+        "and posts the chain straight to #message-logs; /viewedits replies ephemerally and also posts a copy there.",
+    ),
 ]
 
 
