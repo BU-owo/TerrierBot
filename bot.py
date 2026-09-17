@@ -20,6 +20,11 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from cogs.logging.logConfig import LogChannels, MOD_ROLE_ID
+from cogs.community.trollCog import owo_ify
+
+# Commands whose errors get uwu-ified instead of shown straight — matches
+# the bit these commands are already messing with.
+UWU_ERROR_COMMANDS = {"uwu", "troll"}
 
 # Eastern time (auto-handles EST/EDT) — every log line and any timestamp text
 # shown to users should be in this zone rather than the host's local time
@@ -432,6 +437,14 @@ class TerrierBot(commands.Bot):
             return original
         return error
 
+    @staticmethod
+    def _uwuify_error(ctx: Context, msg: str) -> str:
+        """uwu-ify error text for =uwu/=troll (and their hybrid /uwu, /troll
+        forms) — errors from those commands should look the part."""
+        if ctx.command is not None and ctx.command.qualified_name in UWU_ERROR_COMMANDS:
+            return owo_ify(msg)
+        return msg
+
     @override
     async def on_command_error(self, ctx : Context, error : commands.CommandError):
         http_error = None
@@ -458,15 +471,15 @@ class TerrierBot(commands.Bot):
             logging.debug(f"command not found {ctx.message.content} (by {ctx.author})")
             return
         if isinstance(error, commands.MaxConcurrencyReached):
-            _ = await ctx.send("Too many people running this command at a time")
+            _ = await ctx.send(self._uwuify_error(ctx, "Too many people running this command at a time"))
             return
         if isinstance(error, (commands.CommandInvokeError, commands.HybridCommandError)):
             real_error = self._unwrap_invoke_error(error)
             await self.report_exception(category="command", affected=ctx.command.qualified_name if ctx.command else "unknown", error=real_error)
-            _ = await ctx.send(f"{type(real_error).__name__}: {real_error}")
+            _ = await ctx.send(self._uwuify_error(ctx, f"{type(real_error).__name__}: {real_error}"))
             return
         if isinstance(error, commands.NotOwner):
-            _ = await ctx.send("Sorry, you can't run that!")
+            _ = await ctx.send(self._uwuify_error(ctx, "Sorry, you can't run that!"))
             if isinstance(ctx.channel, discord.DMChannel):
                 logging.info(f"{ctx.author.display_name} is trying to run the owner-only command \"{ctx.message.content}\" in a DM")
             else:
@@ -477,20 +490,20 @@ class TerrierBot(commands.Bot):
                 logging.info(f"{ctx.author.display_name} is trying to run the owner-only command \"{ctx.message.content}\" {location}")
             return
         if isinstance(error, commands.MemberNotFound) or isinstance(error, commands.UserNotFound):
-            _ = await ctx.send("That's not a real person.")
+            _ = await ctx.send(self._uwuify_error(ctx, "That's not a real person."))
             return
         if isinstance(error, commands.CommandOnCooldown):
-            _ = await ctx.send(f"You are on cooldown. Chill out for {error.retry_after}s")
+            _ = await ctx.send(self._uwuify_error(ctx, f"You are on cooldown. Chill out for {error.retry_after}s"))
             return
         if isinstance(error, commands.MissingRequiredArgument):
-            _ = await ctx.send(f"Missing argument {error.param}")
+            _ = await ctx.send(self._uwuify_error(ctx, f"Missing argument {error.param}"))
             return
         # NotOwner is a CheckFailure subclass but is already handled above
         # with its own message/logging, so this only catches the rest —
         # has_permissions/has_role/custom checks failing is an expected user
         # mistake, not a bug worth paging the error channel over.
         if isinstance(error, commands.CheckFailure):
-            _ = await ctx.send("You don't have permission to use this command.")
+            _ = await ctx.send(self._uwuify_error(ctx, "You don't have permission to use this command."))
             return
 
         if isinstance(ctx.channel, discord.DMChannel):
@@ -502,7 +515,7 @@ class TerrierBot(commands.Bot):
                 location = ""
             logging.error(f"{type(error).__name__}: {error} on command \"{ctx.message.content}\" from \"{ctx.author.display_name}\" {location}")
         await self.report_exception(category="command", affected=ctx.command.qualified_name if ctx.command else "unknown", error=error)
-        _ = await ctx.send(f"Error - {type(error).__name__}: {error}")
+        _ = await ctx.send(self._uwuify_error(ctx, f"Error - {type(error).__name__}: {error}"))
 
 
 #============================================
@@ -546,6 +559,15 @@ async def _send_app_command_reply(interaction: discord.Interaction, msg: str) ->
         pass
 
 
+def _uwuify_app_error(interaction: discord.Interaction, msg: str) -> str:
+    """Same as TerrierBot._uwuify_error, but for the slash-command error
+    path — errors from /uwu and /troll should look the part."""
+    command = interaction.command
+    if command is not None and command.qualified_name in UWU_ERROR_COMMANDS:
+        return owo_ify(msg)
+    return msg
+
+
 @bot.tree.error
 async def on_app_command_error(
     interaction: discord.Interaction,
@@ -558,10 +580,10 @@ async def on_app_command_error(
     # over — most commands already have their own local .error handler for
     # this, but this is the safety net for ones that don't.
     if isinstance(error, app_commands.CommandOnCooldown):
-        await _send_app_command_reply(interaction, f"You're on cooldown. Try again in {error.retry_after:.0f}s.")
+        await _send_app_command_reply(interaction, _uwuify_app_error(interaction, f"You're on cooldown. Try again in {error.retry_after:.0f}s."))
         return
     if isinstance(error, app_commands.CheckFailure):
-        await _send_app_command_reply(interaction, "You don't have permission to use this command.")
+        await _send_app_command_reply(interaction, _uwuify_app_error(interaction, "You don't have permission to use this command."))
         return
 
     msg = (
@@ -576,7 +598,7 @@ async def on_app_command_error(
         affected=interaction.command.qualified_name if interaction.command else "unknown",
         error=underlying_error,
     )
-    await _send_app_command_reply(interaction, msg)
+    await _send_app_command_reply(interaction, _uwuify_app_error(interaction, msg))
 
 
 @bot.tree.command(name="status", description="Show TerrierBot runtime status.")
