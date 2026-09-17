@@ -81,9 +81,20 @@ _FIELDS = [
         "Toggles a member's access to the Serious category on/off.",
     ),
     (
+        "🗑️ Squad-Ping Delete",
+        "`=squadpingdelete <name>` / `/squadpingdelete`",
+        "Permanently deletes a squad-ping list and everyone's membership in it. Can't be undone.",
+    ),
+    (
         "📝 View Edits",
         "`=viewedits [target]` / `/viewedits [message]`",
         "Shows a message's edit history. =viewedits (reply to the message) posts to logs; /viewedits replies ephemerally.",
+    ),
+    (
+        "🔒 Mod Lock-in",
+        "`/modlockin <duration>` (max 2h) / `/modlockinstop`",
+        "Self-discipline tool: every message you send outside the mod category gets deleted and reposted "
+        "publicly (webhook, your name/pfp) saying you're supposed to be locked in. modlockinstop ends it early.",
     ),
 ]
 

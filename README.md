@@ -24,6 +24,7 @@ TerrierBot currently supports:
 - Automatic class chat discovery: mentioning a BU class code (e.g. "CH 109") points members to that class's forum thread, or spins one up automatically once a code comes up enough
 - Server rule lookup through `rule`, showing a single rule by number or the full numbered list
 - Silent message-edit tracking, viewable on demand by mods through `viewedits` (reply, ID, or link) without auto-posting every edit to the logs
+- Mod self-lock-in through `modlockin`/`modlockinstop`: messages sent outside the mod category get deleted and publicly reposted (webhook, their name/pfp) as a callout until time's up or they cancel it
 
 ## Requirements
 
@@ -124,6 +125,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=squadpinglist` / `/squadpinglist [name]` | List every squad-ping list, or pass a name to see that squad's members without pinging them |
 | `=squadpingmanage <add\|remove> <name>` / `/squadpingmanage` | Join or leave a squad-ping list |
 | `=squadping <name>` / `/squadping` | Ping everyone on a squad-ping list you're a member of (30s per-user cooldown) |
+| `=squadpingdelete <name>` / `/squadpingdelete` | Permanently delete a squad-ping list (mod role required) |
 | `=rule [number]` / `/rule [number]` | Show a server rule by number, or the full numbered list if left blank |
 
 ### Moderation, feedback, and management
@@ -149,6 +151,8 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `/modvote close` | Manually close an open modvote early and post results (mod role required) |
 | `/unserious mode: user:` | Toggle a member's access to the Serious category (mod role required) |
 | `=viewedits [target]` / `/viewedits [message]` | View a message's edit history — silently tracked in the background; `=viewedits` (reply or ID/link) self-deletes and posts to #message-logs, `/viewedits` replies ephemerally and also posts a copy there (mod role required) |
+| `/modlockin duration:` | Self-lock-in for focus (max 2 hours) — any message you send outside the mod category gets deleted and reposted publicly under your name/avatar with a callout; the mod category itself is exempt (mod role required) |
+| `/modlockinstop` | End your own mod lock-in early (mod role required) |
 
 ### Utility and maintenance
 

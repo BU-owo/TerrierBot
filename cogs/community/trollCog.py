@@ -261,42 +261,14 @@ class TrollCog(commands.Cog):
             except discord.Forbidden:
                 pass
 
-    async def _troll_user_autocomplete(
-        self, interaction: discord.Interaction, current: str
-    ) -> list[app_commands.Choice[str]]:
-        guild = interaction.guild
-        if guild is None:
-            return []
-
-        # `user` can be autocompleted before `mode` is chosen (Discord doesn't
-        # enforce fill order), so mode may still be unset here — fall back to
-        # the broader "enable" candidate list rather than assuming disable.
-        mode = interaction.namespace.mode
-        role = guild.get_role(TROLL_ROLE_ID)
-
-        if mode is None or mode == "enable":
-            candidates = guild.members
-        else:
-            candidates = role.members if role is not None else []
-
-        current_lower = current.lower()
-        choices = []
-        for member in candidates:
-            if current_lower in member.display_name.lower():
-                choices.append(app_commands.Choice(name=member.display_name, value=str(member.id)))
-            if len(choices) >= 25:
-                break
-        return choices
-
     @app_commands.command(name="troll", description="Toggle owo-troll mode on a user (mod only)")
     @app_commands.describe(mode="enable or disable", user="The user to toggle troll mode for")
     @app_commands.choices(mode=[
         app_commands.Choice(name="enable", value="enable"),
         app_commands.Choice(name="disable", value="disable"),
     ])
-    @app_commands.autocomplete(user=_troll_user_autocomplete)
     @app_commands.check(_is_mod)
-    async def troll(self, interaction: discord.Interaction, mode: app_commands.Choice[str], user: str):
+    async def troll(self, interaction: discord.Interaction, mode: app_commands.Choice[str], user: discord.Member):
         role = interaction.guild.get_role(TROLL_ROLE_ID)
         if role is None:
             await interaction.response.send_message(
@@ -305,28 +277,25 @@ class TrollCog(commands.Cog):
             return
 
         try:
-            member = interaction.guild.get_member(int(user))
-            if member is None:
-                member = await interaction.guild.fetch_member(int(user))
-        except (ValueError, discord.NotFound, discord.HTTPException):
-            member = None
-
-        if member is None:
-            await interaction.response.send_message(
-                "Could not find that user in this server.", ephemeral=True
-            )
-            return
-
-        try:
             if mode.value == "enable":
-                await member.add_roles(role, reason=f"Troll mode enabled by {interaction.user}")
+                if role in user.roles:
+                    await interaction.response.send_message(
+                        f"Troll mode is already enabled for {user.mention}.", ephemeral=True
+                    )
+                    return
+                await user.add_roles(role, reason=f"Troll mode enabled by {interaction.user}")
                 await interaction.response.send_message(
-                    f"Troll mode enabled for {member.mention}.", ephemeral=True
+                    f"Troll mode enabled for {user.mention}.", ephemeral=True
                 )
             else:
-                await member.remove_roles(role, reason=f"Troll mode disabled by {interaction.user}")
+                if role not in user.roles:
+                    await interaction.response.send_message(
+                        f"Troll mode isn't enabled for {user.mention}.", ephemeral=True
+                    )
+                    return
+                await user.remove_roles(role, reason=f"Troll mode disabled by {interaction.user}")
                 await interaction.response.send_message(
-                    f"Troll mode disabled for {member.mention}.", ephemeral=True
+                    f"Troll mode disabled for {user.mention}.", ephemeral=True
                 )
         except discord.Forbidden:
             await interaction.response.send_message(

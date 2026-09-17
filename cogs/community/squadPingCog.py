@@ -10,6 +10,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import TerrierBot, Context
+from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
 
 # ── Persistence ──────────────────────────────────────────────────────────────
 # Same pattern as banCog's tempbans.json: gitignored, runtime-generated JSON
@@ -253,6 +254,54 @@ class SquadPingCog(
             await self._join(ctx, key)
         else:
             await self._leave(ctx, key)
+
+    # ── /squadpingdelete ─────────────────────────────────────────────────────
+
+    @staticmethod
+    async def _require_mod(ctx: Context) -> bool:
+        if not isinstance(ctx.author, discord.Member) or not any(
+            r.id == MOD_ROLE_ID for r in ctx.author.roles
+        ):
+            await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
+            return False
+        return True
+
+    @commands.hybrid_command(name="squadpingdelete", description="Permanently delete a squad-ping list (mod only).")
+    @app_commands.describe(name="Which squad-ping list to delete")
+    @app_commands.autocomplete(name=_list_name_autocomplete)
+    async def squadpingdelete(self, ctx: Context, name: str) -> None:
+        if not await self._require_mod(ctx):
+            return
+
+        key = name.strip().lower()
+        if key not in self.lists:
+            await ctx.send(self._unknown_list_message(key), ephemeral=True)
+            return
+
+        entry = self.lists.pop(key)
+        _save(self.lists)
+
+        await ctx.send(
+            f"🗑️ Deleted the **{key}** squad-ping list ({len(entry['members'])} member(s)).", ephemeral=True
+        )
+
+        log_channel = get_log_channel(self.bot, LogChannels.MOD)
+        if log_channel is not None:
+            embed = discord.Embed(
+                title="🗑️ Squad-ping list deleted",
+                description=(
+                    f"**List:** {key}\n"
+                    f"**Description:** {entry['description'] or '*none*'}\n"
+                    f"**Members:** {len(entry['members'])}\n"
+                    f"**Moderator:** {user_line(ctx.author)}"
+                ),
+                color=LogColors.MOD,
+                timestamp=discord.utils.utcnow(),
+            )
+            try:
+                await log_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+            except discord.HTTPException:
+                pass
 
 
 async def setup(bot: TerrierBot):
