@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel, user_line
+from .logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel, is_role_log_suppressed, user_line
 
 
 async def setup(bot: TerrierBot):
@@ -34,6 +34,11 @@ class ServerLogCog(commands.Cog, name="ServerLog", description="Logs channel, ro
         added_roles = [role for role in after.roles if role.id not in before_ids and role.name != "@everyone"]
         removed_roles = [role for role in before.roles if role.id not in after_ids and role.name != "@everyone"]
         if not added_roles and not removed_roles:
+            return
+
+        # lockinCog posts its own single consolidated embed for a lock-in
+        # transition's two role-mutating calls — skip the generic duplicate.
+        if is_role_log_suppressed(after.id):
             return
 
         lines: list[str] = []

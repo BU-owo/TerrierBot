@@ -159,6 +159,48 @@ def is_mod_log_suppressed(user_id: int, action: str) -> bool:
     return (now - ts) <= _MOD_LOG_SUPPRESS_TTL_SECONDS
 
 
+# ── Cross-cog role-change-log suppression ────────────────────────────────────
+# lockinCog strips/restores a member's roles via two separate member.remove_
+# roles()/add_roles() calls (one for the member's stashed roles, one for the
+# lock-in role itself), each of which fires its own on_member_update gateway
+# event — without this, ServerLogCog would post two separate, uncorrelated
+# "roles updated" embeds for what's really one lock-in transition, instead of
+# lockinCog's own single consolidated embed. Call suppress_role_log(user_id)
+# right before each role-mutating call that's about to fire one of those
+# events (once per call — each call consumes one suppression), same
+# call-before-you-act pattern as suppress_mod_log above.
+
+_suppressed_role_log: dict[int, list[float]] = {}
+_ROLE_LOG_SUPPRESS_TTL_SECONDS = 30  # generous window to cover both sequential calls + gateway delay
+
+
+def suppress_role_log(user_id: int) -> None:
+    """Mark one upcoming on_member_update role-change event for `user_id` so
+    ServerLogCog skips logging it. Call once per role-mutating call you're
+    about to make (e.g. twice for a strip-then-add transition)."""
+    _suppressed_role_log.setdefault(user_id, []).append(time.monotonic())
+
+
+def is_role_log_suppressed(user_id: int) -> bool:
+    """Check (and consume one) suppression flag for `user_id`. Also
+    opportunistically prunes stale entries so this dict can't grow unbounded."""
+    now = time.monotonic()
+    for uid in list(_suppressed_role_log.keys()):
+        _suppressed_role_log[uid] = [
+            ts for ts in _suppressed_role_log[uid] if now - ts <= _ROLE_LOG_SUPPRESS_TTL_SECONDS
+        ]
+        if not _suppressed_role_log[uid]:
+            del _suppressed_role_log[uid]
+
+    timestamps = _suppressed_role_log.get(user_id)
+    if not timestamps:
+        return False
+    timestamps.pop(0)
+    if not timestamps:
+        del _suppressed_role_log[user_id]
+    return True
+
+
 # ── Cross-cog purge attribution ──────────────────────────────────────────────
 # PurgeCog's =purge bulk-deletes via TextChannel.purge(), which fires the same
 # on_raw_bulk_message_delete event as any other bulk delete. Unlike
