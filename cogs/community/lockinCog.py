@@ -8,7 +8,7 @@ import shelve
 import time
 from typing import Any
 
-from ..logging.logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel, suppress_role_log
+from ..logging.logConfig import LogChannels, LogColors, MAIN_GUILD_ID, MOD_ROLE_ID, get_log_channel, suppress_role_log
 
 LOCKIN_ROLE_ID = 1410344839718895716
 LOCKIN_ANNOUNCE_CHANNEL_ID = 1410345159186714796
@@ -242,6 +242,12 @@ class LockinCog(commands.Cog):
     )
     @app_commands.describe(duration="e.g. 30m, 2h, 1d, 1d2h30m")
     async def lockin(self, ctx: commands.Context, duration: str):
+        # Mods get a longer-duration, mod-only lock-in with its own early-stop
+        # command — point them there instead of the self-service version.
+        if isinstance(ctx.author, discord.Member) and any(r.id == MOD_ROLE_ID for r in ctx.author.roles):
+            await ctx.reply("mods should use `/modlockin` instead.", ephemeral=True)
+            return
+
         user_id = str(ctx.author.id)
 
         # Held from the "already locked in" check through the write to
