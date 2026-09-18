@@ -10,7 +10,8 @@ import discord
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from ..logging.logConfig import MOD_ROLE_ID
+from ..logging.logConfig import MAIN_GUILD_ID, MOD_ROLE_ID
+from .kickPoliticsCog import POLITICS_MOD_ROLE_ID
 
 # ── Config ────────────────────────────────────────────────────────────────
 # Category to split message counts against — messages here vs. everywhere
@@ -149,6 +150,19 @@ class ModTrackerCog(
         # bot's own account in the case log — that's not moderator activity.
         if self.bot.user is not None:
             all_mod_ids.discard(self.bot.user.id)
+
+        # Drop anyone who's left the server, and Politics Mods — their
+        # politics approvals/denials aren't the mod work this report tracks.
+        # Skipped entirely if the guild isn't cached, rather than risk
+        # hiding everyone on a transient cache miss.
+        guild = self.bot.get_guild(MAIN_GUILD_ID)
+        if guild is not None:
+            all_mod_ids = {
+                mod_id
+                for mod_id in all_mod_ids
+                if (member := guild.get_member(mod_id)) is not None
+                and not any(r.id == POLITICS_MOD_ROLE_ID for r in member.roles)
+            }
 
         embed = discord.Embed(
             title="Mod Activity Report",
