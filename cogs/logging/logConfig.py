@@ -36,6 +36,13 @@ class LogChannels:
 # the same value; import it from here instead of re-declaring it.
 MOD_ROLE_ID = 1402095379935395934
 
+# Junior Mod — a limited-permission mod tier. Holders can: timeout (capped at
+# 1 day, unlike full mods' 28-day max — see timeoutCog.py), purge/delete
+# messages, kickpolitics, pollee, unserious, and hardmute. They do NOT get
+# untimeout, unmute, ban/kick, warnings, lockdown, or anything else gated on
+# MOD_ROLE_ID alone — each of those cogs' checks were left untouched.
+JUNIOR_MOD_ROLE_ID = 1550898521144827924
+
 
 # Terrier Hub — the only guild these logging cogs should report activity
 # for. TerrierBot is also a member of a separate appeals server (see

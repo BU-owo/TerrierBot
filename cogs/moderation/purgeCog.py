@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from ..logging.logConfig import MOD_ROLE_ID, register_purge
+from ..logging.logConfig import JUNIOR_MOD_ROLE_ID, MOD_ROLE_ID, register_purge
 
 # Matches a full Discord message link, e.g.
 # https://discord.com/channels/{guild}/{channel}/{message}
@@ -40,7 +40,7 @@ class PurgeCog(
     @staticmethod
     async def _require_mod(ctx: Context) -> bool:
         if not isinstance(ctx.author, discord.Member) or not any(
-            r.id == MOD_ROLE_ID for r in ctx.author.roles
+            r.id in (MOD_ROLE_ID, JUNIOR_MOD_ROLE_ID) for r in ctx.author.roles
         ):
             await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
             return False

@@ -9,7 +9,14 @@ from discord.ext import commands
 
 from bot import TerrierBot
 from ..logging.caseLogCog import record_case
-from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
+from ..logging.logConfig import (
+    JUNIOR_MOD_ROLE_ID,
+    LogChannels,
+    LogColors,
+    MOD_ROLE_ID,
+    get_log_channel,
+    user_line,
+)
 
 UNSERIOUS_CATEGORY_ID = 1402023982185713835
 
@@ -21,7 +28,7 @@ SHELVE_KEY = "unserious_enabled"
 
 def _is_mod(interaction: discord.Interaction) -> bool:
     return isinstance(interaction.user, discord.Member) and any(
-        r.id == MOD_ROLE_ID for r in interaction.user.roles
+        r.id in (MOD_ROLE_ID, JUNIOR_MOD_ROLE_ID) for r in interaction.user.roles
     )
 
 

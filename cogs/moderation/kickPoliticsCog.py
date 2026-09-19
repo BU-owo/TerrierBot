@@ -8,7 +8,14 @@ from discord.ext import commands
 
 from bot import TerrierBot
 from ..logging.caseLogCog import record_case
-from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
+from ..logging.logConfig import (
+    JUNIOR_MOD_ROLE_ID,
+    LogChannels,
+    LogColors,
+    MOD_ROLE_ID,
+    get_log_channel,
+    user_line,
+)
 
 POLITICS_ROLE_ID = 1477468718127775824
 POLITICS_MOD_ROLE_ID = 1548747637166055425
@@ -16,7 +23,7 @@ POLITICS_MOD_ROLE_ID = 1548747637166055425
 
 def _is_mod(interaction: discord.Interaction) -> bool:
     return isinstance(interaction.user, discord.Member) and any(
-        r.id in (MOD_ROLE_ID, POLITICS_MOD_ROLE_ID) for r in interaction.user.roles
+        r.id in (MOD_ROLE_ID, POLITICS_MOD_ROLE_ID, JUNIOR_MOD_ROLE_ID) for r in interaction.user.roles
     )
 
 

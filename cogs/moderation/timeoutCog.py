@@ -11,6 +11,7 @@ from discord.ext import commands
 from bot import Context, TerrierBot
 from ..logging.caseLogCog import record_case
 from ..logging.logConfig import (
+    JUNIOR_MOD_ROLE_ID,
     LogChannels,
     LogColors,
     MOD_ROLE_ID,
@@ -23,6 +24,7 @@ from ..logging.logConfig import (
 _DURATION_RE = re.compile(r"^(\d+)\s*([smhd])$", re.IGNORECASE)
 _UNIT_SECONDS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 _MAX_TIMEOUT_SECONDS = 28 * 86400  # Discord's hard cap on timeout duration
+_JUNIOR_MOD_MAX_TIMEOUT_SECONDS = 86400  # Junior Mods can only timeout for up to 1 day
 _DURATION_FORMAT_HELP = "Use a number + unit: `30m`, `2h`, `1d`, `45s` (s/m/h/d)."
 
 
@@ -56,6 +58,19 @@ class TimeoutCog(
     async def _require_mod(ctx: Context) -> bool:
         if not isinstance(ctx.author, discord.Member) or not any(
             r.id == MOD_ROLE_ID for r in ctx.author.roles
+        ):
+            await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
+            return False
+        return True
+
+    @staticmethod
+    async def _require_mod_or_junior(ctx: Context) -> bool:
+        """Like _require_mod, but also admits Junior Mods — used only by
+        =timeout, whose caller then clamps duration for non-full-mods. Every
+        other command in this cog (=untimeout) stays full-mod-only via
+        _require_mod above."""
+        if not isinstance(ctx.author, discord.Member) or not any(
+            r.id in (MOD_ROLE_ID, JUNIOR_MOD_ROLE_ID) for r in ctx.author.roles
         ):
             await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
             return False
@@ -101,11 +116,16 @@ class TimeoutCog(
     async def timeout(
         self, ctx: Context, member: discord.Member, duration: str, *, reason: str | None = None
     ):
-        if not await self._require_mod(ctx):
+        if not await self._require_mod_or_junior(ctx):
             return
         if ctx.guild is None:
             await ctx.send("This command can only be used in a server.", ephemeral=True)
             return
+
+        is_full_mod = isinstance(ctx.author, discord.Member) and any(
+            r.id == MOD_ROLE_ID for r in ctx.author.roles
+        )
+        max_seconds = _MAX_TIMEOUT_SECONDS if is_full_mod else _JUNIOR_MOD_MAX_TIMEOUT_SECONDS
 
         seconds = _parse_duration_seconds(duration)
         if seconds is None:
@@ -115,9 +135,9 @@ class TimeoutCog(
             )
             return
 
-        clamped = seconds > _MAX_TIMEOUT_SECONDS
+        clamped = seconds > max_seconds
         if clamped:
-            seconds = _MAX_TIMEOUT_SECONDS
+            seconds = max_seconds
 
         guild = ctx.guild
         bot_member = guild.me
@@ -144,7 +164,14 @@ class TimeoutCog(
 
         reason_text = reason or "No reason provided"
         duration_display = format_duration(timedelta(seconds=seconds))
-        clamp_note = " (clamped to Discord's 28-day max)" if clamped else ""
+        if clamped:
+            clamp_note = (
+                " (clamped to Discord's 28-day max)"
+                if is_full_mod
+                else " (clamped to Junior Mods' 1-day max)"
+            )
+        else:
+            clamp_note = ""
 
         try:
             await member.timeout(

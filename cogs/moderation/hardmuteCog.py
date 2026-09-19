@@ -10,7 +10,14 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from ..logging.caseLogCog import record_case
-from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
+from ..logging.logConfig import (
+    JUNIOR_MOD_ROLE_ID,
+    LogChannels,
+    LogColors,
+    MOD_ROLE_ID,
+    get_log_channel,
+    user_line,
+)
 
 # The role that confines a hardmuted member to a single channel. That
 # channel's own permission overwrites are what actually grant/deny access —
@@ -60,6 +67,17 @@ class HardmuteCog(
             return False
         return True
 
+    @staticmethod
+    async def _require_mod_or_junior(ctx: Context) -> bool:
+        """Like _require_mod, but also admits Junior Mods — used only by
+        =hardmute. =unmute stays full-mod-only via _require_mod above."""
+        if not isinstance(ctx.author, discord.Member) or not any(
+            r.id in (MOD_ROLE_ID, JUNIOR_MOD_ROLE_ID) for r in ctx.author.roles
+        ):
+            await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
+            return False
+        return True
+
     async def _log_action(
         self, *, title: str, member: discord.Member, moderator: discord.abc.User
     ) -> None:
@@ -87,7 +105,7 @@ class HardmuteCog(
     )
     @app_commands.describe(member="The member to hardmute")
     async def hardmute(self, ctx: Context, member: discord.Member):
-        if not await self._require_mod(ctx):
+        if not await self._require_mod_or_junior(ctx):
             return
         guild = ctx.guild
         if guild is None:

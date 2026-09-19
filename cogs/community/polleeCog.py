@@ -5,6 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import TerrierBot
+from ..logging.logConfig import JUNIOR_MOD_ROLE_ID
 
 POLLEE_PING_ROLE_ID = 1404504161680228542
 POLLEE_ALLOWED_ROLE_ID = 1403879675679215827
@@ -12,7 +13,7 @@ POLLEE_ALLOWED_ROLE_ID = 1403879675679215827
 
 def _is_allowed(interaction: discord.Interaction) -> bool:
     return isinstance(interaction.user, discord.Member) and any(
-        r.id == POLLEE_ALLOWED_ROLE_ID for r in interaction.user.roles
+        r.id in (POLLEE_ALLOWED_ROLE_ID, JUNIOR_MOD_ROLE_ID) for r in interaction.user.roles
     )
 
 
