@@ -8,10 +8,8 @@ from bot import Context, TerrierBot
 BUPD_NUMBER = "617-353-2121"
 BUPD_MEDICAL_CAMPUS_NUMBER = "617-358-4444"
 
-# 24/7 emergency lines, shown below BUPD (kept smaller/lower-priority — BUPD
-# is who you call first for anything urgent on campus).
 EMERGENCY_LINES: list[tuple[str, str]] = [
-    ("Medical Emergencies (non-life threatening)", "617-353-3575"),
+    ("Medical Emergencies", "617-353-3575 (non-life threatening)"),
     ("Mental Health Emergencies", "617-353-3569"),
     ("SARP (sexual assault, dating violence, etc)", "617-353-7277"),
     ("Facilities Emergencies/Urgent Issues", "617-353-2105"),
@@ -31,14 +29,12 @@ class EmergencyCog(
         self.bot = bot
 
     def _build_embed(self) -> discord.Embed:
-        # BUPD goes in the title — the largest text an embed has — so it's
-        # unmistakably the number to call first for an on-campus emergency.
+        # BUPD goes in the title — the largest text an embed has.
         embed = discord.Embed(
-            title=f"🚨 BU POLICE (Emergency): {BUPD_NUMBER}",
+            title=f"🚨 BU Police: {BUPD_NUMBER}",
             description=(
-                f"**Call BU Police first for any on-campus emergency.**\n"
-                f"Medical Campus: **{BUPD_MEDICAL_CAMPUS_NUMBER}**\n"
-                f"Off-campus? Call **911**."
+                f"{BUPD_MEDICAL_CAMPUS_NUMBER} (Medical Campus)\n"
+                f"Call 911 if you are off-campus"
             ),
             color=discord.Color.red(),
         )
@@ -47,11 +43,8 @@ class EmergencyCog(
             value="\n".join(f"**{label}:** {number}" for label, number in EMERGENCY_LINES),
             inline=False,
         )
-        embed.set_footer(text="Save these — don't wait until you need them to look them up.")
         return embed
 
-    @commands.hybrid_command(
-        name="emergency", description="Show BU emergency contact numbers (BU Police, medical, mental health, SARP, facilities)."
-    )
+    @commands.hybrid_command(name="emergency", description="Show BU emergency contact numbers.")
     async def emergency(self, ctx: Context) -> None:
         await ctx.send(embed=self._build_embed())
