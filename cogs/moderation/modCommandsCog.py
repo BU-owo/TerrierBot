@@ -98,9 +98,9 @@ _FIELDS = [
     ),
 ]
 
-# Only what Junior Mods can actually run, copied from the full-mod entries
+# Only what Support can actually run, copied from the full-mod entries
 # above with the full-mod-only halves removed (=untimeout, =unmute). Pollee is
-# here because JUNIOR_MOD_ROLE_ID is admitted to it; it isn't a full-mod tool.
+# here because the Support role (JUNIOR_MOD_ROLE_ID) is admitted to it; it isn't a full-mod tool.
 _SUPPORT_FIELDS = [
     (
         "🔇 Timeout",
@@ -168,7 +168,7 @@ class ModCommandsCog(
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(
-        name="supportcommands", description="Show a reference of Junior Mod commands and when to use them."
+        name="supportcommands", description="Show a reference of Support commands and when to use them."
     )
     async def supportcommands(self, ctx: Context):
         if not isinstance(ctx.author, discord.Member) or not any(
@@ -179,7 +179,7 @@ class ModCommandsCog(
 
         embed = discord.Embed(
             title="Support Commands",
-            description="Quick reference for the commands available to the Junior Mod role.",
+            description="Quick reference for the commands available to the Support role.",
             color=LogColors.MOD,
         )
         for name, syntax, usage in _SUPPORT_FIELDS:
