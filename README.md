@@ -113,6 +113,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=banner` / `/banner` | Learn about banner submissions |
 | `=boost` / `/boost` | See server boost perks |
 | `=pride` / `/pride` | Send a Pride message |
+| `=bean <member> <fake rule>` / `/bean` | A joke ban: posts a fake "Member beaned" embed, pings the target, and tracks how many times they've been beaned (nothing actually happens; 30s cooldown) |
 | `=roleboost` / `/roleboost` | Give a booster a role tied to their booster status (booster-role required) |
 | `=starleaderboard` / `/starleaderboard` | Show the most-starred posts |
 | `/snitch` | Send a report to the mods, with optional context |
