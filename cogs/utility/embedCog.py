@@ -604,33 +604,15 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
     # NEW: NSFW examples
     embed10 = discord.Embed(
         title="🔞 NSFW Examples",
-    )
-    embed10.add_field(
-        name="Examples",
-        value=(
-            "**\"I'm gonna bang your mom\"**\n"
-            "> No warn\n\n"
-
-            "**\"I'm gonna shove my cock into your mom's pussy\"**\n"
-            "> WARN\n\n"
-
-            "**\"I need to goon\"**\n"
-            "> No warn\n\n"
-
-            "**\"I'm gonna jack off and cum all over the place\"**\n"
-            "> WARN\n\n"
-
-            "**\"Can I finger you?\"**\n"
-            "> Context dependent. About a server member: WARN. Just a random throwaway message: "
-            "I'm fine either way\n\n"
-
-            "**\"I'm gonna kms\"**\n"
-            "> No warn\n\n"
-
-            "**\"I'm gonna slit my wrists\"** (TW sh)\n"
-            "> context dependent warn and send resources"
+        description=(
+            "\"I'm gonna bang your mom\" → No warn\n"
+            "\"I'm gonna shove my cock into your mom's pussy\" → **WARN**\n"
+            "\"I need to goon\" → No warn\n"
+            "\"I'm gonna jack off and cum all over the place\" → **WARN**\n"
+            "\"Can I finger you?\" → Depends: about a member = **WARN**, random throwaway = either way\n"
+            "\"I'm gonna kms\" → No warn\n"
+            "\"I'm gonna slit my wrists\" (TW sh) → Context-dependent warn + send resources"
         ),
-        inline=False,
     )
 
     embed5 = discord.Embed(
