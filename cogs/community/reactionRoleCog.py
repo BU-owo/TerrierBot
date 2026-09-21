@@ -30,7 +30,7 @@ PRESETS = {
         "description": (
             "Get alerted to our energy drink (and more) scavenger hunt hides! "
             "Celsius, Monster, Stickers, Dunkin, and more!\n\n"
-            "**Click the button below to add the role.** Click again to remove it."
+            "**Use the buttons below to add or remove the role.**"
         ),
     },
 }
@@ -40,27 +40,46 @@ class RoleButtonView(discord.ui.View):
     def __init__(self, data: dict):
         super().__init__(timeout=None)
         self.role_id: int = data["role_id"]
-        button = discord.ui.Button(
-            style=discord.ButtonStyle.secondary,
+        add_button = discord.ui.Button(
+            label="Add role",
+            style=discord.ButtonStyle.success,
             emoji=discord.PartialEmoji(name="e", id=data["emoji_id"]),
-            custom_id=f"reactionrole:{self.role_id}",
+            custom_id=f"reactionrole:{self.role_id}:add",
         )
-        button.callback = self._toggle
-        self.add_item(button)
+        add_button.callback = self._add
+        remove_button = discord.ui.Button(
+            label="Remove role",
+            style=discord.ButtonStyle.secondary,
+            custom_id=f"reactionrole:{self.role_id}:remove",
+        )
+        remove_button.callback = self._remove
+        self.add_item(add_button)
+        self.add_item(remove_button)
 
-    async def _toggle(self, interaction: discord.Interaction):
+    async def _add(self, interaction: discord.Interaction):
+        await self._update(interaction, add=True)
+
+    async def _remove(self, interaction: discord.Interaction):
+        await self._update(interaction, add=False)
+
+    async def _update(self, interaction: discord.Interaction, add: bool):
         role = interaction.guild.get_role(self.role_id)
         if role is None:
             await interaction.response.send_message("That role no longer exists.", ephemeral=True)
             return
 
+        has_role = role in interaction.user.roles
         try:
-            if role in interaction.user.roles:
+            if add and has_role:
+                message = f"You already have the {role.mention} role!"
+            elif add:
+                await interaction.user.add_roles(role)
+                message = f"You now have the {role.mention} role!"
+            elif has_role:
                 await interaction.user.remove_roles(role)
                 message = f"You removed the {role.mention} role."
             else:
-                await interaction.user.add_roles(role)
-                message = f"You now have the {role.mention} role!"
+                message = f"You don't have the {role.mention} role."
         except (discord.Forbidden, discord.HTTPException):
             message = "I couldn't update your role. Please let a mod know."
 
