@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from ..logging.logConfig import LogColors, MOD_ROLE_ID
+from ..logging.logConfig import JUNIOR_MOD_ROLE_ID, LogColors, MOD_ROLE_ID
 
 # Tools gated to the MOD_ROLE_ID team, wherever they actually live in the
 # repo — discipline/case-management (cogs/moderation/) plus a couple of
@@ -98,6 +98,42 @@ _FIELDS = [
     ),
 ]
 
+# Only what Junior Mods can actually run, copied from the full-mod entries
+# above with the full-mod-only halves removed (=untimeout, =unmute). Pollee is
+# here because JUNIOR_MOD_ROLE_ID is admitted to it; it isn't a full-mod tool.
+_SUPPORT_FIELDS = [
+    (
+        "🔇 Timeout",
+        "`=timeout <member> <duration> [reason]`",
+        "Quick cooldown for minor or heated behavior.",
+    ),
+    (
+        "🔇 Hardmute",
+        "`=hardmute <member>`",
+        "Strips a member's roles and confines them indefinitely, for questioning potential bots. No auto-expiry.",
+    ),
+    (
+        "🧹 Purge",
+        "`=purge <amount>` (1-100) / `=purgeafter [target]` / `=purgeuser <member> <amount>` (1-100)",
+        "Purgeafter deletes everything after a target message (reply to it, or pass its ID/link) in the current channel. Purgeuser deletes member's messages in current channel.",
+    ),
+    (
+        "😐 Unserious Mode",
+        "`/unserious <enable|disable> <member>`",
+        "Toggles a member's access to the Serious category on/off.",
+    ),
+    (
+        "🏛️ Kick from Politics",
+        "`/kickpolitics <user>`",
+        "Removes the Politics role from a member.",
+    ),
+    (
+        "📣 Pollee",
+        "`/pollee <message>`",
+        "Pings the Pollee role with a message.",
+    ),
+]
+
 
 async def setup(bot: TerrierBot):
     await bot.add_cog(ModCommandsCog(bot))
@@ -127,6 +163,26 @@ class ModCommandsCog(
             color=LogColors.MOD,
         )
         for name, syntax, usage in _FIELDS:
+            embed.add_field(name=name, value=f"{syntax}\n{usage}", inline=False)
+
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command(
+        name="supportcommands", description="Show a reference of Junior Mod commands and when to use them."
+    )
+    async def supportcommands(self, ctx: Context):
+        if not isinstance(ctx.author, discord.Member) or not any(
+            r.id in (MOD_ROLE_ID, JUNIOR_MOD_ROLE_ID) for r in ctx.author.roles
+        ):
+            await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title="Support Commands",
+            description="Quick reference for the commands available to the Junior Mod role.",
+            color=LogColors.MOD,
+        )
+        for name, syntax, usage in _SUPPORT_FIELDS:
             embed.add_field(name=name, value=f"{syntax}\n{usage}", inline=False)
 
         await ctx.send(embed=embed)
