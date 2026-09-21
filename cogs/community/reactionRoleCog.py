@@ -24,15 +24,47 @@ PRESETS = {
     },
     "Scavenger": {
         "role_id": 1420106696222703636,
+        "button": True,
         "emoji_id": 1421470279355338813,
         "title": "🔍 Scavenger Hunt Alerts",
         "description": (
             "Get alerted to our energy drink (and more) scavenger hunt hides! "
             "Celsius, Monster, Stickers, Dunkin, and more!\n\n"
-            "**React with {emoji} below to add the role.** React again to remove it."
+            "**Click the button below to add the role.** Click again to remove it."
         ),
     },
 }
+
+
+class RoleButtonView(discord.ui.View):
+    def __init__(self, data: dict):
+        super().__init__(timeout=None)
+        self.role_id: int = data["role_id"]
+        button = discord.ui.Button(
+            style=discord.ButtonStyle.secondary,
+            emoji=discord.PartialEmoji(name="e", id=data["emoji_id"]),
+            custom_id=f"reactionrole:{self.role_id}",
+        )
+        button.callback = self._toggle
+        self.add_item(button)
+
+    async def _toggle(self, interaction: discord.Interaction):
+        role = interaction.guild.get_role(self.role_id)
+        if role is None:
+            await interaction.response.send_message("That role no longer exists.", ephemeral=True)
+            return
+
+        try:
+            if role in interaction.user.roles:
+                await interaction.user.remove_roles(role)
+                message = f"You removed the {role.mention} role."
+            else:
+                await interaction.user.add_roles(role)
+                message = f"You now have the {role.mention} role!"
+        except (discord.Forbidden, discord.HTTPException):
+            message = "I couldn't update your role. Please let a mod know."
+
+        await interaction.response.send_message(message, ephemeral=True, allowed_mentions=discord.AllowedMentions.none())
 
 
 async def setup(bot: TerrierBot):
@@ -48,6 +80,11 @@ class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assig
 
         print("ReactionRole Cog Ready")
 
+    async def cog_load(self) -> None:
+        for data in PRESETS.values():
+            if data.get("button"):
+                self.bot.add_view(RoleButtonView(data))
+
     def _save_state(self) -> None:
         with shelve.open("terrierbot.shelve") as sh:
             sh["reactionroles"] = self.role_messages
@@ -60,24 +97,16 @@ class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assig
         await interaction.response.defer(ephemeral=True)
 
         data = PRESETS[preset]
+        embed = discord.Embed(title=data.get("title"), description=data["description"], color=discord.Color.blurple())
+        allowed = discord.AllowedMentions(roles=True)
 
-        emoji = data.get("emoji")
-        if emoji is None and data.get("emoji_id") is not None:
-            emoji = self.bot.get_emoji(data["emoji_id"])
-            if emoji is None:
-                await interaction.followup.send(
-                    "Couldn't find the configured emoji for this preset (the bot may not share a server with it).",
-                    ephemeral=True,
-                )
-                return
-
-        description = data["description"].format(emoji=emoji) if "{emoji}" in data["description"] else data["description"]
-        embed = discord.Embed(title=data.get("title"), description=description, color=discord.Color.blurple())
-        message = await interaction.channel.send(embed=embed, allowed_mentions=discord.AllowedMentions(roles=True))
-        await message.add_reaction(emoji)
-
-        self.role_messages[str(message.id)] = data["role_id"]
-        self._save_state()
+        if data.get("button"):
+            await interaction.channel.send(embed=embed, view=RoleButtonView(data), allowed_mentions=allowed)
+        else:
+            message = await interaction.channel.send(embed=embed, allowed_mentions=allowed)
+            await message.add_reaction(data["emoji"])
+            self.role_messages[str(message.id)] = data["role_id"]
+            self._save_state()
 
         await interaction.followup.send("Reaction role posted.", ephemeral=True)
 
@@ -86,11 +115,6 @@ class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assig
             if data["role_id"] == role_id:
                 return data
         return None
-
-    def _emoji_matches(self, emoji: discord.PartialEmoji, preset: dict) -> bool:
-        if preset.get("emoji_id") is not None:
-            return emoji.id == preset["emoji_id"]
-        return emoji.name == preset.get("emoji")
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -102,7 +126,7 @@ class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assig
             return
 
         preset = self._preset_for_role(role_id)
-        if preset is None or not self._emoji_matches(payload.emoji, preset):
+        if preset is None or payload.emoji.name != preset["emoji"]:
             return
 
         guild = self.bot.get_guild(payload.guild_id)
@@ -127,7 +151,7 @@ class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assig
             return
 
         preset = self._preset_for_role(role_id)
-        if preset is None or not self._emoji_matches(payload.emoji, preset):
+        if preset is None or payload.emoji.name != preset["emoji"]:
             return
 
         guild = self.bot.get_guild(payload.guild_id)
