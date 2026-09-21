@@ -52,6 +52,10 @@ class BeanCog(
     @commands.guild_only()
     @commands.cooldown(1, 30, commands.BucketType.user)
     async def bean(self, ctx: Context, member: discord.Member, *, rule: commands.Range[str, 1, 150]):
+        if member.id == ctx.author.id:
+            await ctx.send("You can't bean yourself, bean someone else instead.", ephemeral=True)
+            return
+
         if member.bot:
             await ctx.send(f"Bots can't be beaned. {self.emoji}", ephemeral=True)
             return
