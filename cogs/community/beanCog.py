@@ -1,4 +1,5 @@
 import shelve
+from pathlib import Path
 
 import discord
 from discord import app_commands
@@ -6,7 +7,10 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 
-BEAN_EMOJI = "🫘"
+BEAN_EMOJI_ID = 1551694453121753209
+FALLBACK_EMOJI = "🫘"  # used if the bot can't see the custom emoji
+# Committed in data/ instead of linking a Discord CDN URL, which expires.
+BEAN_IMAGE_PATH = Path(__file__).resolve().parents[2] / "data" / "bean.png"
 BEAN_COLOR = discord.Color(0x8B5A2B)
 
 
@@ -32,9 +36,14 @@ class BeanCog(
         with shelve.open("terrierbot.shelve") as sh:
             sh["bean_counts"] = self.bean_counts
 
+    @property
+    def emoji(self) -> str:
+        custom = self.bot.get_emoji(BEAN_EMOJI_ID)
+        return str(custom) if custom is not None else FALLBACK_EMOJI
+
     @commands.hybrid_command(
         name="bean",
-        description=f"{BEAN_EMOJI} Bean someone. This is a JOKE ban, nothing actually happens!",
+        description="Bean someone. This is a JOKE ban, nothing actually happens!",
     )
     @app_commands.describe(
         member="Who to bean (just for fun!)",
@@ -44,7 +53,7 @@ class BeanCog(
     @commands.cooldown(1, 30, commands.BucketType.user)
     async def bean(self, ctx: Context, member: discord.Member, *, rule: commands.Range[str, 1, 150]):
         if member.bot:
-            await ctx.send(f"Bots can't be beaned. {BEAN_EMOJI}", ephemeral=True)
+            await ctx.send(f"Bots can't be beaned. {self.emoji}", ephemeral=True)
             return
 
         guild_counts = self.bean_counts.setdefault(ctx.guild.id, {})
@@ -53,22 +62,23 @@ class BeanCog(
         self._save_state()
 
         embed = discord.Embed(
-            title=f"{BEAN_EMOJI} Member beaned (JOKE)",
+            title=f"{self.emoji} Member beaned",
             description=(
                 f"**User:** {member.name} (`{member.id}`)\n"
                 f"**Rule:** {rule}\n"
                 "**Reason:** bean\n"
-                "**Duration:** Permanent (just kidding!)\n"
+                "**Duration:** Permanent\n"
                 f"**Times beaned:** {times}"
             ),
             color=BEAN_COLOR,
             timestamp=discord.utils.utcnow(),
         )
-        embed.set_footer(text=f"{BEAN_EMOJI} This is a JOKE. Nobody was actually banned. Just for fun!")
+        embed.set_image(url=f"attachment://{BEAN_IMAGE_PATH.name}")
+        embed.set_footer(text="JOKE.")
 
         await ctx.send(
-            f"{BEAN_EMOJI} {member.mention} has been beaned by {ctx.author.mention}! "
-            "(This is just a joke, nothing actually happened.)",
+            f"{self.emoji} {member.mention} has been beaned by {ctx.author.mention}!",
             embed=embed,
+            file=discord.File(BEAN_IMAGE_PATH),
             allowed_mentions=discord.AllowedMentions(users=[member, ctx.author], roles=False, everyone=False),
         )
