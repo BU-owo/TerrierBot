@@ -145,7 +145,7 @@ class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assig
             return
 
         preset = self._preset_for_role(role_id)
-        if preset is None or payload.emoji.name != preset["emoji"]:
+        if preset is None or payload.emoji.name != preset.get("emoji"):
             return
 
         guild = self.bot.get_guild(payload.guild_id)
@@ -170,7 +170,7 @@ class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assig
             return
 
         preset = self._preset_for_role(role_id)
-        if preset is None or payload.emoji.name != preset["emoji"]:
+        if preset is None or payload.emoji.name != preset.get("emoji"):
             return
 
         guild = self.bot.get_guild(payload.guild_id)

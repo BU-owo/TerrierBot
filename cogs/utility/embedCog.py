@@ -374,21 +374,27 @@ def _build_embedhousing_sequence() -> list[discord.Embed]:
 
     return [embed1, embed2, embed3, embed4, embed5]
 
-
 def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
-    # Navy -> crimson gradient across the 7 embeds
-    gradient = [0x1B2A4A, 0x342943, 0x4D273D, 0x662636, 0x80252F, 0x992329, 0xB22222]
-
     MOD_IMPORTANT_CHANNEL = 1401924438341062798
     MOD_FEET_CHANNEL = 1446304077213597807
     OWO_DOOMER_CHANNEL = LogChannels.DOOMER
     CONFESSION_REVIEW_CHANNEL = 1441905934975635566
+    FRIENDLY_CHECK_IN_CHANNEL = 1498345257455194242
     MOD_QUEUE_CHANNEL = LogChannels.QUEUE
     MOD_ROLE = MOD_ROLE_ID
     SERVER_OWNER = 1274047585098793034
 
+    # Regex patterns that trigger an automatic warning (raw strings so \b, \s etc. stay literal)
+    AUTOWARN_PATTERNS = [
+        r"\bch[i1]nk",
+        r"ch[i1]ng[\s\-_]*ch[o0]ng",
+        r"n[i1]gg[e3a]",
+        r"n[e3]gr[oaie]",
+        r"\bn[i1]gg?s?\b",
+        r"\bsp[i1]ck?s?\b",
+    ]
+
     embed1 = discord.Embed(
-        color=discord.Color(gradient[0]),
         title="🛡️ Terrier Hub Moderator Handbook",
         description=(
             "Terrier Hub exists to create a welcoming space for the entire BU community to find "
@@ -417,7 +423,6 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
     embed1.set_footer(text="Last updated: August 2026")
 
     embed2 = discord.Embed(
-        color=discord.Color(gradient[1]),
         title="✅ Responsibilities & Moderation Approach",
     )
     embed2.add_field(
@@ -460,37 +465,36 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
     )
 
     embed3 = discord.Embed(
-        color=discord.Color(gradient[2]),
         title="⚖️ Punishments",
     )
     embed3.add_field(
-name="For Community Members",
-value=(
-    "**Verbal Warning**\n"
-    "> **When:** Minor first offenses or accidental issues\n"
-    "> **Vote:** None\n"
-    "> **Method:** Publicly or in a ticket\n\n"
+        name="For Community Members",
+        value=(
+            "**Verbal Warning**\n"
+            "> **When:** Minor first offenses or accidental issues\n"
+            "> **Vote:** None\n"
+            "> **Method:** Publicly or in a ticket\n\n"
 
-    "**Delete Message**\n"
-    "> **When:** Harmful, inappropriate, or rule-breaking content\n"
-    "> **Vote:** None\n"
-    "> **Method:** Delete the message\n\n"
+            "**Delete Message**\n"
+            "> **When:** Harmful, inappropriate, or rule-breaking content\n"
+            "> **Vote:** None\n"
+            "> **Method:** Delete the message\n\n"
 
-    "**Time Out**\n"
-    "> **When:** User won't disengage or needs to cool off\n"
-    "> **Vote:** None\n"
-    "> **Method:** TerrierBot `=timeout` / `/timeout`\n\n"
+            "**Time Out**\n"
+            "> **When:** User won't disengage or needs to cool off\n"
+            "> **Vote:** None\n"
+            "> **Method:** TerrierBot `=timeout` / `/timeout`\n\n"
 
-    "**Warning**\n"
-    "> **When:** Clear rule violations or repeated behavior\n"
-    "> **Vote:** None\n"
-    "> **Method:** TerrierBot `=warn` / `/warn`\n\n"
+            "**Warning**\n"
+            "> **When:** Clear rule violations or repeated behavior\n"
+            "> **Vote:** None\n"
+            "> **Method:** TerrierBot `=warn` / `/warn`\n\n"
 
-    "**Ban**\n"
-    "> **When:** Severe violations or excessive warnings\n"
-    "> **Vote:** Majority\n"
-    "> **Method:** TerrierBot `/ban`"
-),
+            "**Ban**\n"
+            "> **When:** Severe violations or excessive warnings\n"
+            "> **Vote:** Majority\n"
+            "> **Method:** TerrierBot `/ban`"
+        ),
         inline=False,
     )
     embed3.add_field(
@@ -506,7 +510,7 @@ value=(
     embed3.add_field(
         name="Warnings as a Log",
         value=(
-            "Don't hesitate to warn for any transgression, even minor ones — a warning isn't a strike "
+            "A warning isn't a strike "
             "toward an automatic ban, it's a log entry. It builds the paper trail (`=modlogs`) that "
             "helps the next mod make an informed call.\n"
             "Warnings don't expire — they stay active until removed by a mod (`=warnremove`) or "
@@ -515,8 +519,33 @@ value=(
         inline=False,
     )
 
+    # NEW: banning bots checklist
+    embed8 = discord.Embed(
+        title="🤖 Banning Bots",
+        description=(
+            "Banning bots fast is very important, but there are a few things to confirm before you do so:"
+        ),
+    )
+    embed8.add_field(
+        name="Confirm first",
+        value=(
+            "1. Do their roles and posts match up? ie. class of '13 high schooler, undergrad in SPH, etc\n"
+            "2. Do they have a post history (does it match)?\n"
+            "3. If they are in the student hub, they are a BU student\n"
+            "4. Is the scam familiar (macbook, camera, PS5, \"im moving out\") or new?"
+        ),
+        inline=False,
+    )
+    embed8.add_field(
+        name="If anything gives you pause",
+        value=(
+            "`=hardmute <member>`. Hard muting completely removes them from the rest of the server and "
+            f"once they are there in <#{FRIENDLY_CHECK_IN_CHANNEL}>, there is no rush."
+        ),
+        inline=False,
+    )
+
     embed4 = discord.Embed(
-        color=discord.Color(gradient[3]),
         title="📜 The Rules",
         description=(
             "1. No harassment or insults.\n"
@@ -543,8 +572,68 @@ value=(
         inline=False,
     )
 
+    # NEW: slurs
+    embed9 = discord.Embed(
+        title="🚫 Slurs",
+        description="We are using discord's \"Insults & Slurs\" filter.",
+    )
+    embed9.add_field(
+        name="These words are allowed despite being in the filter",
+        value=(
+            "`asshat, asshole, cuck, cuckold, cum, cunt, dumbfuck, fucker, fuckhead, gaylord, "
+            "kill yourself, kys, motherfucker, motherfucking, shitbag, shithead, slut, "
+            "suck my dick, wanker, whore`"
+        ),
+        inline=False,
+    )
+    embed9.add_field(
+        name="These words are NOT allowed despite NOT being in the filter",
+        value=(
+            "`beaner, chinaman, currymuncher, goy, goyim, gypped, gypsy, kike, kikes, ladyboys, "
+            "pajeet, queef, queefed, queefing, queefs, schizo, schizos, straggot, trannies, "
+            "tranny, zio, zios`"
+        ),
+        inline=False,
+    )
+    embed9.add_field(
+        name="These words result in an automatic warning",
+        value="```\n" + "\n".join(AUTOWARN_PATTERNS) + "\n```",
+        inline=False,
+    )
+
+    # NEW: NSFW examples
+    embed10 = discord.Embed(
+        title="🔞 NSFW Examples",
+    )
+    embed10.add_field(
+        name="Examples",
+        value=(
+            "**\"I'm gonna bang your mom\"**\n"
+            "> No warn\n\n"
+
+            "**\"I'm gonna shove my cock into your mom's pussy\"**\n"
+            "> WARN\n\n"
+
+            "**\"I need to goon\"**\n"
+            "> No warn\n\n"
+
+            "**\"I'm gonna jack off and cum all over the place\"**\n"
+            "> WARN\n\n"
+
+            "**\"Can I finger you?\"**\n"
+            "> Context dependent. About a server member: WARN. Just a random throwaway message: "
+            "I'm fine either way\n\n"
+
+            "**\"I'm gonna kms\"**\n"
+            "> No warn\n\n"
+
+            "**\"I'm gonna slit my wrists\"** (TW sh)\n"
+            "> context dependent warn and send resources"
+        ),
+        inline=False,
+    )
+
     embed5 = discord.Embed(
-        color=discord.Color(gradient[4]),
         title="📋 Policies & Moderator Tools",
     )
     embed5.add_field(
@@ -595,7 +684,6 @@ value=(
     )
 
     embed6 = discord.Embed(
-        color=discord.Color(gradient[5]),
         title="🗣️ Communication, Voting & Appeals",
     )
     embed6.add_field(
@@ -638,7 +726,6 @@ value=(
     )
 
     embed7 = discord.Embed(
-        color=discord.Color(gradient[6]),
         title="🎓 Term Length & Mod Channels",
     )
     embed7.add_field(
@@ -663,67 +750,20 @@ value=(
         inline=False,
     )
 
-    return [embed1, embed2, embed3, embed4, embed5, embed6, embed7]
+    embeds = [
+        embed1, embed2, embed3, embed8, embed4,
+        embed9, embed10, embed5, embed6, embed7,
+    ]
 
-
-def _build_embedrules_sequence() -> list[discord.Embed]:
-    RULES_CHANNEL = 1396542143803424768
-
-    embed = discord.Embed(
-        color=discord.Color.blurple(),
-        title="Terrier Hub Rules",
-        description=(
-            "1. No harassment or insults.\n"
-            "2. No bigotry, hate speech, hate symbols, or use of slurs.\n"
-            "3. Don't be edgy, provocative, or baiting in a way that upsets people or starts "
-            "needless arguments.\n"
-            "4. No spamming chat or misusing pings.\n"
-            "5. No doxxing identities or personal information, including sharing DMs without "
-            "permission.\n"
-            "6. No threats of harm or encouraging any behaviors that endanger health/safety.\n"
-            "7. No NSFW (sexual/flirting) or NSFL (gore/violent) content or language.\n"
-            "8. No scams allowed. Self-promotion requires prior approval.\n"
-            "9. Mods reserve the right to interpret, enforce, and change rules to keep the "
-            "community healthy.\n\n"
-            "Always follow [Discord Community Guidelines](https://discord.com/guidelines)."
-        ),
-    )
-    embed.add_field(
-        name="📚 Academic Integrity Policy",
-        value=(
-            "**ZERO TOLERANCE** for anything infringing university or professor policy.\n"
-            "Any academic misconduct results in a **ban**."
-        ),
-        inline=False,
-    )
-    embed.add_field(
-        name="⚖️ Punishment",
-        value=(
-            "**Timeouts:** Mod discretion — for heated situations, spam, or disruption.\n"
-            "**Warning Policy:** Any violation results in a **warning**, viewable with `/mywarns`.\n"
-            "**Ban Policy:** Severe or repeated violations result in a **ban**.\n"
-            "*Use `/warnappeal` to appeal a warning.*"
-        ),
-        inline=False,
-    )
-    embed.add_field(
-        name="📣 Reporting",
-        value=(
-            "Ping **@Moderator** for help.\n"
-            "`/snitch` for an immediate, silent alert.\n"
-            f"Create a ticket in <#{RULES_CHANNEL}> to discuss a concern.\n"
-            "Use the Anonymous Feedback Form for anonymous feedback."
-        ),
-        inline=False,
-    )
-    embed.set_footer(
-        text=(
-            "This is an unofficial, student-run server not affiliated with Boston University. "
-            "Posts here don't reflect BU's views. Participate at your own discretion."
+    # Navy -> crimson gradient, evenly spaced across however many embeds there are
+    start, end = (0x1B, 0x2A, 0x4A), (0xB2, 0x22, 0x22)
+    for i, embed in enumerate(embeds):
+        t = i / (len(embeds) - 1)
+        embed.color = discord.Color.from_rgb(
+            *(round(s + (e - s) * t) for s, e in zip(start, end))
         )
-    )
 
-    return [embed]
+    return embeds
 
 
 class EmbedModal(discord.ui.Modal, title="Send Embed"):

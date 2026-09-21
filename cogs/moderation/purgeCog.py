@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import re
 
 import discord
@@ -7,7 +8,15 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from ..logging.logConfig import JUNIOR_MOD_ROLE_ID, MOD_ROLE_ID, register_purge
+from ..logging.logConfig import (
+    JUNIOR_MOD_ROLE_ID,
+    LogChannels,
+    LogColors,
+    MAIN_GUILD_ID,
+    MOD_ROLE_ID,
+    get_log_channel,
+    register_purge,
+)
 
 # Matches a full Discord message link, e.g.
 # https://discord.com/channels/{guild}/{channel}/{message}
@@ -23,6 +32,30 @@ PURGE_AFTER_CAP = 200
 # Safety cap for =purgeuser — how far back through channel history to search
 # for that user's messages before giving up, even if `amount` wasn't reached.
 PURGEUSER_SCAN_LIMIT = 500
+
+# Transcript files stay well under Discord's upload cap; a purge that somehow
+# exceeds this is split across several files so nothing is ever truncated.
+_TRANSCRIPT_CHUNK_BYTES = 7_000_000
+_DISCORD_MAX_FILES_PER_MESSAGE = 10
+
+
+def _format_message(message: discord.Message) -> str:
+    stamp = message.created_at.strftime("%Y-%m-%d %H:%M:%S UTC")
+    lines = [f"[{stamp}] {message.author} (user {message.author.id}) | message {message.id}"]
+    if message.reference is not None and message.reference.message_id is not None:
+        lines.append(f"  (reply to message {message.reference.message_id})")
+    if message.content:
+        lines.extend("  " + line for line in message.content.split("\n"))
+    else:
+        lines.append("  (no text content)")
+    for attachment in message.attachments:
+        lines.append(f"  [attachment] {attachment.filename}: {attachment.url}")
+    for embed in message.embeds:
+        parts = [part for part in (embed.title, embed.description, embed.url) if part]
+        lines.append("  [embed] " + " - ".join(parts) if parts else "  [embed]")
+    for sticker in message.stickers:
+        lines.append(f"  [sticker] {sticker.name}")
+    return "\n".join(lines)
 
 
 async def setup(bot: TerrierBot):
@@ -45,6 +78,74 @@ class PurgeCog(
             await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
             return False
         return True
+
+    async def _log_purge(self, ctx: Context, deleted: list[discord.Message], command: str, detail: str | None = None) -> None:
+        """Post the complete, untruncated contents of a purge to #message-logs
+        as attached text transcripts, using the messages the purge itself
+        returned (full content even if they were never in the bot's cache)."""
+        if ctx.guild is None or ctx.guild.id != MAIN_GUILD_ID:
+            return
+        log_channel = get_log_channel(self.bot, LogChannels.MESSAGE)
+        if log_channel is None:
+            return
+
+        messages = sorted(deleted, key=lambda m: m.id)
+        now = discord.utils.utcnow()
+        header = (
+            f"Purge by {ctx.author} (user {ctx.author.id})\n"
+            f"Command: {command}\n"
+            f"Channel: #{ctx.channel.name} ({ctx.channel.id})\n"
+            f"Time: {now.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+            f"Messages deleted: {len(messages)}"
+        )
+        if detail:
+            header += f"\n{detail}"
+
+        chunks: list[str] = []
+        current = [header]
+        size = len(header.encode())
+        for block in (_format_message(m) for m in messages):
+            block_size = len(block.encode()) + 2
+            if size + block_size > _TRANSCRIPT_CHUNK_BYTES and len(current) > 1:
+                chunks.append("\n\n".join(current))
+                current, size = [], 0
+            current.append(block)
+            size += block_size
+        chunks.append("\n\n".join(current))
+
+        stamp = now.strftime("%Y%m%d-%H%M%S")
+        files = [
+            discord.File(
+                io.BytesIO(chunk.encode("utf-8")),
+                filename=f"purge-{stamp}.txt" if len(chunks) == 1 else f"purge-{stamp}-part{i}.txt",
+            )
+            for i, chunk in enumerate(chunks, start=1)
+        ]
+
+        description = (
+            f"{len(messages)} message(s) purged by {ctx.author.mention} in {ctx.channel.mention} (`{command}`)"
+        )
+        if detail:
+            description += f"\n{detail}"
+        description += f"\n\nFull transcript attached ({len(files)} file(s)) — nothing truncated."
+        embed = discord.Embed(
+            title="🗑️ Purge transcript",
+            description=description,
+            color=LogColors.MOD_DELETE,
+            timestamp=now,
+        )
+        embed.set_footer(text=f"Purged by user ID: {ctx.author.id}")
+
+        try:
+            for start in range(0, len(files), _DISCORD_MAX_FILES_PER_MESSAGE):
+                batch = files[start : start + _DISCORD_MAX_FILES_PER_MESSAGE]
+                await log_channel.send(
+                    embed=embed if start == 0 else None,
+                    files=batch,
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+        except discord.HTTPException:
+            pass
 
     @staticmethod
     def _parse_target(target: str) -> tuple[int | None, int | None]:
@@ -97,6 +198,7 @@ class PurgeCog(
 
         if deleted:
             register_purge([m.id for m in deleted], ctx.author.id, ctx.channel.id)
+            await self._log_purge(ctx, deleted, f"purge {amount}")
 
         await ctx.send(f"🗑️ Purged {len(deleted)} message(s).", ephemeral=True)
 
@@ -198,6 +300,7 @@ class PurgeCog(
 
         if deleted:
             register_purge([m.id for m in deleted], ctx.author.id, ctx.channel.id)
+            await self._log_purge(ctx, deleted, "purgeafter", f"After message: {target_message.jump_url}")
 
         lines = [f"🗑️ Purged {len(deleted)} message(s) after {target_message.jump_url}."]
         if partial:
@@ -260,6 +363,7 @@ class PurgeCog(
 
         if deleted:
             register_purge([m.id for m in deleted], ctx.author.id, ctx.channel.id)
+            await self._log_purge(ctx, deleted, f"purgeuser {amount}", f"Target user: {user} (user {user.id})")
 
         note = ""
         if len(deleted) < amount:
