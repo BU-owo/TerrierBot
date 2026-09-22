@@ -21,7 +21,7 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
         )
 
         embed.add_field(
-            name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Moderation ✧",
+            name="──── ⋆⁺₊✧✧₊⁺⋆ ────\n✧ Moderation ✧",
             value=(
                 "🐕 `/mywarns` — see your active warnings\n"
                 "📝 `/warnappeal` — appeal one of your warnings\n"
@@ -31,17 +31,17 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
         )
 
         embed.add_field(
-            name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Tools ✧",
+            name="──── ⋆⁺₊✧✧₊⁺⋆ ────\n✧ Tools ✧",
             value=(
-                "📜 `=rule` / `/rule` `<number>` — show a server rule by number, or leave blank to see them all\n"
+                "📜 `=rule` / `/rule` `<number>` — show a server rule\n"
                 "📚 `=class` / `/class` — look up a BU course from the Bulletin\n"
                 "⭐ `=rmp` / `/rmp` — look up a professor on RateMyProfessors\n"
                 "🐾 `=club` / `/club` — search for BU clubs on Terrier Central\n"
-                "🚋 `=mbta` / `/mbta` — check how far Green Line trains are from a station (leave blank for the BU stops)\n"
-                "🌈 `=mbtgay` / `/mbtgay` — track down the MBTA Pride Train (car #3706), if it's out riding today\n"
-                "🌦️ `/weather` — today's BU campus forecast, straight from the National Weather Service\n"
+                "🚋 `=mbta` / `/mbta` — check how far Green Line trains are (leave blank for the BU stops)\n"
+                "🌈 `=mbtgay` / `/mbtgay` — track down the MBTA Pride Train\n"
+                "🌦️ `/weather` — today's BU campus forecast\n"
                 "🚨 `=emergency` / `/emergency` — show BU emergency contact numbers\n"
-                "📣 `/pingrole` — ping one of our community roles — events, food, gaming, and more — with a message\n"
+                "📣 `/pingrole` — ping one of our community roles\n"
                 "🔒 `=lockin` / `/lockin` — lock yourself out of the server for a set time to focus (can't be undone early)\n"
                 "⏳ `=lockinleft` / `/lockinleft` — check how much time is left on your lock-in\n"
                 "🥰 `=uwu` / `/uwu` — uwu-ify your own message\n"
@@ -51,7 +51,7 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
         )
 
         embed.add_field(
-            name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Squad Ping ✧",
+            name="──── ⋆⁺₊✧✧₊⁺⋆ ────\n✧ Squad Ping ✧",
             value=(
                 "**Make your own group for classes, hobbies, meetups, and more!**\n"
                 "1️⃣ See the squads: `/squadpinglist` or `=squadpinglist` (add a name to see who's in it)\n"
@@ -63,9 +63,9 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
         )
 
         embed.add_field(
-            name="──── ⋆⁺₊✧🐾✧₊⁺⋆ ────\n✧ Birthdays ✧",
+            name="──── ⋆⁺₊✧✧₊⁺⋆ ────\n✧ Birthdays ✧",
             value=(
-                "🎉 `=birthday set` / `/birthday set` `<month> <day>` — save (or update) your birthday"
+                "🎉 `=birthday set` / `/birthday set` `<month> <day>` — save your birthday"
             ),
             inline=False,
         )
