@@ -102,7 +102,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=search` / `/search` | Search BU courses by school, department, or HUB units |
 | `=mbta` / `/mbta` | Check live MBTA Green Line ETAs |
 | `=mbtgay` / `/mbtgay` | Track the MBTA Pride Train (Green Line car #3706), if it's currently running |
-| `/weather` | Show current conditions and today's forecast for BU campus (°F/°C), from the National Weather Service |
+| `=weather` / `/weather` | Show current conditions and today's forecast for BU campus (°F/°C), from the National Weather Service |
 | `=emergency` / `/emergency` | Show BU emergency contact numbers |
 
 ### Community and fun

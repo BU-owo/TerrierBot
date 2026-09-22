@@ -9,7 +9,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from bot import TerrierBot
+from bot import Context, TerrierBot
 
 EASTERN = ZoneInfo("America/New_York")
 
@@ -274,6 +274,12 @@ class WeatherCog(commands.Cog, name="Weather", description="BU campus weather vi
     # ------------------------------------------------------------------
     # Entry points
     # ------------------------------------------------------------------
+
+    @commands.command(name="weather")
+    async def weather(self, ctx: Context) -> None:
+        """Show today's forecast for BU campus."""
+        embed = await self._build_weather_embed("Here's today's forecast for campus:")
+        await ctx.send(embed=embed)
 
     @app_commands.command(name="weather", description="Show today's forecast for BU campus.")
     async def weather_slash(self, interaction: discord.Interaction) -> None:
