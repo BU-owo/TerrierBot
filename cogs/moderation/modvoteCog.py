@@ -20,6 +20,10 @@ MODVOTE_RESULTS_CHANNEL_ID = LogChannels.MOD
 MAX_OPTIONS = 10  # buttons must stay under Discord's 25-component cap
 ABSTAIN_OPTION = "Abstain"  # appended to every vote automatically, not counted toward the outcome
 CHECK_INTERVAL_SECONDS = 45
+# Once every mod has voted, the remaining time is cut down to this (never
+# extended) and a heads-up is posted — a last chance to change a vote before
+# check_expired closes it.
+FINAL_WARNING_SECONDS = 5 * 60
 
 # modvoteCog.py is two folders below the repo root (cogs/moderation/) — three
 # dirname() calls are needed to reach it, matching every other cog's own
@@ -33,6 +37,13 @@ def _has_mod_role(user: discord.abc.User | discord.Member) -> bool:
     if not isinstance(user, discord.Member):
         return False
     return any(r.id == MOD_ROLE_ID for r in user.roles)
+
+
+def _mod_role_members(guild: discord.Guild) -> list[discord.Member]:
+    role = guild.get_role(MOD_ROLE_ID)
+    if role is None:
+        return []
+    return [m for m in role.members if not m.bot]
 
 
 # ── Group ─────────────────────────────────────────────────────────────────────
@@ -279,6 +290,22 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             return
 
         vote["votes"][str(interaction.user.id)] = option_index
+
+        # First time every mod has a vote in — pull the close time in to a
+        # final 5-minute window (never push it back out) and flag the vote so
+        # this only fires once, not on every subsequent vote change.
+        just_completed = False
+        if not vote.get("all_voted_notified"):
+            guild = self.bot.get_guild(vote["guild_id"])
+            if guild is not None:
+                mods = _mod_role_members(guild)
+                if mods and all(str(m.id) in vote["votes"] for m in mods):
+                    vote["all_voted_notified"] = True
+                    just_completed = True
+                    new_close_ts = int(time.time()) + FINAL_WARNING_SECONDS
+                    if new_close_ts < vote["close_ts"]:
+                        vote["close_ts"] = new_close_ts
+
         self._save()
 
         try:
@@ -291,6 +318,18 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             await interaction.followup.send(f"Your vote has been recorded: {option_label}.", ephemeral=True)
         except discord.HTTPException:
             pass
+
+        if just_completed:
+            channel = self.bot.get_channel(vote["channel_id"])
+            if channel is not None:
+                try:
+                    await channel.send(
+                        f"🗳️ Everyone has voted! You have {FINAL_WARNING_SECONDS // 60} minutes to change your "
+                        f"vote before this closes <t:{vote['close_ts']}:R>.",
+                        allowed_mentions=discord.AllowedMentions.none(),
+                    )
+                except discord.HTTPException:
+                    log.warning("modvoteCog: failed to post all-voted warning for vote %s", vote_id)
 
     # ── /modvote start ────────────────────────────────────────────────────────
 
@@ -361,6 +400,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             "created_by": interaction.user.id,
             "closed": False,
             "closed_ts": None,
+            "all_voted_notified": False,
         }
         self.data["votes"][vote_id] = vote
 
