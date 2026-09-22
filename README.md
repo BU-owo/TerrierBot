@@ -10,6 +10,7 @@ TerrierBot currently supports:
 - BU club discovery through `club`
 - RateMyProfessors lookups through `rmp`
 - Live MBTA Green Line ETA checks through `mbta`, plus MBTA Pride Train (car #3706) tracking through `mbtgay`
+- BU campus weather (current conditions + today's forecast, in °F and °C) through `weather`, sourced from the National Weather Service, plus an automatic daily 9 AM post
 - BU emergency contact numbers through `emergency`
 - Community features such as `hello`, `goodbye`, `love`, `banner`, `boost`, and `pride`
 - Anonymous feedback and moderation tools such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
@@ -101,6 +102,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=search` / `/search` | Search BU courses by school, department, or HUB units |
 | `=mbta` / `/mbta` | Check live MBTA Green Line ETAs |
 | `=mbtgay` / `/mbtgay` | Track the MBTA Pride Train (Green Line car #3706), if it's currently running |
+| `/weather` | Show current conditions and today's forecast for BU campus (°F/°C), from the National Weather Service |
 | `=emergency` / `/emergency` | Show BU emergency contact numbers |
 
 ### Community and fun
