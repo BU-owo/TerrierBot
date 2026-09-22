@@ -62,7 +62,7 @@ _FIELDS = [
     ),
     (
         "🗳️ Modvote",
-        "`/modvote start <target> <options> <duration_minutes>` / `/modvote close [vote_id]`",
+        "`/modvote start <proposal> <options> <duration_minutes>` / `/modvote close [vote_id]`",
         "Anonymous vote for mods only.",
     ),
     (

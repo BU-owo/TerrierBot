@@ -151,17 +151,22 @@ class ModTrackerCog(
         if self.bot.user is not None:
             all_mod_ids.discard(self.bot.user.id)
 
-        # Drop anyone who's left the server, and Politics Mods — their
-        # politics approvals/denials aren't the mod work this report tracks.
-        # Skipped entirely if the guild isn't cached, rather than risk
-        # hiding everyone on a transient cache miss.
+        # Drop anyone who's left the server, and pure Politics Mods (Politics
+        # Mod role but not the general Mod role) — their politics
+        # approvals/denials aren't the mod work this report tracks. A dual
+        # Mod + Politics Mod holder is kept; their real case/warn actions
+        # still count. Skipped entirely if the guild isn't cached, rather
+        # than risk hiding everyone on a transient cache miss.
         guild = self.bot.get_guild(MAIN_GUILD_ID)
         if guild is not None:
             all_mod_ids = {
                 mod_id
                 for mod_id in all_mod_ids
                 if (member := guild.get_member(mod_id)) is not None
-                and not any(r.id == POLITICS_MOD_ROLE_ID for r in member.roles)
+                and (
+                    any(r.id == MOD_ROLE_ID for r in member.roles)
+                    or not any(r.id == POLITICS_MOD_ROLE_ID for r in member.roles)
+                )
             }
 
         embed = discord.Embed(

@@ -86,7 +86,7 @@ class ModVoteView(discord.ui.View):
 
 # ── Cog ───────────────────────────────────────────────────────────────────────
 
-class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes on disciplining a member."):
+class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes on a proposal."):
 
     modvote = ModVoteGroup(name="modvote", description="Start and manage anonymous mod votes.")
 
@@ -133,13 +133,6 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
                 counts[option_index] += 1
         return counts
 
-    def _target_display(self, vote: dict) -> str:
-        guild = self.bot.get_guild(vote["guild_id"])
-        member = guild.get_member(vote["target_id"]) if guild else None
-        if member is not None:
-            return f"{member.display_name} ({member.id})"
-        return f"Unknown Member ({vote['target_id']})"
-
     def _build_open_vote_embed(self, vote: dict) -> discord.Embed:
         # While a vote is open, only the total count is ever shown — never a
         # per-option breakdown. The breakdown is revealed once, in the
@@ -149,7 +142,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
 
         embed = discord.Embed(
             title="🗳️ Mod Vote",
-            description=f"Target: {self._target_display(vote)}",
+            description=f"Proposal: {vote['proposal']}",
             color=discord.Color.orange(),
         )
         embed.add_field(name="Options", value=option_lines or "—", inline=False)
@@ -162,7 +155,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         # No counts here either — just a pointer to the results embed.
         embed = discord.Embed(
             title="🗳️ Mod Vote (Closed)",
-            description=f"Target: {self._target_display(vote)}",
+            description=f"Proposal: {vote['proposal']}",
             color=discord.Color.dark_grey(),
         )
         embed.add_field(
@@ -229,7 +222,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
 
         embed = discord.Embed(
             title="🗳️ Mod Vote Results",
-            description=f"Target: {self._target_display(vote)}",
+            description=f"Proposal: {vote['proposal']}",
             color=discord.Color.green() if max_count > 0 and len(leaders) == 1 else discord.Color.dark_grey(),
         )
         embed.add_field(name="Options", value=option_lines or "—", inline=False)
@@ -333,16 +326,16 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
 
     # ── /modvote start ────────────────────────────────────────────────────────
 
-    @modvote.command(name="start", description="Start an anonymous mod vote on disciplining a member.")
+    @modvote.command(name="start", description="Start an anonymous mod vote on a proposal.")
     @app_commands.describe(
-        target="The member the vote concerns",
+        proposal="What the vote is about, e.g. \"Ban @user for rule 6\"",
         options="Comma-separated choices, e.g. \"Warn, Timeout, No action\" — an Abstain option is added automatically",
         duration_minutes="How long the vote stays open, in minutes",
     )
     async def modvote_start(
         self,
         interaction: discord.Interaction,
-        target: discord.Member,
+        proposal: str,
         options: str,
         duration_minutes: int,
     ) -> None:
@@ -393,7 +386,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             "guild_id": interaction.guild.id,
             "channel_id": channel.id,
             "message_id": None,
-            "target_id": target.id,
+            "proposal": proposal,
             "options": parsed_options,
             "votes": {},
             "close_ts": close_ts,
@@ -435,7 +428,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         for vote_id, vote in self.data["votes"].items():
             if vote["closed"]:
                 continue
-            label = f"{vote_id} — target {vote['target_id']}"[:100]
+            label = f"{vote_id} — {vote['proposal']}"[:100]
             if current.lower() in vote_id.lower():
                 choices.append(app_commands.Choice(name=label, value=vote_id))
         return choices[:25]

@@ -242,11 +242,18 @@ class WarningsCog(commands.Cog):
             await ctx.send("No active warnings.")
             return
 
+        # Warnings stay on record for members who've left — just don't
+        # surface them here, since there's no one in the server to act on.
         lines = []
         for user_id, count in rows:
             member = ctx.guild.get_member(user_id)
-            name = member.mention if member else f"<@{user_id}> (left server)"
-            lines.append(f"{name} — {count} warning(s)")
+            if member is None:
+                continue
+            lines.append(f"{member.mention} — {count} warning(s)")
+
+        if not lines:
+            await ctx.send("No active warnings for members currently in the server.")
+            return
 
         embed = discord.Embed(
             title="Active Warnings by User",

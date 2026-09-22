@@ -17,7 +17,7 @@ TerrierBot currently supports:
 - A shared moderation case log across kicks, timeouts, and bans, viewable per-member with `modlogs`
 - Server management features such as the starboard, Positivity Tuesday automation, ping roles, and preset reaction roles through `reactionrole`
 - Self-service role removal through `leavepolitics`, a mod-reviewed application flow for the #politics channel through `joinpolitics`, and mod-initiated removal through `kickpolitics`
-- Anonymous mod-only disciplinary votes with a time limit through `modvote`
+- Anonymous mod-only votes on any proposal, with a time limit, through `modvote`
 - Member-submitted reports to mods through `snitch`
 - A button + modal ban-appeal flow in a dedicated appeals server, forwarding appeals to the mod log
 - Permanent warnings (no auto-expiry) with a `warnappeal` select-and-modal flow for mods to accept/reject
@@ -153,7 +153,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=modlogs` / `/modlogs` | View a member's full moderation case history: warns, kicks, timeouts, bans (mod only) |
 | `=joinpolitics` / `/joinpolitics` | Post the #politics channel application (Politics mod role required) |
 | `/kickpolitics user:` | Remove the Politics role from a member (mod role or Politics Mod role required) |
-| `/modvote start` | Start an anonymous timed vote on disciplining a member, with custom options (mod role required) |
+| `/modvote start` | Start an anonymous timed vote on a proposal, with custom options (mod role required) |
 | `/modvote close` | Manually close an open modvote early and post results (mod role required) |
 | `/unserious mode: user:` | Toggle a member's access to the Serious category (mod role required) |
 | `=viewedits [target]` / `/viewedits [message]` | View a message's edit history — silently tracked in the background; `=viewedits` (reply or ID/link) self-deletes and posts to #message-logs, `/viewedits` replies ephemerally and also posts a copy there (mod role required) |
