@@ -45,6 +45,28 @@ def _kmh_to_mph(kmh: float) -> float:
     return kmh * 0.621371
 
 
+# (upper bound in whole mph, label), checked in order; anything above the
+# last bound is "Whipping".
+WIND_LABELS = (
+    (3, "Calm"),
+    (7, "Light breeze"),
+    (12, "Breezy"),
+    (18, "Windy"),
+    (24, "Very windy"),
+    (31, "Blustery"),
+)
+
+
+def _wind_label(mph: float) -> str:
+    # Bucket on the rounded value so the label always agrees with the mph
+    # number shown next to it.
+    rounded = round(mph)
+    for upper, label in WIND_LABELS:
+        if rounded <= upper:
+            return label
+    return "Whipping"
+
+
 def _truncate_text(text: str, limit: int = DETAIL_TEXT_LIMIT) -> str:
     if len(text) <= limit:
         return text
@@ -243,7 +265,8 @@ class WeatherCog(commands.Cog, name="Weather", description="BU campus weather vi
             if current.humidity is not None:
                 lines.append(f"💧 Humidity: {current.humidity:.0f}%")
             if current.wind_speed_mph is not None:
-                lines.append(f"💨 Wind: {current.wind_speed_mph:.0f} mph")
+                mph = round(current.wind_speed_mph)
+                lines.append(f"💨 Wind: {_wind_label(mph)} ({mph} mph)")
             embed.add_field(name="Current Conditions", value="\n".join(lines), inline=False)
         else:
             embed.add_field(
