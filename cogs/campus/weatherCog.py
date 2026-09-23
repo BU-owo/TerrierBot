@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
 
@@ -65,6 +66,23 @@ def _wind_label(mph: float) -> str:
         if rounded <= upper:
             return label
     return "Whipping"
+
+
+# Matches NWS forecast wind phrases like "18 mph" or "9 to 15 mph".
+WIND_PHRASE_RE = re.compile(r"(\d+)(?:\s+to\s+(\d+))?\s+mph")
+
+
+def _label_wind_phrases(text: str) -> str:
+    """Tag each wind speed in NWS forecast text with its plain-language label,
+    e.g. "wind 9 to 15 mph" -> "wind 9 to 15 mph (breezy to windy)"."""
+
+    def tag(match: re.Match[str]) -> str:
+        low = int(match.group(1))
+        high = int(match.group(2)) if match.group(2) else low
+        label = _wind_label(max(low, high)).lower()
+        return f"{match.group(0)} ({label})"
+
+    return WIND_PHRASE_RE.sub(tag, text)
 
 
 def _truncate_text(text: str, limit: int = DETAIL_TEXT_LIMIT) -> str:
@@ -153,19 +171,40 @@ class WeatherCog(commands.Cog, name="Weather", description="BU campus weather vi
         except (aiohttp.ClientError, TimeoutError):
             return None
 
-    async def _fetch_endpoints(self, session: aiohttp.ClientSession) -> tuple[str | None, str | None]:
-        """Resolve BU's forecast URL and observation-stations URL from the
-        NWS gridpoint for our coordinates."""
+    async def _fetch_endpoints(
+        self, session: aiohttp.ClientSession
+    ) -> tuple[str | None, str | None, str | None]:
+        """Resolve BU's forecast URL, hourly forecast URL, and
+        observation-stations URL from the NWS gridpoint for our coordinates."""
         points = await self._fetch_json(session, NWS_POINTS_URL)
         if points is None:
-            return None, None
+            return None, None, None
         props = points.get("properties", {})
         forecast_url = props.get("forecast")
+        hourly_url = props.get("forecastHourly")
         stations_url = props.get("observationStations")
         return (
             forecast_url if isinstance(forecast_url, str) else None,
+            hourly_url if isinstance(hourly_url, str) else None,
             stations_url if isinstance(stations_url, str) else None,
         )
+
+    async def _fetch_hourly_wind_mph(self, session: aiohttp.ClientSession, hourly_url: str | None) -> float | None:
+        """Forecast wind speed for the current hour, e.g. "17 mph"."""
+        if hourly_url is None:
+            return None
+        data = await self._fetch_json(session, hourly_url)
+        if data is None:
+            return None
+        periods = data.get("properties", {}).get("periods", [])
+        if not periods:
+            return None
+        wind = periods[0].get("windSpeed")
+        if not isinstance(wind, str):
+            return None
+        # Take the highest number in case NWS gives a range ("9 to 15 mph").
+        speeds = [int(n) for n in re.findall(r"\d+", wind)]
+        return float(max(speeds)) if speeds else None
 
     async def _fetch_forecast_periods(
         self, session: aiohttp.ClientSession, forecast_url: str | None
@@ -248,9 +287,15 @@ class WeatherCog(commands.Cog, name="Weather", description="BU campus weather vi
 
     async def _build_weather_embed(self, intro: str) -> discord.Embed:
         async with aiohttp.ClientSession() as session:
-            forecast_url, stations_url = await self._fetch_endpoints(session)
+            forecast_url, hourly_url, stations_url = await self._fetch_endpoints(session)
             periods = await self._fetch_forecast_periods(session, forecast_url)
             current = await self._fetch_current_conditions(session, stations_url)
+            # KBOS frequently reports no wind reading (null, QC flag "Z"), so
+            # fall back to the hourly forecast's wind for the current hour.
+            if current is not None and current.wind_speed_mph is None:
+                hourly_wind = await self._fetch_hourly_wind_mph(session, hourly_url)
+                if hourly_wind is not None:
+                    current = replace(current, wind_speed_mph=hourly_wind)
 
         embed = discord.Embed(
             title="🐾 BU Campus Weather",
@@ -280,7 +325,7 @@ class WeatherCog(commands.Cog, name="Weather", description="BU campus weather vi
                 emoji = _weather_emoji(period.short_forecast, period.is_daytime)
                 value = (
                     f"{emoji} **{period.temp_f}°F / {period.temp_c:.0f}°C** — {period.short_forecast}\n"
-                    f"{_truncate_text(period.detailed_forecast)}"
+                    f"{_truncate_text(_label_wind_phrases(period.detailed_forecast))}"
                 )
                 embed.add_field(name=period.name, value=value, inline=False)
         else:
