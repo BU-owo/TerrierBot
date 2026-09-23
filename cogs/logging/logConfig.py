@@ -102,6 +102,27 @@ def user_line(user: discord.abc.User) -> str:
     return f"{user.mention} — **{user}** (`{user.id}`)"
 
 
+async def resolve_user(bot: discord.Client, user_id: int) -> discord.User | None:
+    """Cache lookup first, then an API fetch. Returns None if the account
+    can't be resolved (deleted, or the fetch failed). Use before displaying
+    a user known only by ID — a bare `<@id>` for a user the client hasn't
+    cached renders as an unresolvable raw ID."""
+    user = bot.get_user(user_id)
+    if user is not None:
+        return user
+    try:
+        return await bot.fetch_user(user_id)
+    except discord.HTTPException:
+        return None
+
+
+async def user_line_by_id(bot: discord.Client, user_id: int) -> str:
+    """user_line() for a user known only by ID, resolving them first. Falls
+    back to just the ID if they can't be resolved."""
+    user = await resolve_user(bot, user_id)
+    return user_line(user) if user is not None else f"*Unknown user* (`{user_id}`)"
+
+
 # ── Cross-cog deletion suppression ───────────────────────────────────────────
 # Some cogs (e.g. scamImageCog) delete a message AND post their own richer
 # log entry for it elsewhere (mod-log). Without this, MessageLogCog would

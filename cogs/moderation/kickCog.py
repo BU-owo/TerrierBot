@@ -48,7 +48,7 @@ class KickCog(
         embed = discord.Embed(
             title="👢 Member kicked",
             description=(
-                f"**Target:** {target.mention} (`{target.id}`)\n"
+                f"**Target:** {user_line(target)}\n"
                 f"**Moderator:** {user_line(moderator)}\n"
                 f"**Reason:** {reason}\n"
                 f"**DM delivered:** {'✅ Yes' if dm_delivered else '❌ No'}"

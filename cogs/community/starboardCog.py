@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from ..logging.logConfig import LogChannels
+from ..logging.logConfig import LogChannels, resolve_user
 
 STAR_EMOJI = "⭐"
 DEFAULT_THRESHOLD = 3
@@ -294,7 +294,7 @@ class StarboardCog(commands.Cog, name="Starboard", description="Starboard and st
     # Leaderboard (public)
     # =========================================================
 
-    def _build_leaderboard_embed(self, guild: discord.Guild) -> discord.Embed:
+    async def _build_leaderboard_embed(self, guild: discord.Guild) -> discord.Embed:
         guild_totals = self.user_star_totals.get(guild.id, {})
         top = sorted(
             ((uid, s) for uid, s in guild_totals.items() if s > 0),
@@ -311,7 +311,11 @@ class StarboardCog(commands.Cog, name="Starboard", description="Starboard and st
             for i, (user_id, stars) in enumerate(top):
                 prefix = medals[i] if i < 3 else f"**{i + 1}.**"
                 member = guild.get_member(user_id)
-                name = member.display_name if member else f"<@{user_id}>"
+                if member is not None:
+                    name = member.display_name
+                else:
+                    user = await resolve_user(self.bot, user_id)
+                    name = str(user) if user is not None else f"Unknown user (`{user_id}`)"
                 star_word = "star" if stars == 1 else "stars"
                 lines.append(f"{prefix} {name} — {stars} {star_word}")
             embed.description = "\n".join(lines)
@@ -322,7 +326,7 @@ class StarboardCog(commands.Cog, name="Starboard", description="Starboard and st
     async def starleaderboard_prefix(self, ctx: Context) -> None:
         """Show the star leaderboard."""
         assert ctx.guild is not None
-        embed = self._build_leaderboard_embed(ctx.guild)
+        embed = await self._build_leaderboard_embed(ctx.guild)
         await ctx.send(embed=embed)
 
     @app_commands.command(name="starleaderboard", description="Show who has received the most ⭐ stars.")
@@ -330,5 +334,6 @@ class StarboardCog(commands.Cog, name="Starboard", description="Starboard and st
         if interaction.guild is None:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
-        embed = self._build_leaderboard_embed(interaction.guild)
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.defer()
+        embed = await self._build_leaderboard_embed(interaction.guild)
+        await interaction.followup.send(embed=embed)

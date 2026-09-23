@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from ..logging.logConfig import MAIN_GUILD_ID, MOD_ROLE_ID
+from ..logging.logConfig import MAIN_GUILD_ID, MOD_ROLE_ID, resolve_user
 from .kickPoliticsCog import POLITICS_MOD_ROLE_ID
 
 # ── Config ────────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ class ModTrackerCog(
             entry["last"] = ("warn", warned_at)
         return result
 
-    def _build_report_embeds(self) -> list[discord.Embed]:
+    async def _build_report_embeds(self) -> list[discord.Embed]:
         case_data = self._query_case_actions()
         warn_data = self._query_warn_actions()
 
@@ -224,7 +224,7 @@ class ModTrackerCog(
                 else "*none tracked yet*"
             )
 
-            user = self.bot.get_user(mod_id)
+            user = await resolve_user(self.bot, mod_id)
             display = f"{user}" if user else f"User ID {mod_id}"
 
             field_value = (
@@ -255,7 +255,7 @@ class ModTrackerCog(
     @commands.is_owner()
     async def modtracker(self, ctx: Context):
         """Owner only. DMs a report of mod action and message activity."""
-        embeds = self._build_report_embeds()
+        embeds = await self._build_report_embeds()
 
         # Delete the invoking message first regardless of DM outcome — it
         # should never sit visible in-channel either way.

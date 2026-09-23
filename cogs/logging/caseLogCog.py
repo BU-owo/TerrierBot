@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from .logConfig import LogColors, MOD_ROLE_ID, format_duration
+from .logConfig import LogColors, MOD_ROLE_ID, format_duration, resolve_user
 
 # Same on-disk location pattern as warningsCog's warnings.db — outside the
 # PM2-watched project directory so a deploy/redeploy never touches case data.
@@ -142,6 +142,14 @@ def _fetch_warnings(user_id: int) -> list[dict]:
     return entries
 
 
+def _moderator_label(entry: dict) -> str:
+    # "moderator_name" is filled in by modlogs before the entries are paged;
+    # without it (unresolvable account) fall back to the bare mention.
+    mention = f"<@{entry['moderator_id']}>"
+    name = entry.get("moderator_name")
+    return f"{mention} (**{name}**)" if name else mention
+
+
 def _format_entry(entry: dict) -> str:
     emoji, type_text = CASE_LABELS.get(entry["type"], (_UNKNOWN_CASE_EMOJI, entry["type"].title()))
     ts = int(entry["timestamp"].timestamp())
@@ -159,12 +167,12 @@ def _format_entry(entry: dict) -> str:
         # occupies the same column position as a real emoji would.
         marker = "‎ "
         return (
-            f"*{marker}**{type_text}** — <t:{ts}:R> by <@{entry['moderator_id']}> — "
+            f"*{marker}**{type_text}** — <t:{ts}:R> by {_moderator_label(entry)} — "
             f"{reason}{duration_suffix} — Appealed*"
         )
 
     return (
-        f"{emoji} **{type_text}** — <t:{ts}:R> by <@{entry['moderator_id']}> — "
+        f"{emoji} **{type_text}** — <t:{ts}:R> by {_moderator_label(entry)} — "
         f"{reason}{duration_suffix}"
     )
 
@@ -281,13 +289,21 @@ class CaseLogCog(
             return
 
         user_id = member.id
-        target_line = f"{member.mention} (`{user_id}`)"
+        target_line = f"{member.mention} — **{member}** (`{user_id}`)"
 
         entries = sorted(
             _fetch_cases(user_id) + _fetch_warnings(user_id),
             key=lambda e: e["timestamp"],
             reverse=True,
         )
+
+        moderator_names: dict[int, str | None] = {}
+        for entry in entries:
+            mod_id = entry["moderator_id"]
+            if mod_id not in moderator_names:
+                mod = await resolve_user(self.bot, mod_id)
+                moderator_names[mod_id] = str(mod) if mod is not None else None
+            entry["moderator_name"] = moderator_names[mod_id]
 
         view = _ModLogsView(entries, target_line)
         await ctx.send(

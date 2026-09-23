@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from bot import Context, TerrierBot
 from ..logging.caseLogCog import record_case
-from ..logging.logConfig import LogChannels, get_log_channel, register_queue_item, resolve_queue_item
+from ..logging.logConfig import LogChannels, get_log_channel, register_queue_item, resolve_queue_item, user_line
 from cogs.logging.logConfig import MOD_ROLE_ID
 
 log = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ async def _post_application_for_review(applicant: discord.Member) -> None:
         color=discord.Color.blurple(),
         timestamp=discord.utils.utcnow(),
     )
-    embed.add_field(name="Applicant", value=applicant.mention, inline=False)
+    embed.add_field(name="Applicant", value=user_line(applicant), inline=False)
     embed.add_field(name="Politics Channel Agreement", value="I agree", inline=False)
     embed.set_footer(text=f"Applicant ID: {applicant.id}")
 

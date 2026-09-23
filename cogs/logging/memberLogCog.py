@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot import TerrierBot
-from .logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel
+from .logConfig import LogChannels, LogColors, MAIN_GUILD_ID, get_log_channel, user_line
 
 
 async def setup(bot: TerrierBot):
@@ -29,7 +29,7 @@ class MemberLogCog(commands.Cog, name="MemberLog", description="Logs nickname, u
         embed = discord.Embed(
             title="✏️ Nickname changed",
             description=(
-                f"{after.mention} (`{after.id}`)\n"
+                f"{user_line(after)}\n"
                 f"**Before:** {before.nick or '*(none)*'}\n"
                 f"**After:** {after.nick or '*(none)*'}"
             ),
@@ -63,7 +63,7 @@ class MemberLogCog(commands.Cog, name="MemberLog", description="Logs nickname, u
             if channel is None:
                 continue
 
-            lines = [f"{after.mention} (`{after.id}`)"]
+            lines = [user_line(after)]
             if before.name != after.name:
                 lines.append(f"**Username before:** {before.name}\n**Username after:** {after.name}")
             if before.display_avatar.key != after.display_avatar.key:

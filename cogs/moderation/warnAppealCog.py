@@ -12,7 +12,7 @@ from discord.ext import commands
 from bot import Context, TerrierBot
 from .warningsCog import DB_PATH, EASTERN, RULES
 from ..logging.caseLogCog import record_case
-from ..logging.logConfig import LogChannels, MOD_ROLE_ID, register_queue_item, resolve_queue_item, user_line
+from ..logging.logConfig import LogChannels, MOD_ROLE_ID, register_queue_item, resolve_queue_item, user_line, user_line_by_id
 
 
 def _is_mod(user: discord.abc.User) -> bool:
@@ -49,6 +49,7 @@ class _WarnAppealTextModal(discord.ui.Modal, title="Appeal Warning"):
             )
             return
 
+        issuer_line = await user_line_by_id(bot, moderator_id)
         date_str = datetime.fromisoformat(warned_at).strftime("%Y-%m-%d")
         rule_name = RULES.get(rule, "Unknown rule")
 
@@ -58,7 +59,7 @@ class _WarnAppealTextModal(discord.ui.Modal, title="Appeal Warning"):
                 f"**Appellant:** {user_line(interaction.user)}\n\n"
                 f"**Warning #{warn_id}** — Rule {rule}: {rule_name} ({date_str})\n"
                 f"**Reason:** {reason}\n"
-                f"**Issued by:** <@{moderator_id}>\n\n"
+                f"**Issued by:** {issuer_line}\n\n"
                 f"**Appeal:**\n{self.appeal_input.value}"
             ),
             color=discord.Color.orange(),

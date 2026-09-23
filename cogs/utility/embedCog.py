@@ -5,7 +5,9 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import Context, TerrierBot
-from cogs.logging.logConfig import LogChannels, MOD_ROLE_ID
+from cogs.logging.logConfig import LogChannels, MOD_ROLE_ID, resolve_user
+
+_SERVER_OWNER_ID = 1274047585098793034
 
 
 async def setup(bot: TerrierBot):
@@ -374,7 +376,7 @@ def _build_embedhousing_sequence() -> list[discord.Embed]:
 
     return [embed1, embed2, embed3, embed4, embed5]
 
-def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
+def _build_embedmodhandbook_sequence(server_owner_display: str) -> list[discord.Embed]:
     MOD_IMPORTANT_CHANNEL = 1401924438341062798
     MOD_FEET_CHANNEL = 1446304077213597807
     OWO_DOOMER_CHANNEL = LogChannels.DOOMER
@@ -382,7 +384,6 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
     FRIENDLY_CHECK_IN_CHANNEL = 1498345257455194242
     MOD_QUEUE_CHANNEL = LogChannels.QUEUE
     MOD_ROLE = MOD_ROLE_ID
-    SERVER_OWNER = 1274047585098793034
 
     # Regex patterns that trigger an automatic warning (raw strings so \b, \s etc. stay literal)
     AUTOWARN_PATTERNS = [
@@ -714,7 +715,7 @@ def _build_embedmodhandbook_sequence() -> list[discord.Embed]:
         name="Term Length",
         value=(
             "We're looking for mods to stay active in the community. If you feel unable to keep up with "
-            f"your duties, reach out to the server owner (<@{SERVER_OWNER}>) — they'll check in periodically "
+            f"your duties, reach out to the server owner ({server_owner_display}) — they'll check in periodically "
             "to see if you're interested in continuing.\n"
             "1 year post-graduation, moderators can move into a Moderator Emeritus role, where they can "
             "offer wisdom/insight but no longer vote or make decisions."
@@ -957,7 +958,9 @@ class EmbedCog(commands.Cog, name="Embed", description="Send rich embeds. Owner 
         except (discord.Forbidden, discord.HTTPException):
             pass
 
-        for embed in _build_embedmodhandbook_sequence():
+        owner = await resolve_user(self.bot, _SERVER_OWNER_ID)
+        owner_display = f"<@{_SERVER_OWNER_ID}> (**{owner}**)" if owner is not None else f"<@{_SERVER_OWNER_ID}>"
+        for embed in _build_embedmodhandbook_sequence(owner_display):
             await ctx.channel.send(embed=embed)
 
     @commands.command(name="embedrules")

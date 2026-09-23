@@ -10,7 +10,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import TerrierBot, Context
-from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
+from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, resolve_user, user_line
 
 # ── Persistence ──────────────────────────────────────────────────────────────
 # Same pattern as banCog's tempbans.json: gitignored, runtime-generated JSON
@@ -212,7 +212,12 @@ class SquadPingCog(
             if not ids:
                 members_value = "No one has joined yet."
             else:
-                mentions = [f"<@{uid}>" for uid in ids]
+                await ctx.defer()
+                mentions = []
+                for uid in ids:
+                    member = ctx.guild.get_member(uid) if ctx.guild else None
+                    user = member or await resolve_user(self.bot, uid)
+                    mentions.append(str(user) if user is not None else f"<@{uid}>")
                 members_value = "\n".join(mentions)
                 if len(members_value) > 1024:
                     shown: list[str] = []

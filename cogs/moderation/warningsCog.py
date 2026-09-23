@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line
+from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line, user_line_by_id
 
 EASTERN = ZoneInfo("America/New_York")
 
@@ -147,7 +147,7 @@ class WarningsCog(commands.Cog):
         mod_log_embed = discord.Embed(
             title=f"⚠️ Warning #{warn_id} issued",
             description=(
-                f"**Target:** {user.mention} (`{user.id}`)\n"
+                f"**Target:** {user_line(user)}\n"
                 f"**Moderator:** {user_line(moderator)}\n"
                 f"**Rule:** {rule}. {RULES[rule]}\n"
                 f"**Reason:** {reason}\n"
@@ -201,7 +201,7 @@ class WarningsCog(commands.Cog):
             title=f"Warning #{warn_id} issued",
             color=discord.Color.orange(),
         )
-        confirm_embed.add_field(name="User", value=user.mention, inline=True)
+        confirm_embed.add_field(name="User", value=user_line(user), inline=True)
         confirm_embed.add_field(name="Rule", value=f"{rule}. {RULES[rule]}", inline=True)
         confirm_embed.add_field(name="Reason", value=reason, inline=False)
         confirm_embed.set_footer(text=dm_status)
@@ -249,7 +249,7 @@ class WarningsCog(commands.Cog):
             member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
-            lines.append(f"{member.mention} — {count} warning(s)")
+            lines.append(f"{member.mention} (**{member}**) — {count} warning(s)")
 
         if not lines:
             await ctx.send("No active warnings for members currently in the server.")
@@ -352,12 +352,13 @@ class WarningsCog(commands.Cog):
         conn.execute("UPDATE warnings SET active = 0 WHERE id = ?", (warn_id,))
         conn.commit()
         conn.close()
-        await ctx.send(f"Warning #{warn_id} removed for <@{user_id}>.")
+        target_line = await user_line_by_id(self.bot, user_id)
+        await ctx.send(f"Warning #{warn_id} removed for {target_line}.")
 
         mod_log_embed = discord.Embed(
             title=f"✅ Warning #{warn_id} removed",
             description=(
-                f"**Target:** <@{user_id}> (`{user_id}`)\n"
+                f"**Target:** {target_line}\n"
                 f"**Moderator:** {user_line(ctx.author)}\n"
                 f"**Original rule:** {rule}. {RULES.get(rule, 'Unknown')}\n"
                 f"**Original reason:** {reason}"
@@ -413,10 +414,11 @@ class WarningsCog(commands.Cog):
         # Accept/Reject on a stale appeal message for this id, that just
         # becomes a no-op UPDATE (0 rows matched).
 
+        target_line = await user_line_by_id(self.bot, user_id)
         audit_embed = discord.Embed(
             title=f"🗑️ Warning #{warn_id} nullified",
             description=(
-                f"**Target:** <@{user_id}> (`{user_id}`)\n"
+                f"**Target:** {target_line}\n"
                 f"**Moderator:** {user_line(interaction.user)}\n"
                 f"**Reason:** {reason}"
             ),

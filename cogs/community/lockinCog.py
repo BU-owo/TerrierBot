@@ -8,7 +8,7 @@ import shelve
 import time
 from typing import Any
 
-from ..logging.logConfig import LogChannels, LogColors, MAIN_GUILD_ID, MOD_ROLE_ID, get_log_channel, suppress_role_log
+from ..logging.logConfig import LogChannels, LogColors, MAIN_GUILD_ID, MOD_ROLE_ID, get_log_channel, suppress_role_log, user_line
 
 LOCKIN_ROLE_ID = 1410344839718895716
 LOCKIN_ANNOUNCE_CHANNEL_ID = 1410345159186714796
@@ -132,7 +132,7 @@ class LockinCog(commands.Cog):
             return
 
         lines = [
-            f"{member.mention} (`{member.id}`)",
+            user_line(member),
             f"**Duration:** {format_duration(seconds)}",
             f"**Roles removed:** {', '.join(r.mention for r in removed_roles) if removed_roles else '*None*'}",
             f"**Roles restored:** <t:{end_ts}:F> (<t:{end_ts}:R>)",
@@ -162,7 +162,7 @@ class LockinCog(commands.Cog):
         embed = discord.Embed(
             title="🔓 Lock-in ended",
             description=(
-                f"{member.mention} (`{member.id}`)\n"
+                f"{user_line(member)}\n"
                 f"**Roles restored:** {', '.join(r.mention for r in restored_roles) if restored_roles else '*None*'}"
             ),
             color=LogColors.MEMBER,

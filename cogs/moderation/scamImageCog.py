@@ -10,7 +10,7 @@ from discord.ext import commands
 from PIL import Image
 import imagehash
 
-from ..logging.logConfig import LogChannels, suppress_message_log
+from ..logging.logConfig import LogChannels, suppress_message_log, user_line
 from cogs.logging.logConfig import MOD_ROLE_ID
 
 log = logging.getLogger(__name__)
@@ -307,7 +307,7 @@ class ScamImageCog(commands.Cog):
             embed = discord.Embed(
                 title="⚠️ Possible cross-channel image spam",
                 description=(
-                    f"{member.mention} ({member.id}) posted images in "
+                    f"{user_line(member)} posted images in "
                     f"{SPAM_CHANNEL_THRESHOLD}+ channels within {SPAM_WINDOW_SECONDS}s "
                     f"and has been timed out for {TIMEOUT_MINUTES} minutes. "
                     "Please review and take further action if needed."

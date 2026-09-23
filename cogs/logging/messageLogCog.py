@@ -14,6 +14,7 @@ from .logConfig import (
     get_purger,
     is_suppressed,
     user_line,
+    user_line_by_id,
 )
 
 # How recent an audit log entry must be to count as "this deletion" — Discord
@@ -110,7 +111,7 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
                     "**Attachments:** " + ", ".join(a.filename for a in message.attachments)
                 )
             if deleter is not None and deleter.id != message.author.id:
-                description_lines.append(f"-# 🔨 Deleted by {deleter.mention}")
+                description_lines.append(f"-# 🔨 Deleted by {user_line(deleter)}")
 
             embed = discord.Embed(
                 description=f"{message.author.mention}\n" + "\n".join(description_lines),
@@ -212,7 +213,7 @@ class MessageLogCog(commands.Cog, name="MessageLog", description="Logs deleted m
         purger_ids = {get_purger(mid) for mid in payload.message_ids}
         if len(purger_ids) == 1 and None not in purger_ids:
             (deleter_id,) = purger_ids
-            description = f"{total} message(s) purged by <@{deleter_id}> in {location}"
+            description = f"{total} message(s) purged by {await user_line_by_id(self.bot, deleter_id)} in {location}"
         else:
             description = f"{total} message(s) deleted in {location}"
             if uncached_count:
