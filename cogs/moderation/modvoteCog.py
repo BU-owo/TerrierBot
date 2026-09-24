@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import time
-import uuid
 
 import discord
 from discord import app_commands
@@ -92,7 +91,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.data: dict = {"votes": {}, "sticky_by_channel": {}}
+        self.data: dict = {"votes": {}, "sticky_by_channel": {}, "next_vote_num": 0}
         self._load()
 
         # Re-register persistent views for votes that were still open at last shutdown.
@@ -118,6 +117,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             self.data = json.load(f)
         self.data.setdefault("votes", {})
         self.data.setdefault("sticky_by_channel", {})
+        self.data.setdefault("next_vote_num", 0)
 
     def _save(self) -> None:
         os.makedirs(_DATA_DIR, exist_ok=True)
@@ -378,7 +378,8 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             # Stale entry (vote closed but map wasn't cleared) — safe to drop.
             del self.data["sticky_by_channel"][ch_key]
 
-        vote_id = uuid.uuid4().hex
+        self.data["next_vote_num"] += 1
+        vote_id = f"vote-{self.data['next_vote_num']}"
         close_ts = int(time.time()) + duration_minutes * 60
 
         vote = {
