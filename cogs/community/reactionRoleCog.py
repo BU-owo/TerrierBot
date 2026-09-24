@@ -45,6 +45,7 @@ class RoleButtonView(discord.ui.View):
         self.add_item(add_button)
         self.add_item(remove_button)
 
+
     async def _add(self, interaction: discord.Interaction):
         await self._update(interaction, add=True)
 
