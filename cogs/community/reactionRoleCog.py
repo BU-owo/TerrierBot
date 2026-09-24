@@ -1,31 +1,19 @@
 import shelve
-from typing import Literal
+from typing import Optional
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 from bot import TerrierBot, Context
 
-PRESETS = {
-    "Freshmen": {
-        "role_id": 1541770660710191134,
-        "emoji": "🧑‍🤝‍🧑",
-        "title": "🧑‍🤝‍🧑 Freshmen Ping Role",
-        "description": (
-            "Freshmen! Are you interested in being invited to do "
-            "**[insert anything you want to do]** with people from this server? "
-            "<@&1541770660710191134> is pingable by anyone in your class, and it will "
-            "**only reach people who have opted in to be pinged** (no constant pings @'30).\n\n"
-            "**React with 🧑‍🤝‍🧑 below to add the role.**\n\n"
-            "Ping when you are heading to the dining hall, exploring campus, getting coffee, "
-            "going to an on campus event, etc.\n\n"
-            "*This is for orientation week only.*"
-        ),
-    },
+# Seed preset — only used the first time the bot ever runs with no shelve
+# data yet. After that, self.presets (loaded from shelve) is the source of
+# truth and this constant is ignored. The old "Freshmen" reaction-based
+# preset has been dropped along with reaction-role support entirely.
+_SEED_PRESETS = {
     "Scavenger": {
         "role_id": 1420106696222703636,
-        "button": True,
-        "emoji_id": 1421470279355338813,
+        "emoji": "<:e:1421470279355338813>",
         "title": "🔍 Scavenger Hunt Alerts",
         "description": (
             "Get alerted to our energy drink (and more) scavenger hunt hides! "
@@ -40,10 +28,11 @@ class RoleButtonView(discord.ui.View):
     def __init__(self, data: dict):
         super().__init__(timeout=None)
         self.role_id: int = data["role_id"]
+        emoji = discord.PartialEmoji.from_str(data["emoji"])
         add_button = discord.ui.Button(
             label="Add role",
             style=discord.ButtonStyle.success,
-            emoji=discord.PartialEmoji(name="e", id=data["emoji_id"]),
+            emoji=emoji,
             custom_id=f"reactionrole:{self.role_id}:add",
         )
         add_button.callback = self._add
@@ -90,98 +79,93 @@ async def setup(bot: TerrierBot):
     await bot.add_cog(ReactionRoleCog(bot))
 
 
-class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assignable reaction roles. Requires Manage Roles to configure."):
+class ReactionRoleCog(commands.Cog, name="ReactionRole", description="Self-assignable button roles. Requires Manage Roles to configure."):
     def __init__(self, bot: TerrierBot):
         self.bot: TerrierBot = bot
 
         with shelve.open("terrierbot.shelve") as sh:
-            self.role_messages: dict[str, int] = sh.get("reactionroles", {})
+            self.presets: dict[str, dict] = sh.get("reactionrole_presets")
+            if self.presets is None:
+                self.presets = dict(_SEED_PRESETS)
+                sh["reactionrole_presets"] = self.presets
 
         print("ReactionRole Cog Ready")
 
     async def cog_load(self) -> None:
-        for data in PRESETS.values():
-            if data.get("button"):
-                self.bot.add_view(RoleButtonView(data))
+        for data in self.presets.values():
+            self.bot.add_view(RoleButtonView(data))
 
-    def _save_state(self) -> None:
+    def _save_presets(self) -> None:
         with shelve.open("terrierbot.shelve") as sh:
-            sh["reactionroles"] = self.role_messages
+            sh["reactionrole_presets"] = self.presets
 
-    @app_commands.command(name="reactionrole", description="Post a reaction role message from a preset.")
+    async def _preset_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ) -> list[app_commands.Choice[str]]:
+        return [
+            app_commands.Choice(name=name, value=name)
+            for name in self.presets
+            if current.lower() in name.lower()
+        ][:25]
+
+    @app_commands.command(name="reactionrole", description="Post a button role message from a preset.")
     @app_commands.describe(preset="Which preset message to post")
+    @app_commands.autocomplete(preset=_preset_autocomplete)
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_roles=True)
-    async def reactionrole(self, interaction: discord.Interaction, preset: Literal[tuple(PRESETS.keys())]):
-        await interaction.response.defer(ephemeral=True)
+    async def reactionrole(self, interaction: discord.Interaction, preset: str):
+        data = self.presets.get(preset)
+        if data is None:
+            await interaction.response.send_message(f"No preset named `{preset}`.", ephemeral=True)
+            return
 
-        data = PRESETS[preset]
         embed = discord.Embed(title=data.get("title"), description=data["description"], color=discord.Color.blurple())
-        allowed = discord.AllowedMentions(roles=True)
+        await interaction.channel.send(embed=embed, view=RoleButtonView(data))
+        await interaction.response.send_message("Reaction role posted.", ephemeral=True)
 
-        if data.get("button"):
-            await interaction.channel.send(embed=embed, view=RoleButtonView(data), allowed_mentions=allowed)
-        else:
-            message = await interaction.channel.send(embed=embed, allowed_mentions=allowed)
-            await message.add_reaction(data["emoji"])
-            self.role_messages[str(message.id)] = data["role_id"]
-            self._save_state()
-
-        await interaction.followup.send("Reaction role posted.", ephemeral=True)
-
-    def _preset_for_role(self, role_id: int) -> dict | None:
-        for data in PRESETS.values():
-            if data["role_id"] == role_id:
-                return data
-        return None
-
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        if payload.user_id == self.bot.user.id:
+    @app_commands.command(name="addreactionrole", description="Register a new button role preset (does not post it).")
+    @app_commands.describe(
+        name="Unique key for this preset, used with /reactionrole",
+        title="Embed title",
+        description="Embed description",
+        role="Role granted/removed by the buttons",
+        emoji="Emoji shown on the Add role button — normal or custom",
+    )
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(manage_roles=True)
+    async def addreactionrole(
+        self,
+        interaction: discord.Interaction,
+        name: str,
+        title: str,
+        description: str,
+        role: discord.Role,
+        emoji: str,
+    ):
+        if name in self.presets:
+            await interaction.response.send_message(f"A preset named `{name}` already exists.", ephemeral=True)
             return
 
-        role_id = self.role_messages.get(str(payload.message_id))
-        if role_id is None:
+        parsed_emoji = discord.PartialEmoji.from_str(emoji)
+        # Custom emoji: validate it's actually usable by the bot (from_str will
+        # happily parse a well-formed <:name:id> string even if the emoji
+        # doesn't exist/isn't accessible).
+        if parsed_emoji.id is not None and discord.utils.get(self.bot.emojis, id=parsed_emoji.id) is None:
+            await interaction.response.send_message(
+                "I can't find that custom emoji — make sure it's from a server I'm in.", ephemeral=True
+            )
             return
 
-        preset = self._preset_for_role(role_id)
-        if preset is None or payload.emoji.name != preset.get("emoji"):
-            return
+        data = {
+            "role_id": role.id,
+            "emoji": str(parsed_emoji),
+            "title": title,
+            "description": description,
+        }
+        self.presets[name] = data
+        self._save_presets()
+        self.bot.add_view(RoleButtonView(data))
 
-        guild = self.bot.get_guild(payload.guild_id)
-        if guild is None:
-            return
-        role = guild.get_role(role_id)
-        if role is None or payload.member is None:
-            return
-
-        try:
-            await payload.member.add_roles(role)
-        except (discord.Forbidden, discord.HTTPException):
-            pass
-
-    @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
-        if payload.user_id == self.bot.user.id:
-            return
-
-        role_id = self.role_messages.get(str(payload.message_id))
-        if role_id is None:
-            return
-
-        preset = self._preset_for_role(role_id)
-        if preset is None or payload.emoji.name != preset.get("emoji"):
-            return
-
-        guild = self.bot.get_guild(payload.guild_id)
-        if guild is None:
-            return
-        role = guild.get_role(role_id)
-        if role is None:
-            return
-
-        try:
-            member = await guild.fetch_member(payload.user_id)
-            await member.remove_roles(role)
-        except (discord.Forbidden, discord.HTTPException):
-            pass
+        await interaction.response.send_message(
+            f"Registered preset `{name}`. Post it with `/reactionrole preset:{name}`.", ephemeral=True
+        )

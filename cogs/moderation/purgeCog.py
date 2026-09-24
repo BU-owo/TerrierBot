@@ -200,7 +200,12 @@ class PurgeCog(
             register_purge([m.id for m in deleted], ctx.author.id, ctx.channel.id)
             await self._log_purge(ctx, deleted, f"purge {amount}")
 
-        await ctx.send(f"🗑️ Purged {len(deleted)} message(s).", ephemeral=True)
+        confirmation = await ctx.send(f"🗑️ Purged {len(deleted)} message(s).", ephemeral=True)
+        # ephemeral is a no-op on a prefix invocation (=purge, not /purge) —
+        # it posts as a normal visible message, so clean it up after a delay
+        # instead of leaving it sitting in the channel forever.
+        if ctx.interaction is None:
+            await confirmation.delete(delay=60)
 
     @commands.hybrid_command(
         name="purgeafter",
