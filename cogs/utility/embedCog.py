@@ -493,7 +493,7 @@ def _build_embedmodhandbook_sequence(server_owner_display: str) -> list[discord.
 
             "**Ban**\n"
             "> **When:** Severe violations or excessive warnings\n"
-            "> **Vote:** Majority\n"
+            "> **Vote:** Required if under 5 active warnings; 5+ active warnings, any mod can ban unilaterally\n"
             "> **Method:** TerrierBot `/ban`"
         ),
         inline=False,
@@ -501,7 +501,7 @@ def _build_embedmodhandbook_sequence(server_owner_display: str) -> list[discord.
     embed3.add_field(
         name="For Bots",
         value=(
-            "TerrierBot `/ban`\n"
+            "TerrierBot `/ban` - no vote or warning count needed \n"
             "If unsure whether an account is a bot, use TerrierBot `/hardmute` and ask about their "
             "affiliation in <#1498345257455194242>. `/unmute` reverses it once things are sorted out.\n"
             "When in doubt, time out."
@@ -684,7 +684,8 @@ def _build_embedmodhandbook_sequence(server_owner_display: str) -> list[discord.
     embed6.add_field(
         name="Voting",
         value=(
-            f"Majority vote decides bans — warnings can be issued unilaterally. Anyone can start a "
+            f"Bans require a majority vote **unless** the target already has 5+ active warnings, in which case "
+            f"any mod can ban unilaterally. Warnings can be issued unilaterally, no vote. Anyone can start a "
             f"vote — ping <@&{MOD_ROLE}>, state your case, and try not to make it too lengthy."
         ),
         inline=False,
