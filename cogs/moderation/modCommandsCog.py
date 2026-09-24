@@ -81,6 +81,11 @@ _FIELDS = [
         "Toggles a member's access to the Serious category on/off.",
     ),
     (
+        "🎭 Reaction Role",
+        "`/addreactionrole <name> <title> <description> <role> <emoji>` / `/reactionrole <preset>`",
+        "Register a new button-role preset, then post it with /reactionrole. Requires Manage Roles.",
+    ),
+    (
         "🗑️ Squad-Ping Delete",
         "`=squadpingdelete <name>` / `/squadpingdelete`",
         "Permanently deletes a squad-ping list and everyone's membership in it. Can't be undone.",
