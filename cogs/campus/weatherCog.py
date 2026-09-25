@@ -28,11 +28,6 @@ NWS_HEADERS = {
 
 WEATHER_ANNOUNCE_CHANNEL_ID = 1396542256445391069
 
-# Detailed forecast text gets truncated to this many characters (at the last
-# whole word) so a single embed field never gets close to Discord's 1024
-# character field-value limit.
-DETAIL_TEXT_LIMIT = 400
-
 
 def _c_to_f(celsius: float) -> float:
     return celsius * 9 / 5 + 32
@@ -44,6 +39,10 @@ def _f_to_c(fahrenheit: float) -> float:
 
 def _kmh_to_mph(kmh: float) -> float:
     return kmh * 0.621371
+
+
+def _mph_to_kmh(mph: float) -> float:
+    return mph / 0.621371
 
 
 # (upper bound in whole mph, label), checked in order; anything above the
@@ -68,31 +67,18 @@ def _wind_label(mph: float) -> str:
     return "Whipping"
 
 
-# Matches NWS forecast wind phrases like "18 mph" or "9 to 15 mph".
+# Matches NWS windSpeed values like "18 mph" or "9 to 15 mph".
 WIND_PHRASE_RE = re.compile(r"(\d+)(?:\s+to\s+(\d+))?\s+mph")
 
 
-def _label_wind_phrases(text: str) -> str:
-    """Tag each wind speed in NWS forecast text with its plain-language label,
-    e.g. "wind 9 to 15 mph" -> "wind 9 to 15 mph (breezy to windy)"."""
-
-    def tag(match: re.Match[str]) -> str:
-        low = int(match.group(1))
-        high = int(match.group(2)) if match.group(2) else low
-        label = _wind_label(max(low, high)).lower()
-        return f"{match.group(0)} ({label})"
-
-    return WIND_PHRASE_RE.sub(tag, text)
-
-
-def _truncate_text(text: str, limit: int = DETAIL_TEXT_LIMIT) -> str:
-    if len(text) <= limit:
-        return text
-    truncated = text[:limit]
-    last_space = truncated.rfind(" ")
-    if last_space > 0:
-        truncated = truncated[:last_space]
-    return f"{truncated.rstrip(',.;: ')}..."
+def _parse_wind_range(wind_speed: str) -> tuple[int, int] | None:
+    """Parse an NWS windSpeed value into (low, high) mph."""
+    match = WIND_PHRASE_RE.search(wind_speed)
+    if match is None:
+        return None
+    low = int(match.group(1))
+    high = int(match.group(2)) if match.group(2) else low
+    return low, high
 
 
 def _weather_emoji(forecast_text: str, is_daytime: bool) -> str:
@@ -120,6 +106,20 @@ def _weather_emoji(forecast_text: str, is_daytime: bool) -> str:
     return "🌡️"
 
 
+def _format_period_wind(period: ForecastPeriod) -> str | None:
+    """e.g. "💨 NE wind (very windy)"; None if NWS gave nothing."""
+    if period.wind_direction is None and period.wind_mph_range is None:
+        return None
+    parts = ["💨"]
+    if period.wind_direction is not None:
+        parts.append(period.wind_direction)
+    parts.append("wind" if period.wind_direction is not None else "Wind")
+    if period.wind_mph_range is not None:
+        _, high = period.wind_mph_range
+        parts.append(f"({_wind_label(high).lower()})")
+    return " ".join(parts)
+
+
 def _is_daytime_now() -> bool:
     hour = datetime.now(EASTERN).hour
     return 6 <= hour < 19
@@ -139,10 +139,12 @@ class CurrentConditions:
 class ForecastPeriod:
     name: str
     short_forecast: str
-    detailed_forecast: str
     temp_f: int
     temp_c: float
     is_daytime: bool
+    wind_direction: str | None
+    wind_mph_range: tuple[int, int] | None
+    precip_pct: int | None
 
 
 async def setup(bot: TerrierBot):
@@ -227,16 +229,20 @@ class WeatherCog(commands.Cog, name="Weather", description="BU campus weather vi
 
             temp_f = temp if temp_unit == "F" else _c_to_f(temp)
             temp_c = _f_to_c(temp_f)
-            detailed = period.get("detailedForecast")
+            wind_direction = period.get("windDirection")
+            wind_speed = period.get("windSpeed")
+            precip = (period.get("probabilityOfPrecipitation") or {}).get("value")
 
             result.append(
                 ForecastPeriod(
                     name=name,
                     short_forecast=short_forecast,
-                    detailed_forecast=detailed if isinstance(detailed, str) else short_forecast,
                     temp_f=round(temp_f),
                     temp_c=round(temp_c),
                     is_daytime=bool(period.get("isDaytime", True)),
+                    wind_direction=wind_direction.strip() or None if isinstance(wind_direction, str) else None,
+                    wind_mph_range=_parse_wind_range(wind_speed) if isinstance(wind_speed, str) else None,
+                    precip_pct=round(precip) if isinstance(precip, (int, float)) else None,
                 )
             )
 
@@ -311,7 +317,8 @@ class WeatherCog(commands.Cog, name="Weather", description="BU campus weather vi
                 lines.append(f"💧 Humidity: {current.humidity:.0f}%")
             if current.wind_speed_mph is not None:
                 mph = round(current.wind_speed_mph)
-                lines.append(f"💨 Wind: {_wind_label(mph)} ({mph} mph)")
+                kmh = round(_mph_to_kmh(current.wind_speed_mph))
+                lines.append(f"💨 Wind: {_wind_label(mph)} ({mph} mph / {kmh} km/h)")
             embed.add_field(name="Current Conditions", value="\n".join(lines), inline=False)
         else:
             embed.add_field(
@@ -323,11 +330,13 @@ class WeatherCog(commands.Cog, name="Weather", description="BU campus weather vi
         if periods:
             for period in periods:
                 emoji = _weather_emoji(period.short_forecast, period.is_daytime)
-                value = (
-                    f"{emoji} **{period.temp_f}°F / {period.temp_c:.0f}°C** — {period.short_forecast}\n"
-                    f"{_truncate_text(_label_wind_phrases(period.detailed_forecast))}"
-                )
-                embed.add_field(name=period.name, value=value, inline=False)
+                lines = [f"{emoji} **{period.temp_f}°F / {period.temp_c:.0f}°C** — {period.short_forecast}"]
+                wind_line = _format_period_wind(period)
+                if wind_line is not None:
+                    lines.append(wind_line)
+                if period.precip_pct:
+                    lines.append(f"☔ {period.precip_pct}% chance of precip")
+                embed.add_field(name=period.name, value="\n".join(lines), inline=False)
         else:
             embed.add_field(
                 name="Forecast",
