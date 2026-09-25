@@ -71,11 +71,21 @@ class PurgeCog(
         self.bot = bot
 
     @staticmethod
-    async def _require_mod(ctx: Context) -> bool:
+    async def _reply(ctx: Context, content: str) -> None:
+        """Ephemeral reply to the mod. ephemeral is a no-op on a prefix
+        invocation (=purge, not /purge) — it posts as a normal visible
+        message, so clean it up after a delay instead of leaving it sitting
+        in the channel forever."""
+        message = await ctx.send(content, ephemeral=True)
+        if ctx.interaction is None:
+            await message.delete(delay=60)
+
+    @classmethod
+    async def _require_mod(cls, ctx: Context) -> bool:
         if not isinstance(ctx.author, discord.Member) or not any(
             r.id in (MOD_ROLE_ID, JUNIOR_MOD_ROLE_ID) for r in ctx.author.roles
         ):
-            await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)
+            await cls._reply(ctx, "Oops! You can't run that... mods only!")
             return False
         return True
 
@@ -168,7 +178,7 @@ class PurgeCog(
         if not await self._require_mod(ctx):
             return
         if not isinstance(ctx.channel, (discord.TextChannel, discord.Thread, discord.VoiceChannel)):
-            await ctx.send("This command can only be used in a text channel.", ephemeral=True)
+            await self._reply(ctx, "This command can only be used in a text channel.")
             return
 
         await ctx.defer(ephemeral=True)
@@ -184,10 +194,10 @@ class PurgeCog(
         try:
             deleted = await ctx.channel.purge(limit=amount, check=check, bulk=True)
         except discord.Forbidden:
-            await ctx.send("I don't have permission to delete messages here.", ephemeral=True)
+            await self._reply(ctx, "I don't have permission to delete messages here.")
             return
         except discord.HTTPException as exc:
-            await ctx.send(f"Failed to purge messages: {exc}", ephemeral=True)
+            await self._reply(ctx, f"Failed to purge messages: {exc}")
             return
 
         if ctx.interaction is None:
@@ -200,12 +210,7 @@ class PurgeCog(
             register_purge([m.id for m in deleted], ctx.author.id, ctx.channel.id)
             await self._log_purge(ctx, deleted, f"purge {amount}")
 
-        confirmation = await ctx.send(f"🗑️ Purged {len(deleted)} message(s).", ephemeral=True)
-        # ephemeral is a no-op on a prefix invocation (=purge, not /purge) —
-        # it posts as a normal visible message, so clean it up after a delay
-        # instead of leaving it sitting in the channel forever.
-        if ctx.interaction is None:
-            await confirmation.delete(delay=60)
+        await self._reply(ctx, f"🗑️ Purged {len(deleted)} message(s).")
 
     @commands.hybrid_command(
         name="purgeafter",
@@ -218,7 +223,7 @@ class PurgeCog(
         if not await self._require_mod(ctx):
             return
         if not isinstance(ctx.channel, (discord.TextChannel, discord.Thread, discord.VoiceChannel)):
-            await ctx.send("This command can only be used in a text channel.", ephemeral=True)
+            await self._reply(ctx, "This command can only be used in a text channel.")
             return
 
         # Prefix replies take priority over an explicit target argument — a
@@ -235,10 +240,10 @@ class PurgeCog(
                 )
 
         if reply_message_id is None and target is None:
-            await ctx.send(
+            await self._reply(
+                ctx,
                 "Tell me which message to purge after — reply to it with `=purgeafter`, "
                 "or pass its message ID or link: `=purgeafter <id_or_link>`.",
-                ephemeral=True,
             )
             return
 
@@ -248,17 +253,17 @@ class PurgeCog(
             assert target is not None
             target_channel_id, target_message_id = self._parse_target(target)
             if target_message_id is None:
-                await ctx.send(
+                await self._reply(
+                    ctx,
                     "That doesn't look like a message ID or a Discord message link. "
                     "Reply to the message with `=purgeafter`, or pass its ID or link.",
-                    ephemeral=True,
                 )
                 return
 
         if target_channel_id is not None and target_channel_id != ctx.channel.id:
-            await ctx.send(
+            await self._reply(
+                ctx,
                 "That message isn't in this channel — `=purgeafter` only purges within the current channel.",
-                ephemeral=True,
             )
             return
 
@@ -267,13 +272,13 @@ class PurgeCog(
         try:
             target_message = await ctx.channel.fetch_message(target_message_id)
         except discord.NotFound:
-            await ctx.send("Couldn't find that message in this channel.", ephemeral=True)
+            await self._reply(ctx, "Couldn't find that message in this channel.")
             return
         except discord.Forbidden:
-            await ctx.send("I don't have permission to read message history here.", ephemeral=True)
+            await self._reply(ctx, "I don't have permission to read message history here.")
             return
         except discord.HTTPException as exc:
-            await ctx.send(f"Failed to fetch that message: {exc}", ephemeral=True)
+            await self._reply(ctx, f"Failed to fetch that message: {exc}")
             return
 
         try:
@@ -281,10 +286,10 @@ class PurgeCog(
                 after=target_message, limit=PURGE_AFTER_CAP, oldest_first=False, bulk=True
             )
         except discord.Forbidden:
-            await ctx.send("I don't have permission to delete messages here.", ephemeral=True)
+            await self._reply(ctx, "I don't have permission to delete messages here.")
             return
         except discord.HTTPException as exc:
-            await ctx.send(f"Failed to purge messages: {exc}", ephemeral=True)
+            await self._reply(ctx, f"Failed to purge messages: {exc}")
             return
 
         # oldest_first=False above deleted the 200 messages closest to now first;
@@ -315,7 +320,7 @@ class PurgeCog(
             )
         if contradiction_note:
             lines.append(contradiction_note)
-        await ctx.send("\n".join(lines), ephemeral=True)
+        await self._reply(ctx, "\n".join(lines))
 
     @commands.hybrid_command(
         name="purgeuser",
@@ -329,7 +334,7 @@ class PurgeCog(
         if not await self._require_mod(ctx):
             return
         if not isinstance(ctx.channel, (discord.TextChannel, discord.Thread, discord.VoiceChannel)):
-            await ctx.send("This command can only be used in a text channel.", ephemeral=True)
+            await self._reply(ctx, "This command can only be used in a text channel.")
             return
 
         await ctx.defer(ephemeral=True)
@@ -354,10 +359,10 @@ class PurgeCog(
         try:
             deleted = await ctx.channel.purge(limit=PURGEUSER_SCAN_LIMIT, check=check, bulk=True)
         except discord.Forbidden:
-            await ctx.send("I don't have permission to delete messages here.", ephemeral=True)
+            await self._reply(ctx, "I don't have permission to delete messages here.")
             return
         except discord.HTTPException as exc:
-            await ctx.send(f"Failed to purge messages: {exc}", ephemeral=True)
+            await self._reply(ctx, f"Failed to purge messages: {exc}")
             return
 
         if ctx.interaction is None:
@@ -373,4 +378,4 @@ class PurgeCog(
         note = ""
         if len(deleted) < amount:
             note = f" (only found {len(deleted)} within the last {PURGEUSER_SCAN_LIMIT} messages scanned)"
-        await ctx.send(f"🗑️ Purged {len(deleted)} message(s) from {user.mention}.{note}", ephemeral=True)
+        await self._reply(ctx, f"🗑️ Purged {len(deleted)} message(s) from {user.mention}.{note}")
