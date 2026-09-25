@@ -310,7 +310,9 @@ class WeatherCog(commands.Cog, name="Weather", description="BU campus weather vi
         )
 
         if current is not None:
-            lines = [f"{_weather_emoji(current.description, _is_daytime_now())} {current.description}"]
+            lines = []
+            if current.description != "Unknown":
+                lines.append(f"{_weather_emoji(current.description, _is_daytime_now())} {current.description}")
             if current.temp_f is not None and current.temp_c is not None:
                 lines.append(f"🌡️ {current.temp_f:.0f}°F / {current.temp_c:.0f}°C")
             if current.humidity is not None:
