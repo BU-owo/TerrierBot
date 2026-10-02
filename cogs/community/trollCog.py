@@ -7,6 +7,8 @@ from discord.ext import commands
 from ..logging.logConfig import MOD_ROLE_ID
 
 TROLL_ROLE_ID = 1529519978976379061
+OBLIVION_USER_ID = 759754154905960499
+OBLIVION_TEXT = "ai is gonna make yall unemployed"
 
 
 def _is_mod(interaction: discord.Interaction) -> bool:
@@ -301,6 +303,22 @@ class TrollCog(commands.Cog):
             await interaction.response.send_message(
                 "I don't have permission to modify that user's roles.", ephemeral=True
             )
+
+    @app_commands.command(name="oblivion", description="oblivion")
+    @app_commands.check(_is_mod)
+    async def oblivion(self, interaction: discord.Interaction):
+        target = interaction.guild.get_member(OBLIVION_USER_ID)
+        if target is None:
+            try:
+                target = await interaction.guild.fetch_member(OBLIVION_USER_ID)
+            except discord.HTTPException:
+                target = None
+        if target is None:
+            await interaction.response.send_message("oblivion failed.", ephemeral=True)
+            return
+
+        await interaction.response.send_message("oblivion.", ephemeral=True)
+        await self._send_as(interaction.channel, target, OBLIVION_TEXT)
 
     @commands.hybrid_command(name="uwu", description="uwu-ify your own message")
     @app_commands.describe(text="The text to uwu-ify")
