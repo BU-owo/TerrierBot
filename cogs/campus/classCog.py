@@ -14,21 +14,21 @@ from bot import TerrierBot, Context
 
 
 # ---------------------------------------------------------------------------
-# Fall 2026 schedule  (loaded once at import from the CSV pulled 2026-05-27)
+# Term schedule  (loaded once at import from the registrar CSV export)
 # ---------------------------------------------------------------------------
 
-_FALL_TERM = "2268"
+_TERM_NAME = "Spring 2027"
+_TERM_CODE = "2271"
 _CSV_PATHS = [
-    Path("data/BU_R0032B_SR_CLASS_SCHD_DOWNLD.csv"),
-    Path("data/Fall2026Courses.csv"),
+    Path("data/BU_R0032B_Spring2027_utf8.csv"),
 ]
 _COURSE_INDEX_CSV_PATH = Path("data/bu_courses_all.csv")
 
 # { (subject_area, catalog_nbr) : [raw CSV rows] }
-_fall_schedule: dict[tuple[str, str], list[dict[str, str]]] = {}
+_term_schedule: dict[tuple[str, str], list[dict[str, str]]] = {}
 
 
-def _load_fall_schedule() -> None:
+def _load_term_schedule() -> None:
     loaded_any = False
     for csv_path in _CSV_PATHS:
         if not csv_path.exists():
@@ -37,27 +37,27 @@ def _load_fall_schedule() -> None:
         try:
             with open(csv_path, newline="", encoding="utf-8-sig", errors="replace") as f:
                 for row in csv.DictReader(f):
-                    if row.get("Term", "").strip() != _FALL_TERM:
+                    if row.get("Term", "").strip() != _TERM_CODE:
                         continue
                     key = (
                         row.get("Subject Area", "").strip().upper(),
                         row.get("Catalog Nbr",  "").strip(),
                     )
-                    _fall_schedule.setdefault(key, []).append(row)
+                    _term_schedule.setdefault(key, []).append(row)
         except Exception as exc:
             import logging
-            logging.getLogger(__name__).warning("Could not load fall schedule CSV %s: %s", csv_path, exc)
+            logging.getLogger(__name__).warning("Could not load term schedule CSV %s: %s", csv_path, exc)
 
     if not loaded_any:
         import logging
-        logging.getLogger(__name__).warning("No fall schedule CSV found. Looked for: %s", ", ".join(str(p) for p in _CSV_PATHS))
+        logging.getLogger(__name__).warning("No term schedule CSV found. Looked for: %s", ", ".join(str(p) for p in _CSV_PATHS))
 
 
-_load_fall_schedule()
+_load_term_schedule()
 
 
-def _get_fall_rows(school: str, subject: str, number: str) -> list[dict[str, str]]:
-    return _fall_schedule.get((f"{school}{subject}".upper(), number), [])
+def _get_term_rows(school: str, subject: str, number: str) -> list[dict[str, str]]:
+    return _term_schedule.get((f"{school}{subject}".upper(), number), [])
 
 
 _DAY_SHORT: dict[str, str] = {
@@ -151,16 +151,16 @@ def _fmt_section(g: dict, *, short: bool = False) -> str:
     return f"{header} · {sched}" if short else f"{header}\n{sched}"
 
 
-def _fall_field_and_instructors(
+def _term_field_and_instructors(
     school: str, subject: str, number: str
 ) -> tuple[str, list[str]]:
     """
-    Build the embed field value for Fall 2026 and collect unique instructor names.
-    Returns ('_Not offered Fall 2026._', []) when the course isn't in the schedule.
+    Build the embed field value for the current term and collect unique instructor names.
+    Returns ('_Not offered <term>._', []) when the course isn't in the schedule.
     """
-    rows = _get_fall_rows(school, subject, number)
+    rows = _get_term_rows(school, subject, number)
     if not rows:
-        return "_Not offered Fall 2026._", []
+        return f"_Not offered {_TERM_NAME}._", []
 
     sections   = _build_sections(rows)
     enrollment = [s for s in sections if s["class_type"] == "Enrollment"]
@@ -200,13 +200,13 @@ class _AllSectionsButton(discord.ui.Button["RMPView"]):
         self.number  = number
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        rows     = _get_fall_rows(self.school, self.subject, self.number)
+        rows     = _get_term_rows(self.school, self.subject, self.number)
         sections = _build_sections(rows)
         enroll   = [s for s in sections if s["class_type"] == "Enrollment"]
         labs     = [s for s in sections if s["class_type"] != "Enrollment"]
 
         embed = discord.Embed(
-            title=f"Fall 2026 — {self.school} {self.subject} {self.number}",
+            title=f"{_TERM_NAME} — {self.school} {self.subject} {self.number}",
             color=discord.Color.purple(),
         )
 
@@ -629,11 +629,11 @@ class ClassCog(commands.Cog, name="Class", description="Lookup BU Bulletin cours
         embed.add_field(name="BU Hub", value=details["hubs"][:1024], inline=False)
         embed.add_field(name="Description", value=details["description"][:1024], inline=False)
 
-        fall_value, instructors = _fall_field_and_instructors(school, subject, number)
-        embed.add_field(name="📅 Fall 2026", value=fall_value, inline=False)
+        term_value, instructors = _term_field_and_instructors(school, subject, number)
+        embed.add_field(name=f"📅 {_TERM_NAME}", value=term_value, inline=False)
         view: discord.ui.View | None = (
             RMPView(school, subject, number, instructors)
-            if _get_fall_rows(school, subject, number)
+            if _get_term_rows(school, subject, number)
             else None
         )
 

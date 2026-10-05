@@ -146,8 +146,17 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             color=discord.Color.orange(),
         )
         embed.add_field(name="Options", value=option_lines or "—", inline=False)
-        embed.add_field(name="Votes cast", value=f"{total} votes cast so far", inline=True)
-        embed.add_field(name="Closes", value=f"<t:{vote['close_ts']}:R>", inline=True)
+        # Who has voted is shown, never what they voted — the ballot stays anonymous.
+        votes_cast = f"{total} votes cast so far"
+        guild = self.bot.get_guild(vote["guild_id"])
+        mods = sorted(_mod_role_members(guild), key=lambda m: m.display_name.lower()) if guild else []
+        if mods:
+            mod_lines = [f"{'🗳️' if str(m.id) in vote['votes'] else '➖'} {m.mention}" for m in mods]
+            votes_cast += "\n" + "\n".join(mod_lines)
+            if len(votes_cast) > 1024:  # Discord embed field value cap
+                votes_cast = votes_cast[:1020].rsplit("\n", 1)[0] + "\n…"
+        embed.add_field(name="Votes cast", value=votes_cast, inline=False)
+        embed.add_field(name="Closes", value=f"<t:{vote['close_ts']}:R>", inline=False)
         embed.set_footer(text=f"Vote ID: {vote['vote_id']}")
         return embed
 

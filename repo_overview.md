@@ -9,7 +9,7 @@ Discord bot (discord.py 2.7.1) for a BU-focused Discord server ("Terrier Hub", g
 Format: `path — description — commands — loaded?`. "Loaded?" reflects `bot.py`'s `cogList` (all extensions the bot knows how to load, shown in `=cog list`) vs `defaultCogs` (auto-loaded on startup in `setup_hook`).
 
 ### campus/
-- **classCog.py** (`campus.class`, cog `"Class"`) — BU Bulletin course lookup, cross-referenced with a locally cached Fall 2026 CSV schedule. `=class <query>` / `/class query:`. Exposes `lookup_course()` used by rmpCog. **In defaultCogs.**
+- **classCog.py** (`campus.class`, cog `"Class"`) — BU Bulletin course lookup, cross-referenced with a locally cached Spring 2027 CSV schedule. `=class <query>` / `/class query:`. Exposes `lookup_course()` used by rmpCog. **In defaultCogs.**
 - **clubCog.py** (`campus.club`, `"Clubs"`) — searches BU clubs via the Campus Labs "Engage" public API. `=club <query>`, `=clubdebug <query>` (owner-only) / `/club query:`. **In defaultCogs.**
 - **endCog.py** (`campus.end`, `"End"`) — end-of-semester countdown/hype posts (hourly + daily scheduled tasks). `=end` / `/end`. **In cogList but NOT in defaultCogs — not auto-loaded at startup, only reachable via `=cog load end`.**
 - **mbtaCog.py** (`campus.mbta`, `"MBTA"`) — live MBTA Green Line ETA/alerts + "Pride Train" tracker via MBTA v3 API. `=mbta [station]` / `/mbta station:` (autocomplete); hybrid `mbtgay`/`/mbtgay`. **In defaultCogs.**
@@ -114,7 +114,7 @@ Shared flat key-value store, opened independently by each cog via `shelve.open("
 - **`sheets_service_account.json`** — listed in `.gitignore` but **no code in the repo actually loads it**; grep hits for "google/sheets" in towokenCog.py and embedCog.py are just plain Google Sites/Sheets URLs in message text, not credential usage. Looks vestigial.
 
 ### CSV — under `data/` (static reference data, mostly committed)
-- **`data/Fall2026Courses.csv`** (committed, ~7.8MB) + **`data/BU_R0032B_SR_CLASS_SCHD_DOWNLD.csv`** (referenced by path, **not present in the repo** — classCog checks `.exists()` and silently skips if missing, so this is an optional/local-only registrar export, not a hard dependency) — both read by classCog for live section/instructor data.
+- **`data/BU_R0032B_Spring2027_utf8.csv`** (~6.9MB registrar class schedule export, term `2271`) — read by classCog for live section/instructor data. Rows are filtered by `_TERM_CODE`; switching semesters means updating `_TERM_NAME`, `_TERM_CODE`, and `_CSV_PATHS` in `classCog.py`.
 - **`data/bu_courses_all.csv`** (committed, ~4.8MB) — primary dataset for searchCog (orphaned/unloaded, see §1) and also read by classCog just to augment its school→subject mapping.
 - **`data/Category Roles - Copy of Sheet1.csv`** (committed) — category→role-name mapping, read only by membersCog's `exportmembersbycategory`.
 
@@ -238,7 +238,6 @@ General pattern: development is active and iterative on the same handful of area
 - **Structural TODO-equivalents surfaced during this audit** (not marked in code, but worth listing since they're the kind of thing a planning pass would want to know):
   - `cogs/campus/searchCog.py` and `cogs/community/prideCog.py` exist but are never loaded (not in `cogList`/`defaultCogs`) — either intentionally shelved or accidentally dropped from the load list.
   - `cogs/campus/endCog.py` is in `cogList` but missing from `defaultCogs` — loadable manually but not auto-started; unclear if intentional (e.g. only meant to be loaded near end-of-semester) or an oversight.
-  - `data/BU_R0032B_SR_CLASS_SCHD_DOWNLD.csv` is referenced by `classCog.py` but not present in the repo (handled gracefully via `.exists()` check).
   - `sheets_service_account.json` is gitignored but unreferenced by any code — likely vestigial.
 
 ---
