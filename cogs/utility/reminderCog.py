@@ -20,8 +20,9 @@ EASTERN = ZoneInfo("America/New_York")  # handles EST/EDT automatically
 
 MAX_PER_USER = 25
 MAX_MESSAGE_LEN = 500
-MAX_AHEAD = timedelta(days=365)
+MAX_AHEAD = timedelta(days=3650)  # ~10 years
 MIN_AHEAD_SECONDS = 5
+TOO_FAR_MSG = "Dude... Terrier Hub will not survive that long"
 
 MONTHS = {
     "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
@@ -138,13 +139,16 @@ def parse_when(raw: str, now: datetime | None = None) -> datetime:
     if not text:
         raise ReminderParseError("Tell me when!")
 
-    delta = _parse_relative(text)
-    due = now + delta if delta is not None else _parse_absolute(text, now)
+    try:
+        delta = _parse_relative(text)
+        due = now + delta if delta is not None else _parse_absolute(text, now)
+    except OverflowError:
+        raise ReminderParseError(TOO_FAR_MSG) from None
 
     if (due - now).total_seconds() < MIN_AHEAD_SECONDS:
         raise ReminderParseError("That's too soon — pick at least a few seconds from now.")
     if due - now > MAX_AHEAD:
-        raise ReminderParseError("Reminders can be at most a year out.")
+        raise ReminderParseError(TOO_FAR_MSG)
     return due
 
 
