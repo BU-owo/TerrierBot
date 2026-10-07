@@ -257,9 +257,8 @@ class ReminderCog(commands.Cog, name="Reminder", description="Set reminders that
         self._save()
 
         await ctx.send(
-            f"✅ Reminder **#{reminder_id}** set for <t:{due_ts}:F> (<t:{due_ts}:R>).\n"
-            f"I'll ping you in this channel and DM you. See all yours with `/remindersview` or cancel with `/remindercancel`.\n"
-            f"-# Eastern time: {due.strftime('%a %b %d, %I:%M %p %Z').replace(' 0', ' ')}",
+            f"✅ Got it! I'll remind you **{due.strftime('%a, %b %d at %I:%M %p %Z').replace(' 0', ' ')}** (<t:{due_ts}:R>).\n"
+            f"-# Pings you here + DMs you · `/remindersview` · `/remindercancel`",
             allowed_mentions=discord.AllowedMentions.none(),
         )
 
@@ -277,7 +276,7 @@ class ReminderCog(commands.Cog, name="Reminder", description="Set reminders that
         lines = []
         for r in mine:
             text = r["message"] if len(r["message"]) <= 100 else r["message"][:97] + "..."
-            lines.append(f"**#{r['id']}** — <t:{r['due']}:F> (<t:{r['due']}:R>) in <#{r['channel_id']}>\n> {text}")
+            lines.append(f"<t:{r['due']}:F> (<t:{r['due']}:R>) in <#{r['channel_id']}>\n> {text}")
 
         embed = discord.Embed(
             title="⏰ Your reminders",
@@ -287,21 +286,45 @@ class ReminderCog(commands.Cog, name="Reminder", description="Set reminders that
         embed.set_footer(text="Times shown in your local timezone")
         await ctx.send(embed=embed, ephemeral=True)
 
-    @commands.hybrid_command(name="remindercancel", description="Cancel one of your reminders by its # (see /remindersview).")
-    @discord.app_commands.describe(reminder_id="The reminder's # from /remindersview")
-    async def remindercancel(self, ctx: Context, reminder_id: int) -> None:
-        """Cancel one of your upcoming reminders by its # (see `/remindersview`)."""
-        match = next((r for r in self.reminders if r["id"] == reminder_id and r["user_id"] == ctx.author.id), None)
-        if match is None:
-            await ctx.send(
-                f"You don't have a reminder **#{reminder_id}**. Check `/remindersview` for your reminder numbers.",
-                ephemeral=True,
-            )
+    @commands.hybrid_command(name="remindercancel", description="Pick one of your reminders to cancel.")
+    async def remindercancel(self, ctx: Context) -> None:
+        """Pick one of your upcoming reminders from a dropdown to cancel it."""
+        mine = sorted((r for r in self.reminders if r["user_id"] == ctx.author.id), key=lambda r: r["due"])
+        if not mine:
+            await ctx.send("You have no upcoming reminders to cancel.", ephemeral=True)
             return
-        self.reminders.remove(match)
-        self._save()
-        await ctx.send(f"🗑️ Cancelled reminder **#{reminder_id}**: {match['message'][:200]}", ephemeral=True,
-                       allowed_mentions=discord.AllowedMentions.none())
+        await ctx.send("Which reminder do you want to cancel?", view=CancelView(self, ctx.author.id, mine[:25]), ephemeral=True)
+
+
+class CancelSelect(discord.ui.Select):
+    def __init__(self, cog: ReminderCog, reminders: list[dict]):
+        self.cog = cog
+        options = []
+        for r in reminders:
+            when = datetime.fromtimestamp(r["due"], EASTERN).strftime("%b %d, %I:%M %p %Z").replace(" 0", " ")
+            text = r["message"] if len(r["message"]) <= 80 else r["message"][:77] + "..."
+            options.append(discord.SelectOption(label=text, description=when, value=str(r["id"])))
+        super().__init__(placeholder="Choose a reminder to cancel", options=options)
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        rid = int(self.values[0])
+        match = next((r for r in self.cog.reminders if r["id"] == rid and r["user_id"] == interaction.user.id), None)
+        if match is None:
+            await interaction.response.edit_message(content="That reminder already went off or was cancelled.", view=None)
+            return
+        self.cog.reminders.remove(match)
+        self.cog._save()
+        await interaction.response.edit_message(content=f"🗑️ Cancelled: {match['message'][:200]}", view=None)
+
+
+class CancelView(discord.ui.View):
+    def __init__(self, cog: ReminderCog, user_id: int, reminders: list[dict]):
+        super().__init__(timeout=120)
+        self.user_id = user_id
+        self.add_item(CancelSelect(cog, reminders))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user_id
 
 
 async def setup(bot: TerrierBot):

@@ -170,7 +170,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=help` | Show the command overview |
 | `=reminder <when> <message>` / `/reminder` | Set a reminder; the bot pings you in the same channel and DMs you when it's due. `<when>` is either a duration (`30m`, `2h`, `1d 3h`, `in 2 hours`) or a date/time in Eastern Time, EST/EDT (`3pm`, `tomorrow 9am`, `10/15 6pm`, `2026-10-15 18:00`). With `=`, quote a `<when>` that has spaces: `=reminder "tomorrow 9am" submit form` |
 | `=remindersview` / `/remindersview` | See your upcoming reminders (only you can see the list) |
-| `=remindercancel <#>` / `/remindercancel` | Cancel one of your reminders using its number from `remindersview` |
+| `=remindercancel` / `/remindercancel` | Pick one of your upcoming reminders from a dropdown to cancel it |
 | `=leavepolitics` / `/leavepolitics` | Leave the Politics role/channel (re-apply needed to rejoin) |
 | `=embedrules` | Post the Terrier Hub rules embed in this channel |
 | `=sync` | Sync slash commands to the current server (owner only) |
