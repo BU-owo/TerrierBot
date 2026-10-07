@@ -24,6 +24,7 @@ TerrierBot currently supports:
 - Self-service birthday tracking through `birthday`, with automatic daily role assignment/removal and a server announcement
 - Roleless, self-service "squad ping" lists through `squadpingcreate`, letting anyone spin up a new opt-in ping group and join/leave/ping it with `squadpingmanage` and `squadping`
 - Automatic class chat discovery: mentioning a BU class code (e.g. "CH 109") points members to that class's forum thread, or spins one up automatically once a code comes up enough
+- Reminders through `reminder` (ping in-channel + DM, set by duration like `2h` or by Eastern Time date/time like `tomorrow 9am`), viewable with `remindersview`
 - Server rule lookup through `rule`, showing a single rule by number or the full numbered list
 - Silent message-edit tracking, viewable on demand by mods through `viewedits` (reply, ID, or link) without auto-posting every edit to the logs
 - Mod self-lock-in through `modlockin`/`modlockinstop`: messages sent outside the mod category get deleted and publicly reposted (webhook, their name/pfp) as a callout until time's up or they cancel it
@@ -167,6 +168,9 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=end` / `/end` | See how many days remain until the semester ends |
 | `=test` / `/test` | Confirm that the bot is responding |
 | `=help` | Show the command overview |
+| `=reminder <when> <message>` / `/reminder` | Set a reminder; the bot pings you in the same channel and DMs you when it's due. `<when>` is either a duration (`30m`, `2h`, `1d 3h`, `in 2 hours`) or a date/time in Eastern Time, EST/EDT (`3pm`, `tomorrow 9am`, `10/15 6pm`, `2026-10-15 18:00`). With `=`, quote a `<when>` that has spaces: `=reminder "tomorrow 9am" submit form` |
+| `=remindersview` / `/remindersview` | See your upcoming reminders (only you can see the list) |
+| `=remindercancel <#>` / `/remindercancel` | Cancel one of your reminders using its number from `remindersview` |
 | `=leavepolitics` / `/leavepolitics` | Leave the Politics role/channel (re-apply needed to rejoin) |
 | `=embedrules` | Post the Terrier Hub rules embed in this channel |
 | `=sync` | Sync slash commands to the current server (owner only) |
