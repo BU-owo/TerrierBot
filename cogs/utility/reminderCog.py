@@ -257,13 +257,13 @@ class ReminderCog(commands.Cog, name="Reminder", description="Set reminders that
         self._save()
 
         await ctx.send(
-            f"✅ Got it! I'll remind you **{due.strftime('%a, %b %d at %I:%M %p %Z').replace(' 0', ' ')}** (<t:{due_ts}:R>).\n"
-            f"-# Pings you here + DMs you · `/remindersview` · `/remindercancel`",
+            f"⏰ Reminder set for **{due.strftime('%a, %b %d at %I:%M %p %Z').replace(' 0', ' ')}** (<t:{due_ts}:R>).\n"
+            f"-# Pings you here + DMs you · `/reminderview` · `/remindercancel`",
             allowed_mentions=discord.AllowedMentions.none(),
         )
 
-    @commands.hybrid_command(name="remindersview", description="View your upcoming reminders.")
-    async def remindersview(self, ctx: Context) -> None:
+    @commands.hybrid_command(name="reminderview", description="View your upcoming reminders.")
+    async def reminderview(self, ctx: Context) -> None:
         """View your upcoming reminders (only you can see the list)."""
         mine = sorted((r for r in self.reminders if r["user_id"] == ctx.author.id), key=lambda r: r["due"])
         if not mine:

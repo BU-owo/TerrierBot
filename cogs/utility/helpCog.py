@@ -47,7 +47,7 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
                 "🥰 `=uwu` / `/uwu` — uwu-ify your own message\n"
                 "🫘 `=bean` / `/bean` `<member> <fake rule>` — bean who is misbehaving...\n"
                 "⏰ `=reminder` / `/reminder` `<when> <message>` — ping + DM later. `<when>` = a duration (`2h`, `1d 3h`) or Eastern time (`3pm`, `tomorrow 9am`); quote it with `=` if it has spaces\n"
-                "📋 `=remindersview` / `/remindersview` — see your upcoming reminders\n"
+                "📋 `=reminderview` / `/reminderview` — see your upcoming reminders\n"
                 "🗑️ `=remindercancel` / `/remindercancel` — pick one of your reminders to cancel"
             ),
             inline=False,
