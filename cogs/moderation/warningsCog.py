@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+from ..logging.caseLogCog import PagedEmbedView, paginate_lines
 from ..logging.logConfig import LogChannels, LogColors, MOD_ROLE_ID, get_log_channel, user_line, user_line_by_id
 
 EASTERN = ZoneInfo("America/New_York")
@@ -280,16 +281,23 @@ class WarningsCog(commands.Cog):
             await ctx.send(f"{user.mention} has no warnings on record.")
             return
 
-        embed = discord.Embed(title=f"Warning history — {user.display_name}", color=discord.Color.orange())
+        # Description lines paged by length rather than embed fields, which
+        # cap at 1024 chars / 25 per embed and would reject long reasons or
+        # long histories.
+        lines = []
         for warn_id, rule, reason, warned_at, active in rows:
             date_str = datetime.fromisoformat(warned_at).astimezone(EASTERN).strftime("%Y-%m-%d")
             status_str = "Active" if active else "Removed"
-            embed.add_field(
-                name=f"#{warn_id} — Rule {rule} ({date_str})",
-                value=f"{reason}\nStatus: {status_str}",
-                inline=False,
-            )
-        await ctx.send(embed=embed)
+            lines.append(f"**#{warn_id} — Rule {rule} ({date_str})**\n{reason}\nStatus: {status_str}")
+
+        view = PagedEmbedView(
+            paginate_lines(user_line(user), lines, sep="\n\n"),
+            title=f"Warning history — {user.display_name}",
+            color=discord.Color.orange(),
+            total=len(rows),
+            empty_text="",
+        )
+        await ctx.send(embed=view.build_embed(), view=view if len(view.pages) > 1 else None)
 
     # ---------- /mywarns ----------
     @commands.hybrid_command(name="mywarns", description="Show your own active warnings")
@@ -306,15 +314,24 @@ class WarningsCog(commands.Cog):
             await ctx.send("You have no active warnings.", ephemeral=True)
             return
 
-        embed = discord.Embed(title="Your active warnings", color=discord.Color.orange())
+        lines = []
         for warn_id, rule, reason, warned_at in rows:
             date_str = datetime.fromisoformat(warned_at).astimezone(EASTERN).strftime("%Y-%m-%d")
-            embed.add_field(
-                name=f"#{warn_id} — Rule {rule}: {RULES.get(rule, 'Unknown')} ({date_str})",
-                value=reason,
-                inline=False,
-            )
-        await ctx.send(embed=embed, ephemeral=True)
+            lines.append(f"**#{warn_id} — Rule {rule}: {RULES.get(rule, 'Unknown')} ({date_str})**\n{reason}")
+
+        view = PagedEmbedView(
+            paginate_lines(f"{len(rows)} active warning(s)", lines, sep="\n\n"),
+            title="Your active warnings",
+            color=discord.Color.orange(),
+            total=len(rows),
+            empty_text="",
+            owner_id=ctx.author.id,
+        )
+        await ctx.send(
+            embed=view.build_embed(),
+            view=view if len(view.pages) > 1 else None,
+            ephemeral=True,
+        )
 
     # ---------- /warnremove ----------
     async def _warn_id_autocomplete(self, interaction: discord.Interaction, current: str):

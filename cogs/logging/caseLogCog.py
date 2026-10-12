@@ -33,7 +33,10 @@ CASE_LABELS = {
     "warn": ("⚠️", "Warn"),
 }
 _UNKNOWN_CASE_EMOJI = "•"
-_REASON_MAX_LEN = 60
+# Discord's embed description cap. Pages are packed by length against this
+# (not just by _PAGE_SIZE) so reasons are always shown in full instead of
+# being cut short or making the send fail.
+_DESCRIPTION_LIMIT = 4096
 
 
 def _init_db() -> None:
@@ -155,8 +158,6 @@ def _format_entry(entry: dict) -> str:
     ts = int(entry["timestamp"].timestamp())
 
     reason = entry["reason"]
-    if len(reason) > _REASON_MAX_LEN:
-        reason = reason[: _REASON_MAX_LEN - 1].rstrip() + "…"
 
     duration_suffix = ""
     if entry["duration_seconds"]:
@@ -181,16 +182,82 @@ async def setup(bot: TerrierBot):
     await bot.add_cog(CaseLogCog(bot))
 
 
-class _ModLogsView(discord.ui.View):
-    def __init__(self, entries: list[dict], target_line: str) -> None:
+def _split_long(text: str, limit: int) -> list[str]:
+    """Split one over-long entry into chunks of at most `limit` chars,
+    preferring line then word boundaries, so nothing is ever dropped."""
+    chunks = []
+    while len(text) > limit:
+        cut = text.rfind("\n", 0, limit)
+        if cut <= 0:
+            cut = text.rfind(" ", 0, limit)
+        if cut <= 0:
+            cut = limit
+        chunks.append(text[:cut])
+        text = text[cut:].lstrip()
+    chunks.append(text)
+    return chunks
+
+
+def paginate_lines(
+    header: str, lines: list[str], *, sep: str = "\n", max_per_page: int = _PAGE_SIZE
+) -> list[tuple[str, int, int]]:
+    """Pack `lines` under `header` into embed descriptions that each fit
+    Discord's cap. Returns (description, first_line_no, last_line_no) per
+    page, 1-indexed. A single line too long for one page continues onto the
+    next rather than being truncated."""
+    budget = _DESCRIPTION_LIMIT - len(header) - 2  # "\n\n" after the header
+    pages: list[tuple[str, int, int]] = []
+    current: list[str] = []
+    current_len = 0
+    first = last = 0
+
+    def flush() -> None:
+        pages.append((f"{header}\n\n" + sep.join(current), first, last))
+
+    for idx, line in enumerate(lines, start=1):
+        for piece in _split_long(line, budget):
+            added = len(piece) + (len(sep) if current else 0)
+            if current and (current_len + added > budget or len(current) >= max_per_page):
+                flush()
+                current, current_len = [], 0
+                added = len(piece)
+            if not current:
+                first = idx
+            current.append(piece)
+            current_len += added
+            last = idx
+    if current:
+        flush()
+    return pages
+
+
+class PagedEmbedView(discord.ui.View):
+    """Prev/Next pager over pre-built pages from paginate_lines(). Shared by
+    =modlogs and warningsCog's =warninfo / /mywarns. Paging is restricted to
+    `owner_id` when given, otherwise to mods."""
+
+    def __init__(
+        self,
+        pages: list[tuple[str, int, int]],
+        *,
+        title: str,
+        color: discord.Color | int,
+        total: int,
+        empty_text: str,
+        owner_id: int | None = None,
+    ) -> None:
         super().__init__(timeout=120)
-        self.entries = entries
-        self.target_line = target_line
+        self.pages = pages
+        self.title = title
+        self.color = color
+        self.total = total
+        self.empty_text = empty_text
+        self.owner_id = owner_id
         self.page = 0
         self._rebuild()
 
     def _total_pages(self) -> int:
-        return max(1, (len(self.entries) + _PAGE_SIZE - 1) // _PAGE_SIZE)
+        return max(1, len(self.pages))
 
     def _rebuild(self) -> None:
         self.clear_items()
@@ -219,38 +286,29 @@ class _ModLogsView(discord.ui.View):
         self.add_item(next_btn)
 
     def build_embed(self) -> discord.Embed:
-        total = len(self.entries)
-        start = self.page * _PAGE_SIZE
-        end = min(start + _PAGE_SIZE, total)
-        page_entries = self.entries[start:end]
-
-        if page_entries:
-            lines = "\n".join(_format_entry(entry) for entry in page_entries)
-            description = f"{self.target_line}\n\n{lines}"
+        total = self.total
+        if self.pages:
+            description, start, end = self.pages[self.page]
+            footer = f"{total} total entr{'y' if total == 1 else 'ies'} — showing {start}-{end}"
         else:
-            description = f"{self.target_line}\n\nNo warns, kicks, timeouts, or bans on record."
+            description, footer = self.empty_text, "0 entries"
 
-        embed = discord.Embed(
-            title="📋 Moderation case log",
-            description=description,
-            color=LogColors.MOD,
-        )
-        embed.set_footer(
-            text=f"{total} total entr{'y' if total == 1 else 'ies'} — showing {start + 1}-{end}"
-            if total
-            else "0 entries"
-        )
+        embed = discord.Embed(title=self.title, description=description, color=self.color)
+        embed.set_footer(text=footer)
         return embed
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if not isinstance(interaction.user, discord.Member) or not any(
+        if self.owner_id is not None:
+            if interaction.user.id == self.owner_id:
+                return True
+        elif isinstance(interaction.user, discord.Member) and any(
             r.id == MOD_ROLE_ID for r in interaction.user.roles
         ):
-            await interaction.response.send_message(
-                "You don't have permission to use this.", ephemeral=True
-            )
-            return False
-        return True
+            return True
+        await interaction.response.send_message(
+            "You don't have permission to use this.", ephemeral=True
+        )
+        return False
 
     async def _on_prev(self, interaction: discord.Interaction) -> None:
         self.page = max(0, self.page - 1)
@@ -305,8 +363,14 @@ class CaseLogCog(
                 moderator_names[mod_id] = str(mod) if mod is not None else None
             entry["moderator_name"] = moderator_names[mod_id]
 
-        view = _ModLogsView(entries, target_line)
+        view = PagedEmbedView(
+            paginate_lines(target_line, [_format_entry(entry) for entry in entries]),
+            title="📋 Moderation case log",
+            color=LogColors.MOD,
+            total=len(entries),
+            empty_text=f"{target_line}\n\nNo warns, kicks, timeouts, or bans on record.",
+        )
         await ctx.send(
             embed=view.build_embed(),
-            view=view if len(entries) > _PAGE_SIZE else None,
+            view=view if len(view.pages) > 1 else None,
         )
