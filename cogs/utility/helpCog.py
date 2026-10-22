@@ -41,7 +41,7 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
                 "🌈 `=mbtgay` / `/mbtgay` — track down the MBTA Pride Train\n"
                 "🌦️ `=weather` / `/weather` — today's BU campus forecast\n"
                 "🚨 `=emergency` / `/emergency` — show BU emergency contact numbers\n"
-                "📣 `/pingrole` — ping one of our community roles\n"
+                "📣 @Eventee, @Foodee, @StudyBuddy & co. — ping them directly! Max one ping-role ping every 30 min, or it's a 30-min timeout\n"
                 "🔒 `=lockin` / `/lockin` — lock yourself out of the server for a set time to focus (can't be undone early)\n"
                 "⏳ `=lockinleft` / `/lockinleft` — check how much time is left on your lock-in\n"
                 "🥰 `=uwu` / `/uwu` — uwu-ify your own message\n"

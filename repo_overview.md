@@ -28,7 +28,7 @@ Format: `path — description — commands — loaded?`. "Loaded?" reflects `bot
 - **leavePoliticsCog.py** (`community.leavePolitics`, `"LeavePoliticsCog"`) — voluntary leave-#politics confirm/cancel flow. `=leavepolitics` / `/leavepolitics`. **In defaultCogs.**
 - **lockinCog.py** (`community.lockin`, `"LockinCog"`) — self-service focus mode: strips roles for a duration, auto-restores. `=lockin <duration>` / `/lockin`, `=lockinleft` / `/lockinleft`. **In defaultCogs.**
 - **loveCog.py** (`community.love`, `"Love"`) — placeholder "coming soon". `=love` / `/love`. **In defaultCogs.**
-- **pingroleCog.py** (`"PingRoleCog"`) — ping one of 7 self-serve interest roles with a message, rate-limited. `/pingrole role: message:` (slash only). **In defaultCogs (`community.pingrole`).**
+- **rolePingCog.py** (`community.rolePing`, `"RolePing"`) — replaced the old `/pingrole` command. Members ping the 7 interest roles directly; pinging any of them again within 30 min (even a different role) gets the message deleted + an automatic 30-min timeout (case-logged, posted to the mod log). Mod and Junior Mod (Support) roles are exempt. No commands (listener only). **In defaultCogs.**
 - **positivityCog.py** (`community.positivity`, `"Positivity"`) — "Positivity Tuesday" random-chatter shoutouts, per-guild config, auto on/off at midnight ET. Prefix/slash group `positivity`: `enable`, `disable`, `interval`, `cooldown`, `status`. **In defaultCogs.**
 - **prideCog.py** (`"Pride"`) — posts a Pride-flag celebration message every 500 messages or on demand. `=pride` / `/pride`. **Not in cogList or defaultCogs at all — orphaned, never loaded by the bot.**
 - **reactionCog.py** (`community.reaction`, `"Reaction"`) — sentiment-based auto-reaction when the bot is mentioned/replied to. No commands (listener only). **In defaultCogs.**
@@ -138,7 +138,7 @@ No central `config.py`/`constants.py`. IDs are defined per-cog as module-level (
 - `HARDMUTE_ROLE_ID = 1441111071715758171` (hardmuteCog)
 - `PRESETS["Freshmen"]["role_id"] = 1541770660710191134` (reactionRoleCog)
 - `prune_role_id = 1474070492548956170` (membersCog)
-- `pingroleCog.PINGROLES` — 7 role IDs: `1405219077693243434` (Eventee), `1412441490591842354` (Foodee), `1416190981102895136` (HungryLonger), `1422358773657243678` (FitnessFriend), `1425108753086287903` (StudyBuddy), `1458528619482710047` (MC), `1475971319366549534` (Val)
+- `rolePingCog.PING_ROLES` — 7 role IDs: `1405219077693243434` (Eventee), `1412441490591842354` (Foodee), `1416190981102895136` (HungryLonger), `1422358773657243678` (FitnessFriend), `1425108753086287903` (StudyBuddy), `1458528619482710047` (MC), `1475971319366549534` (Val)
 
 **Channel IDs**
 - `logConfig.LogChannels`: `JOIN_LEAVE=1441888109359796275`, `MEMBER=1441888363639603340`, `SERVER=1441888428735070400`, `MOD=1441889164898341098`, `MESSAGE=1441888579147141170`, `QUEUE=1541936565151080519` (consolidated mod-queue inbox — appeals, snitch reports, scam-hash confirms, politics apps), `ANNOUNCE=1470061524394709083`.

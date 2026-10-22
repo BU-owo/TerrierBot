@@ -15,7 +15,7 @@ TerrierBot currently supports:
 - Community features such as `hello`, `goodbye`, `love`, `banner`, `boost`, and `pride`
 - Anonymous feedback and moderation tools such as `feedbacksetup`, `warn`, `warncount`, `warninfo`, `mywarns`, and `warnremove`
 - A shared moderation case log across kicks, timeouts, and bans, viewable per-member with `modlogs`
-- Server management features such as the starboard, Positivity Tuesday automation, ping roles, and preset reaction roles through `reactionrole`
+- Server management features such as the starboard, Positivity Tuesday automation, directly-pingable community roles (rate-limited to one ping per member per 30 minutes, with an automatic 30-minute timeout for repeats), and preset reaction roles through `reactionrole`
 - Self-service role removal through `leavepolitics`, a mod-reviewed application flow for the #politics channel through `joinpolitics`, and mod-initiated removal through `kickpolitics`
 - Anonymous mod-only votes on any proposal, with a time limit, through `modvote`
 - Member-submitted reports to mods through `snitch`
@@ -141,7 +141,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=positivity` / `/positivity ...` | Configure Positivity Tuesday automation (Manage Server required) |
 | `=feedbacksetup` / `/feedbacksetup` | Post the anonymous feedback prompt |
 | `/starboard ...` | Configure the starboard (Manage Server required) |
-| `/pingrole` | Ping one of the community roles |
+| *(no command)* `@Eventee`, `@Foodee`, etc. | Community ping roles are pinged directly. Pinging any of them again within 30 minutes of your last ping (even a different role) deletes the message and auto-times-out the member for 30 minutes (mods and Support exempt) |
 | `/pollee message:` | Ping the Pollee role with a message (restricted to a specific role) |
 | `/reactionrole <preset>` | Post a reaction role message from a preset (Manage Roles required) |
 | `=warn` / `/warn` | Warn a member |

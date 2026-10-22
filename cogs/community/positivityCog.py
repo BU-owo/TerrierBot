@@ -132,7 +132,7 @@ class PositivityCog(commands.Cog, name="Positivity", description="Positivity Tue
             self._save_state()
             await message.channel.send(
                 f"Happy Positivity Tuesday, <@{author_id}>! 🌸✨ You have been selected to make a positive comment about yourself, a fellow member, or anything else. 💖",
-                allowed_mentions=discord.AllowedMentions(users=False)
+                allowed_mentions=discord.AllowedMentions(users=False, roles=False, everyone=False)
             )
             return
 

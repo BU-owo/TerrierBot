@@ -127,7 +127,10 @@ class ModLockinCog(
             await troll_cog._send_as(channel, member, content)
             return
         try:
-            await channel.send(f"**{member.display_name}:** {content}")
+            await channel.send(
+                f"**{member.display_name}:** {content}",
+                allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False),
+            )
         except (discord.Forbidden, discord.HTTPException):
             pass
 

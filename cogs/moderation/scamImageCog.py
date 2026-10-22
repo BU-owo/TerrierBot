@@ -287,7 +287,7 @@ class ScamImageCog(commands.Cog):
                 await log_channel.send(
                     content=ping_content,
                     embed=embed,
-                    allowed_mentions=discord.AllowedMentions(roles=True),
+                    allowed_mentions=discord.AllowedMentions(roles=True, everyone=False),
                 )
 
     async def _handle_channel_spam(self, message: discord.Message) -> None:
@@ -317,7 +317,7 @@ class ScamImageCog(commands.Cog):
             await message.channel.send(
                 content=f"<@&{SCAMCATCHER_ROLE_ID}>",
                 embed=embed,
-                allowed_mentions=discord.AllowedMentions(roles=True),
+                allowed_mentions=discord.AllowedMentions(roles=True, everyone=False),
             )
         except discord.HTTPException:
             pass

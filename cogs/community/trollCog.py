@@ -145,6 +145,9 @@ def owo_ify(text: str) -> str:
 
 
 WEBHOOK_NAME = "troll-webhook"
+# Reposts echo arbitrary member text, so never let it fire @everyone/@here or
+# role pings — the bot (and its webhook) has permission to mention everyone.
+_NO_MASS_PINGS = discord.AllowedMentions(users=True, roles=False, everyone=False)
 
 # owo_ify() inflates text (per-word stutter, escalated "!", nyaify, trailing
 # emoticon, "-chan" on mentions), so a message that started under Discord's
@@ -222,6 +225,7 @@ class TrollCog(commands.Cog):
                 username=member.display_name,
                 avatar_url=member.display_avatar.url,
                 thread=thread_kwarg,
+                allowed_mentions=_NO_MASS_PINGS,
             )
             if reference is not None:
                 webhook_kwargs["reference"] = reference
@@ -252,14 +256,14 @@ class TrollCog(commands.Cog):
         fallback_text = f"**{member.display_name} says:** {content}"
         try:
             if reference is not None:
-                await channel.send(fallback_text, reference=reference)
+                await channel.send(fallback_text, reference=reference, allowed_mentions=_NO_MASS_PINGS)
             else:
-                await channel.send(fallback_text)
+                await channel.send(fallback_text, allowed_mentions=_NO_MASS_PINGS)
         except discord.Forbidden:
             pass
         except discord.HTTPException:
             try:
-                await channel.send(fallback_text)
+                await channel.send(fallback_text, allowed_mentions=_NO_MASS_PINGS)
             except discord.Forbidden:
                 pass
 

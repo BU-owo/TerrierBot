@@ -114,7 +114,7 @@ class LockinCog(commands.Cog):
         try:
             await channel.send(
                 f"{member.mention} is locked in until <t:{end_ts}:F> (<t:{end_ts}:R>).",
-                allowed_mentions=discord.AllowedMentions(users=True),
+                allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False),
             )
         except discord.HTTPException:
             pass
