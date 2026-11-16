@@ -176,7 +176,7 @@ class ClassChatCog(
                 await self._maybe_notify(
                     message,
                     code,
-                    f"There's a class chat for {code} where you can connect with your classmates! → {thread.jump_url}",
+                    f"There's a class chat for {code} where you can connect with your classmates! → [{code} class chat]({thread.jump_url})",
                 )
             return
 
@@ -201,7 +201,7 @@ class ClassChatCog(
         await self._maybe_notify(
             message,
             code,
-            f"Seems like y'all are talking about {code} a lot, so I made a class chat for you: {new_thread.jump_url}",
+            f"Seems like y'all are talking about {code} a lot, so I made a class chat for you: [{code} class chat]({new_thread.jump_url})",
         )
 
     async def _resolve_cached_thread(self, forum: discord.ForumChannel, code: str) -> discord.Thread | None:
