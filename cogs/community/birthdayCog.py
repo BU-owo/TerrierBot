@@ -329,7 +329,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
                 "If they're wearing the birthday role today, it'll still come off at the end of the day as usual."
             )
 
-    @birthday.command(name="nearest", description="Show birthdays coming up in the next couple weeks.")
+    @birthday.command(name="nearest", description="Show birthdays from the past two weeks to the next two.")
     async def birthday_nearest(self, ctx: Context) -> None:
         guild = self.bot.get_guild(MAIN_GUILD_ID)
         if guild is None:
@@ -354,7 +354,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
                 upcoming.append((offset, member, entry))
 
         if not upcoming:
-            await ctx.send("No birthdays in the next two weeks. 🥲")
+            await ctx.send("No birthdays within two weeks of today. 🥲")
             return
 
         upcoming.sort(key=lambda item: item[0])
@@ -363,7 +363,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
             for _, member, entry in upcoming
         ]
         embed = discord.Embed(
-            title="🎂 Upcoming Birthdays",
+            title="🎂 Nearest Birthdays",
             description="\n".join(lines),
             color=discord.Color.pink(),
         )
