@@ -275,13 +275,13 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     @app_commands.choices(month=MONTH_CHOICES)
     async def birthday_set(self, ctx: Context, month: str, day: app_commands.Range[int, 1, 31]) -> None:
         # No permission checks here — defer immediately, before
-        # _set_birthday()'s shelve write. Ephemeral — its messages
-        # (validation errors and the success reply below) are too.
-        await ctx.defer(ephemeral=True)
+        # _set_birthday()'s shelve write. Not ephemeral — its messages
+        # (validation errors and the success reply below) are public.
+        await ctx.defer()
 
-        if await self._set_birthday(ctx, ctx.author, month, day):
+        if await self._set_birthday(ctx, ctx.author, month, day, ephemeral=False):
             entry = self.birthdays[str(ctx.author.id)]
-            await ctx.send(f"Thank you! Your birthday is set to {format_birthday(entry['month'], entry['day'])}. 🎂", ephemeral=True)
+            await ctx.send(f"Thank you! Your birthday is set to {format_birthday(entry['month'], entry['day'])}. 🎂")
 
     @birthday.command(name="get", description="Look up a saved birthday.")
     @app_commands.describe(user="Whose birthday to check (leave blank for your own)")

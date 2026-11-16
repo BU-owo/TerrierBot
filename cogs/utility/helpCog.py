@@ -25,7 +25,8 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
             value=(
                 "🐕 `/mywarns` — see your active warnings\n"
                 "📝 `/warnappeal` — appeal one of your warnings\n"
-                "🤫 `/snitch` — send an anonymous, silent alert to the mods"
+                "🤫 `/snitch` — send an anonymous, silent alert to the mods\n"
+                "📜 `=rule` / `/rule` `<number>` — show a server rule"
             ),
             inline=False,
         )
@@ -33,7 +34,6 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
         embed.add_field(
             name="──── ⋆⁺₊✧✧₊⁺⋆ ────\n✧ Campus & Transit ✧",
             value=(
-                "📜 `=rule` / `/rule` `<number>` — show a server rule\n"
                 "📚 `=class` / `/class` — look up a BU course from the Bulletin\n"
                 "⭐ `=rmp` / `/rmp` — look up a professor on RateMyProfessors\n"
                 "🐾 `=club` / `/club` — search for BU clubs on Terrier Central\n"
