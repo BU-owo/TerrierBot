@@ -184,6 +184,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
 
         vote["closed"] = True
         vote["closed_ts"] = int(time.time())
+        self._save()
 
         channel = self.bot.get_channel(vote["channel_id"])
         if channel is not None and vote.get("message_id"):
@@ -273,7 +274,19 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             if not vote["closed"] and vote["close_ts"] <= now
         ]
         for vote_id in expired:
-            await self._close_vote(vote_id)
+            # One bad vote must not stop the others (or the loop itself) from closing.
+            try:
+                await self._close_vote(vote_id)
+            except Exception:
+                log.exception("modvoteCog: failed to close expired vote %s", vote_id)
+
+    @check_expired.error
+    async def check_expired_error(self, error: BaseException) -> None:
+        # An unhandled exception permanently stops a tasks.loop, which would
+        # leave every future vote open forever — log it and start it again.
+        log.error("modvoteCog: check_expired crashed, restarting", exc_info=error)
+        if not self.check_expired.is_running():
+            self.check_expired.restart()
 
     @check_expired.before_loop
     async def before_check_expired(self) -> None:
