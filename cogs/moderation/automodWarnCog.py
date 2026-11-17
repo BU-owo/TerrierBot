@@ -119,8 +119,12 @@ class AutomodWarnCog(
             reason=_format_warn_reason(execution, rule),
         )
 
+        # execution.channel only looks up regular channels, so it's None for
+        # threads and forum posts — resolve those through the guild instead.
         channel = execution.channel
-        if isinstance(channel, discord.TextChannel):
+        if channel is None and execution.channel_id is not None:
+            channel = execution.guild.get_channel_or_thread(execution.channel_id)
+        if isinstance(channel, (discord.TextChannel, discord.Thread, discord.VoiceChannel)):
             try:
                 await channel.send(
                     f"{member.mention} has been warned for a Rule {SLUR_WARN_RULE} violation.",

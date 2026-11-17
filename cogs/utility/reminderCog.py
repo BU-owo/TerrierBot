@@ -199,6 +199,13 @@ class ReminderCog(commands.Cog, name="Reminder", description="Set reminders that
 
         user = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id)
         channel = self.bot.get_channel(reminder["channel_id"])
+        if channel is None:
+            # Threads/forum posts drop out of the cache once archived, which
+            # is common for long reminders — fetch so they still get posted.
+            try:
+                channel = await self.bot.fetch_channel(reminder["channel_id"])
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                channel = None
         in_dm = isinstance(channel, discord.DMChannel)
 
         if channel is not None and not in_dm and isinstance(channel, discord.abc.Messageable):

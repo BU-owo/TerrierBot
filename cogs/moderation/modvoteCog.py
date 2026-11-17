@@ -177,6 +177,17 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
 
     # ── Vote lifecycle ────────────────────────────────────────────────────────
 
+    async def _get_vote_channel(self, vote: dict):
+        """Resolve the channel a vote was started in, including archived
+        threads/forum posts, which aren't in the cache."""
+        channel = self.bot.get_channel(vote["channel_id"])
+        if channel is None:
+            try:
+                channel = await self.bot.fetch_channel(vote["channel_id"])
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                return None
+        return channel
+
     async def _close_vote(self, vote_id: str) -> None:
         vote = self.data["votes"].get(vote_id)
         if vote is None or vote["closed"]:
@@ -185,7 +196,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
         vote["closed"] = True
         vote["closed_ts"] = int(time.time())
 
-        channel = self.bot.get_channel(vote["channel_id"])
+        channel = await self._get_vote_channel(vote)
         if channel is not None and vote.get("message_id"):
             try:
                 msg = await channel.fetch_message(vote["message_id"])
@@ -256,7 +267,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             log.warning("modvoteCog: results channel %s not found/visible", MODVOTE_RESULTS_CHANNEL_ID)
 
         if vote["channel_id"] != MODVOTE_RESULTS_CHANNEL_ID:
-            origin_channel = self.bot.get_channel(vote["channel_id"])
+            origin_channel = await self._get_vote_channel(vote)
             if origin_channel is not None:
                 try:
                     await origin_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
@@ -322,7 +333,7 @@ class ModVoteCog(commands.Cog, name="ModVote", description="Anonymous mod votes 
             pass
 
         if just_completed:
-            channel = self.bot.get_channel(vote["channel_id"])
+            channel = await self._get_vote_channel(vote)
             if channel is not None:
                 try:
                     await channel.send(

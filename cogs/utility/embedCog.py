@@ -815,7 +815,9 @@ class EmbedCog(commands.Cog, name="Embed", description="Send rich embeds. Owner 
 
     @app_commands.command(name="embed", description="Send a rich embed. (Owner only)")
     @app_commands.describe(channel="Channel to send the embed to (defaults to current channel)")
-    async def embed_slash(self, interaction: discord.Interaction, channel: discord.TextChannel | None = None):
+    async def embed_slash(
+        self, interaction: discord.Interaction, channel: discord.TextChannel | discord.Thread | None = None
+    ):
         if not await self.bot.is_owner(interaction.user):
             await interaction.response.send_message("That command is not for you.", ephemeral=True)
             return
@@ -824,7 +826,9 @@ class EmbedCog(commands.Cog, name="Embed", description="Send rich embeds. Owner 
 
     @commands.command(name="embed")
     @commands.is_owner()
-    async def send_embed(self, ctx: Context, channel: discord.TextChannel | None = None, *, json_text: str = ""):
+    async def send_embed(
+        self, ctx: Context, channel: discord.TextChannel | discord.Thread | None = None, *, json_text: str = ""
+    ):
         """Send one or more rich embeds via JSON inline or attached file. (Owner only)
 
         Formats:

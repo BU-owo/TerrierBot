@@ -47,7 +47,7 @@ class LockdownCog(
         return True
 
     async def _log_action(
-        self, channel: discord.TextChannel, moderator: discord.abc.User, *, locked: bool
+        self, channel: discord.TextChannel | discord.Thread, moderator: discord.abc.User, *, locked: bool
     ) -> None:
         log_channel = get_log_channel(self.bot, LogChannels.MOD)
         if log_channel is None:
@@ -66,6 +66,49 @@ class LockdownCog(
         except discord.HTTPException:
             pass
 
+    async def _set_thread_lock(self, ctx: Context, thread: discord.Thread, *, locked: bool) -> None:
+        """Lock/unlock a thread or forum post.
+
+        Threads have no permission overwrites of their own, so instead of the
+        @everyone snapshot used for channels this uses Discord's native thread
+        lock: only members with Manage Threads can post in a locked thread.
+        The lock state lives on the thread itself, so it survives restarts.
+        """
+        if thread.locked == locked:
+            msg = "This thread is already locked." if locked else "This thread isn't locked."
+            await ctx.send(msg, ephemeral=True)
+            return
+
+        await ctx.defer()
+        action = "Lockdown" if locked else "Unlock"
+        try:
+            # Locking keeps the thread open (archived=False) so it stays
+            # visible; unlocking an archived thread would otherwise fail.
+            await thread.edit(
+                locked=locked, archived=False, reason=f"{action} by {ctx.author} ({ctx.author.id})"
+            )
+        except discord.HTTPException:
+            verb = "lock" if locked else "unlock"
+            await ctx.send(f"Failed to {verb} this thread — check my permissions.", ephemeral=True)
+            return
+
+        if locked:
+            embed = discord.Embed(
+                title="🔒 Thread locked",
+                description=f"This thread has been locked by {ctx.author.mention}. Only moderators can send messages here.",
+                color=LogColors.MOD,
+                timestamp=discord.utils.utcnow(),
+            )
+        else:
+            embed = discord.Embed(
+                title="🔓 Thread unlocked",
+                description=f"This thread has been unlocked by {ctx.author.mention}.",
+                color=LogColors.MOD,
+                timestamp=discord.utils.utcnow(),
+            )
+        await ctx.send(embed=embed)
+        await self._log_action(thread, ctx.author, locked=locked)
+
     @commands.hybrid_command(
         name="lockdown", description="Lock this channel — prevents @everyone from sending messages."
     )
@@ -74,8 +117,11 @@ class LockdownCog(
             return
 
         channel = ctx.channel
+        if isinstance(channel, discord.Thread):
+            await self._set_thread_lock(ctx, channel, locked=True)
+            return
         if not isinstance(channel, discord.TextChannel):
-            await ctx.send("This command can only be used in a text channel.", ephemeral=True)
+            await ctx.send("This command can only be used in a text channel or thread.", ephemeral=True)
             return
 
         if channel.id in _lockdown_snapshots:
@@ -136,8 +182,11 @@ class LockdownCog(
             return
 
         channel = ctx.channel
+        if isinstance(channel, discord.Thread):
+            await self._set_thread_lock(ctx, channel, locked=False)
+            return
         if not isinstance(channel, discord.TextChannel):
-            await ctx.send("This command can only be used in a text channel.", ephemeral=True)
+            await ctx.send("This command can only be used in a text channel or thread.", ephemeral=True)
             return
 
         snapshot = _lockdown_snapshots.get(channel.id)

@@ -127,12 +127,27 @@ class StarboardCog(commands.Cog, name="Starboard", description="Starboard and st
         if starboard_channel_id is not None and channel_id == starboard_channel_id:
             return
 
-        channel = guild.get_channel(channel_id)
-        if not isinstance(channel, discord.TextChannel):
+        # Threads (incl. forum posts) aren't returned by get_channel(), and an
+        # archived thread isn't cached at all — fall back to fetching it.
+        channel = guild.get_channel_or_thread(channel_id)
+        if channel is None:
+            try:
+                channel = await guild.fetch_channel(channel_id)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                return
+        if not isinstance(channel, (discord.TextChannel, discord.Thread, discord.VoiceChannel)):
             return
 
-        # Don't star messages from mod/log-only channels
-        if channel.id in STARBOARD_BLACKLISTED_CHANNEL_IDS or channel.category_id == MOD_LOG_CATEGORY_ID:
+        # Don't star messages from mod/log-only channels. For a thread, the
+        # blacklist also applies to its parent channel (or forum), and
+        # Thread.category_id already resolves to the parent's category.
+        parent_id = channel.parent_id if isinstance(channel, discord.Thread) else None
+        if (
+            channel.id in STARBOARD_BLACKLISTED_CHANNEL_IDS
+            or parent_id in STARBOARD_BLACKLISTED_CHANNEL_IDS
+            or (parent_id is not None and parent_id == starboard_channel_id)
+            or channel.category_id == MOD_LOG_CATEGORY_ID
+        ):
             return
 
         try:

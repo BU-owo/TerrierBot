@@ -694,7 +694,12 @@ class RMPCog(commands.Cog, name="RMP", description="RateMyProfessors lookup for 
         return embed, view, None
 
     def _needs_channel_warning(self, channel: discord.abc.GuildChannel | discord.Thread | None) -> bool:
-        return channel is None or channel.id != RMP_CHANNEL_ID
+        if channel is None:
+            return True
+        # Threads/forum posts inside the RMP channel count as the RMP channel.
+        if isinstance(channel, discord.Thread) and channel.parent_id == RMP_CHANNEL_ID:
+            return False
+        return channel.id != RMP_CHANNEL_ID
 
     def _channel_warning_text(self, user: discord.abc.User) -> str:
         return (

@@ -57,7 +57,7 @@ class ExportCog(
     async def exporthistory(
         self,
         ctx: Context,
-        channel: discord.TextChannel,
+        channel: discord.TextChannel | discord.Thread | discord.VoiceChannel,
         days: app_commands.Range[int, 1, 30] = 7,
     ):
         # Manage Messages alone doesn't imply the mod can read the target channel.
@@ -125,7 +125,10 @@ class ExportCog(
             "",
         ]
         data = ("\n".join(header + lines) + "\n").encode("utf-8")
-        filename = f"{channel.name}-last-{days}d.txt"
+        # Thread/forum post titles can contain spaces and symbols that aren't
+        # safe in a filename, unlike channel names.
+        safe_name = re.sub(r"[^\w-]+", "-", channel.name).strip("-") or "channel"
+        filename = f"{safe_name}-last-{days}d.txt"
         if len(data) > GZIP_THRESHOLD_BYTES:
             data = gzip.compress(data)
             filename += ".gz"
