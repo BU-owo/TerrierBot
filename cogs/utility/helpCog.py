@@ -25,22 +25,29 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
             value=(
                 "🐕 `/mywarns` — see your active warnings\n"
                 "📝 `/warnappeal` — appeal one of your warnings\n"
-                "🤫 `/snitch` — send an anonymous, silent alert to the mods"
+                "🤫 `/snitch` — send an anonymous, silent alert to the mods\n"
+                "📜 `=rule` / `/rule` `<number>` — show a server rule"
             ),
             inline=False,
         )
 
         embed.add_field(
-            name="──── ⋆⁺₊✧✧₊⁺⋆ ────\n✧ Tools ✧",
+            name="──── ⋆⁺₊✧✧₊⁺⋆ ────\n✧ Campus & Transit ✧",
             value=(
-                "📜 `=rule` / `/rule` `<number>` — show a server rule\n"
                 "📚 `=class` / `/class` — look up a BU course from the Bulletin\n"
                 "⭐ `=rmp` / `/rmp` — look up a professor on RateMyProfessors\n"
                 "🐾 `=club` / `/club` — search for BU clubs on Terrier Central\n"
                 "🚋 `=mbta` / `/mbta` — check how far Green Line trains are\n"
                 "🌈 `=mbtgay` / `/mbtgay` — track down the MBTA Pride Train\n"
                 "🌦️ `=weather` / `/weather` — today's BU campus forecast\n"
-                "🚨 `=emergency` / `/emergency` — show BU emergency contact numbers\n"
+                "🚨 `=emergency` / `/emergency` — show BU emergency contact numbers"
+            ),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="──── ⋆⁺₊✧✧₊⁺⋆ ────\n✧ Utilities & Fun ✧",
+            value=(
                 "📣 @Eventee, @Foodee, @StudyBuddy & co. — ping them directly! Max one ping-role ping every 30 min, or it's a 30-min timeout\n"
                 "🔒 `=lockin` / `/lockin` — lock yourself out of the server for a set time to focus (can't be undone early)\n"
                 "⏳ `=lockinleft` / `/lockinleft` — check how much time is left on your lock-in\n"
