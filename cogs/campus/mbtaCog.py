@@ -27,6 +27,7 @@ ALERT_TEXT_LIMIT = 90
 # as married pairs (e.g. label "3706-3871"), so vehicle lookups match this as
 # a substring rather than requiring an exact label match.
 PRIDE_TRAIN_CAR_NUMBER = "3706"
+BURGER_TRAIN_CAR_NUMBER = "3855"
 GREEN_LINE_ROUTE_IDS: tuple[str, ...] = ("Green-B", "Green-C", "Green-D", "Green-E")
 
 # MBTA direction_id convention for the Green Line (all branches share it):
@@ -575,7 +576,9 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
 
         return items
 
-    async def _fetch_pride_train_vehicle(self) -> PrideTrainStatus | None:
+    async def _fetch_pride_train_vehicle(
+        self, car_number: str = PRIDE_TRAIN_CAR_NUMBER
+    ) -> PrideTrainStatus | None:
         """Look for the Pride Train (car #3706) currently reporting a
         position anywhere on the Green Line. Returns None if it isn't
         currently running, or on any API error (treated as "not running")."""
@@ -596,7 +599,7 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
         vehicle_item = None
         for item in payload.get("data", []):
             label = item.get("attributes", {}).get("label")
-            if isinstance(label, str) and PRIDE_TRAIN_CAR_NUMBER in label:
+            if isinstance(label, str) and car_number in label:
                 vehicle_item = item
                 break
 
@@ -854,4 +857,33 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
             return
 
         embed = self._build_pride_train_embed(status)
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command(
+        name="mburgta",
+        description="Track the MBTA Burger Train (Green Line car #3855), if it's out today.",
+    )
+    async def mburgta(self, ctx: Context) -> None:
+        # Defer immediately: the MBTA API call can outrun Discord's 3s ack window.
+        await ctx.defer()
+
+        status = await self._fetch_pride_train_vehicle(BURGER_TRAIN_CAR_NUMBER)
+        if status is None:
+            await ctx.send("🍔🌱 No sign of the Burger Train right now.... MBTA vegan? 🌱🍔")
+            return
+
+        branch = LINE_DISPLAY_NAME.get(status.route_id, "the Green Line")
+        phrase = _pride_status_phrase(status)
+        arrow = "➡️" if status.direction_id == DIR_EASTBOUND else "⬅️"
+        direction_label = _direction_label(status.direction_id)
+
+        embed = discord.Embed(
+            title="🍔 Burger Train Tracker 🍔",
+            description=(
+                f"✨🍔 Car #{BURGER_TRAIN_CAR_NUMBER} is out riding the **{branch}**! 🍔✨\n\n"
+                f"🍔 {phrase} — {arrow} {direction_label} 🍔"
+            ),
+            color=discord.Color.from_rgb(205, 133, 63),
+        )
+        embed.set_footer(text="Source: MBTA v3 API 🍔")
         await ctx.send(embed=embed)

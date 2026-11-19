@@ -39,6 +39,7 @@ class HelpCog(commands.Cog, name="Help", description="Shows the categorized Terr
                 "🐾 `=club` / `/club` — search for BU clubs on Terrier Central\n"
                 "🚋 `=mbta` / `/mbta` — check how far Green Line trains are\n"
                 "🌈 `=mbtgay` / `/mbtgay` — track down the MBTA Pride Train\n"
+                "🍔 `=mburgta` / `/mburgta` — track down the MBTA Burger Train\n"
                 "🌦️ `=weather` / `/weather` — today's BU campus forecast\n"
                 "🚨 `=emergency` / `/emergency` — show BU emergency contact numbers"
             ),
