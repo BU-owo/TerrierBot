@@ -27,6 +27,7 @@ TerrierBot currently supports:
 - Reminders through `reminder` (ping in-channel + DM, set by duration like `2h` or by Eastern Time date/time like `tomorrow 9am`), viewable with `reminderview`
 - Server rule lookup through `rule`, showing a single rule by number or the full numbered list
 - Silent message-edit tracking, viewable on demand by mods through `viewedits` (reply, ID, or link) without auto-posting every edit to the logs
+- Full member export through `exportall`: a CSV of every member's names, roles, join date and message activity level, DMed to the mod who ran it
 - Mod self-lock-in through `modlockin`/`modlockinstop`: messages sent outside the mod category get deleted and publicly reposted (webhook, their name/pfp) as a callout until time's up or they cancel it
 
 ## Requirements
@@ -161,6 +162,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=viewedits [target]` / `/viewedits [message]` | View a message's edit history — silently tracked in the background; `=viewedits` (reply or ID/link) self-deletes and posts to #message-logs, `/viewedits` replies ephemerally and also posts a copy there (mod role required) |
 | `/modlockin duration:` | Self-lock-in for focus (max 2 hours) — any message you send outside the mod category gets deleted and reposted publicly under your name/avatar with a callout; the mod category itself is exempt (mod role required) |
 | `/modlockinstop` | End your own mod lock-in early (mod role required) |
+| `=exportall [days]` / `/exportall [days]` | DM yourself a CSV of every member: username, global name, server nickname, roles, join date, account age, boost date, and activity (messages in the last 7/30 days, last message, activity level). Activity is tracked live from when the cog was first loaded; pass `days` (1-30) to rescan that much message history first (mod role required) |
 
 ### Utility and maintenance
 
