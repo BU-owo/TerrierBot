@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import difflib
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -27,7 +28,9 @@ ALERT_TEXT_LIMIT = 90
 # as married pairs (e.g. label "3706-3871"), so vehicle lookups match this as
 # a substring rather than requiring an exact label match.
 PRIDE_TRAIN_CAR_NUMBER = "3706"
-BURGER_TRAIN_CAR_NUMBER = "3855"
+# Both of these cars wear the burger livery. When both are out at once it's a
+# Double Cheeseburger.
+BURGER_TRAIN_CAR_NUMBERS: tuple[str, ...] = ("3804", "3855")
 GREEN_LINE_ROUTE_IDS: tuple[str, ...] = ("Green-B", "Green-C", "Green-D", "Green-E")
 
 # MBTA direction_id convention for the Green Line (all branches share it):
@@ -861,28 +864,49 @@ class MBTACog(commands.Cog, name="MBTA", description="Live MBTA Green Line ETAs 
 
     @commands.hybrid_command(
         name="mburgta",
-        description="Track the MBTA Burger Train (Green Line car #3855), if it's out today.",
+        description="Track the MBTA Burger Trains (Green Line cars #3804 and #3855), if they're out today.",
     )
     async def mburgta(self, ctx: Context) -> None:
         # Defer immediately: the MBTA API call can outrun Discord's 3s ack window.
         await ctx.defer()
 
-        status = await self._fetch_pride_train_vehicle(BURGER_TRAIN_CAR_NUMBER)
-        if status is None:
+        results = await asyncio.gather(
+            *(self._fetch_pride_train_vehicle(car) for car in BURGER_TRAIN_CAR_NUMBERS)
+        )
+        found = [(car, s) for car, s in zip(BURGER_TRAIN_CAR_NUMBERS, results) if s is not None]
+        if not found:
             await ctx.send("🍔🌱 No sign of the Burger Train right now.... MBTA vegan? 🌱🍔")
             return
 
-        branch = LINE_DISPLAY_NAME.get(status.route_id, "the Green Line")
-        phrase = _pride_status_phrase(status)
-        arrow = "➡️" if status.direction_id == DIR_EASTBOUND else "⬅️"
-        direction_label = _direction_label(status.direction_id)
+        def where(status: PrideTrainStatus) -> tuple[str, str]:
+            branch = LINE_DISPLAY_NAME.get(status.route_id, "the Green Line")
+            arrow = "➡️" if status.direction_id == DIR_EASTBOUND else "⬅️"
+            return branch, f"{_pride_status_phrase(status)} — {arrow} {_direction_label(status.direction_id)}"
+
+        if len(found) == 1:
+            car, status = found[0]
+            branch, line = where(status)
+            title = "🍔 Burger Train Tracker 🍔"
+            description = f"✨🍔 Car #{car} is out riding the **{branch}**! 🍔✨\n\n🍔 {line} 🍔"
+        elif found[0][1].vehicle_id == found[1][1].vehicle_id:
+            # Both burger cars coupled into the same train.
+            branch, line = where(found[0][1])
+            title = "🍔🧀🍔 DOUBLE CHEESEBURGER 🍔🧀🍔"
+            description = (
+                f"✨🍔🧀 Cars #{found[0][0]} **and** #{found[1][0]} are coupled together on the "
+                f"**{branch}**! 🧀🍔✨\n\n🍔🍔 {line} 🍔🍔"
+            )
+        else:
+            title = "🍔🧀🍔 DOUBLE CHEESEBURGER 🍔🧀🍔"
+            lines = []
+            for car, status in found:
+                branch, line = where(status)
+                lines.append(f"🍔 **Car #{car}** on the **{branch}**\n{line}")
+            description = "✨🧀 Both Burger Trains are out right now! 🧀✨\n\n" + "\n\n".join(lines)
 
         embed = discord.Embed(
-            title="🍔 Burger Train Tracker 🍔",
-            description=(
-                f"✨🍔 Car #{BURGER_TRAIN_CAR_NUMBER} is out riding the **{branch}**! 🍔✨\n\n"
-                f"🍔 {phrase} — {arrow} {direction_label} 🍔"
-            ),
+            title=title,
+            description=description,
             color=discord.Color.from_rgb(205, 133, 63),
         )
         embed.set_footer(text="Source: MBTA v3 API 🍔")
