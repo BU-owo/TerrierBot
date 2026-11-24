@@ -144,7 +144,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=positivity` / `/positivity ...` | Configure Positivity Tuesday automation (Manage Server required) |
 | `=feedbacksetup` / `/feedbacksetup` | Post the anonymous feedback prompt |
 | `/starboard ...` | Configure the starboard (Manage Server required) |
-| *(no command)* Thanksgiving nudges | Through Fri 11/27 at noon ET, a member who sends 15+ messages within 10 minutes gets a reply nudging them to fill out the thank-you form (once per member per day, at most one nudge per channel every 5 minutes, mod/log category excluded). Turns itself off after the event |
+| *(no command)* Thanksgiving nudges | Through Fri 11/27 at noon ET, a member who sends 10+ messages within 10 minutes gets a reply nudging them to fill out the thank-you form (once per member per day, at most one nudge per channel every 5 minutes, mod/log category excluded). Turns itself off after the event |
 | *(no command)* `@Eventee`, `@Foodee`, etc. | Community ping roles are pinged directly. Pinging any of them again within 30 minutes of your last ping (even a different role) deletes the message and auto-times-out the member for 30 minutes (mods and Support exempt) |
 | `/pollee message:` | Ping the Pollee role with a message (restricted to a specific role) |
 | `/reactionrole <preset>` | Post a reaction role message from a preset (Manage Roles required) |
