@@ -273,7 +273,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     @birthday.command(name="set", description="Set your birthday.")
     @app_commands.describe(month="Your birth month", day="Your birth day")
     @app_commands.choices(month=MONTH_CHOICES)
-    async def birthday_set(self, ctx: Context, month: str, day: app_commands.Range[int, 1, 31]) -> None:
+    async def birthday_set(self, ctx: Context, month: str, day: commands.Range[int, 1, 31]) -> None:
         # No permission checks here — defer immediately, before
         # _set_birthday()'s shelve write. Not ephemeral — its messages
         # (validation errors and the success reply below) are public.
@@ -392,7 +392,7 @@ class BirthdayCog(commands.Cog, name="Birthday", description="Birthday roles, an
     @app_commands.describe(user="Member to set the birthday for", month="Birth month", day="Birth day")
     @app_commands.choices(month=MONTH_CHOICES)
     async def birthday_override(
-        self, ctx: Context, user: discord.Member, month: str, day: app_commands.Range[int, 1, 31]
+        self, ctx: Context, user: discord.Member, month: str, day: commands.Range[int, 1, 31]
     ) -> None:
         if not self._is_mod(ctx.author):
             await ctx.send("Oops! You can't run that... mods only!", ephemeral=True)

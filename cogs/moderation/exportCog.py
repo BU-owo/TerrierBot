@@ -58,7 +58,7 @@ class ExportCog(
         self,
         ctx: Context,
         channel: discord.TextChannel | discord.Thread | discord.VoiceChannel,
-        days: app_commands.Range[int, 1, 30] = 7,
+        days: commands.Range[int, 1, 30] = 7,
     ):
         # Manage Messages alone doesn't imply the mod can read the target channel.
         perms = channel.permissions_for(ctx.author)

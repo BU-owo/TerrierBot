@@ -162,7 +162,7 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=viewedits [target]` / `/viewedits [message]` | View a message's edit history — silently tracked in the background; `=viewedits` (reply or ID/link) self-deletes and posts to #message-logs, `/viewedits` replies ephemerally and also posts a copy there (mod role required) |
 | `/modlockin duration:` | Self-lock-in for focus (max 2 hours) — any message you send outside the mod category gets deleted and reposted publicly under your name/avatar with a callout; the mod category itself is exempt (mod role required) |
 | `/modlockinstop` | End your own mod lock-in early (mod role required) |
-| `=exportall [days]` / `/exportall [days]` | DM yourself a CSV of every member: username, global name, server nickname, roles, join date, account age, boost date, and activity (messages in the last 7/30 days, last message, activity level). Activity is tracked live from when the cog was first loaded; pass `days` (1-30) to rescan that much message history first (mod role required) |
+| `=exportall` / `/exportall` | DM yourself a CSV of every member: username, global name, server nickname, roles, join date, account age, boost date, and activity (messages in the last 7/30 days, last message, activity level). Always rescans the last 30 days of message history first, so it can take a few minutes (mod role required) |
 
 ### Utility and maintenance
 

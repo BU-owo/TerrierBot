@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import discord
-from discord import app_commands
 from discord.ext import commands, tasks
 
 from bot import Context, TerrierBot
@@ -177,14 +176,11 @@ class ExportAllCog(
         name="exportall",
         description="DM yourself a CSV of every member: names, roles, join date, and activity (mod only).",
     )
-    @app_commands.describe(
-        days="Optional: rescan this many days of message history first for accurate activity (1-30)",
-    )
     @commands.guild_only()
-    async def exportall(self, ctx: Context, days: app_commands.Range[int, 0, 30] = 0):
+    async def exportall(self, ctx: Context):
         """Mod only. DMs a CSV of all members with names, roles, join date and activity level.
 
-        Usage: =exportall [days] — pass days (1-30) to rescan that much history first.
+        Always rescans the last 30 days of message history first, so activity is accurate.
         """
         assert ctx.guild is not None
         if not isinstance(ctx.author, discord.Member) or not any(r.id == MOD_ROLE_ID for r in ctx.author.roles):
@@ -197,9 +193,9 @@ class ExportAllCog(
             await guild.chunk()
 
         scan_note = ""
-        if days > 0 and guild.id == MAIN_GUILD_ID:
-            total, skipped = await self._scan_history(guild, days)
-            scan_note = f" Rescanned {days}d of history ({total} messages)."
+        if guild.id == MAIN_GUILD_ID:
+            total, skipped = await self._scan_history(guild, WINDOW_DAYS)
+            scan_note = f" Scanned the last {WINDOW_DAYS} days of history ({total} messages)."
             if skipped:
                 scan_note += f" Couldn't read {len(skipped)} channel(s)."
 
@@ -226,13 +222,7 @@ class ExportAllCog(
                 "activity_level": "Bot" if m.bot else _activity_level(m30),
             })
 
-        tracked_days = (time.time() - self.since) / 86400
         note = f"{len(members)} members in {guild.name}.{scan_note}"
-        if tracked_days < WINDOW_DAYS:
-            note += (
-                f"\n-# Activity only covers the last {tracked_days:.1f} days (tracking started "
-                f"<t:{int(self.since)}:R>). Run `=exportall 30` to backfill from history."
-            )
 
         filename = f"members-{datetime.now(EASTERN):%Y-%m-%d}.csv"
         # utf-8-sig so Excel opens emoji/non-ASCII names correctly
