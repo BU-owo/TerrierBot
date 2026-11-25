@@ -87,6 +87,15 @@ class DeleteUserDataCog(
                         del data[uid_s]
                         sh[key] = data
 
+            # thankful_submissions is a list[dict] with a "user_id" field.
+            data = sh.get("thankful_submissions")
+            if isinstance(data, list):
+                kept = [s for s in data if s.get("user_id") != user_id]
+                if len(kept) != len(data):
+                    lines.append(f"shelve[thankful_submissions]: {len(data) - len(kept)} entries")
+                    if apply:
+                        sh["thankful_submissions"] = kept
+
             # roleboost_assignments is {int(user_id): role_id}
             data = sh.get("roleboost_assignments")
             if isinstance(data, dict) and user_id in data:

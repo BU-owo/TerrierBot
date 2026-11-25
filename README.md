@@ -27,7 +27,8 @@ TerrierBot currently supports:
 - Reminders through `reminder` (ping in-channel + DM, set by duration like `2h` or by Eastern Time date/time like `tomorrow 9am`), viewable with `reminderview`
 - Server rule lookup through `rule`, showing a single rule by number or the full numbered list
 - Silent message-edit tracking, viewable on demand by mods through `viewedits` (reply, ID, or link) without auto-posting every edit to the logs
-- Thanksgiving week nudges: very active chatters get a playful reminder to submit thank-you messages through the form (runs through Friday 11/27 at noon ET)
+- Thanksgiving thank-you form through `thankyou`: posts an embed whose button opens a pop-up Discord form (their name, why you're thankful, optional sign-off). Submissions are saved, appended to the Google Sheet when `sheets_service_account.json` is present, and exportable as CSV with `thankfulexport`
+- Thanksgiving week nudges: very active chatters get a playful reminder linking to the thank-you form (runs through Friday 11/27 at noon ET)
 - Full member export through `exportall`: a CSV of every member's names, roles, join date and message activity level, DMed to the mod who ran it
 - Mod self-lock-in through `modlockin`/`modlockinstop`: messages sent outside the mod category get deleted and publicly reposted (webhook, their name/pfp) as a callout until time's up or they cancel it
 
@@ -144,7 +145,9 @@ Most commands support the `=` prefix, and many also support slash commands. The 
 | `=positivity` / `/positivity ...` | Configure Positivity Tuesday automation (Manage Server required) |
 | `=feedbacksetup` / `/feedbacksetup` | Post the anonymous feedback prompt |
 | `/starboard ...` | Configure the starboard (Manage Server required) |
-| *(no command)* Thanksgiving nudges | Through Fri 11/27 at noon ET, a member who sends 10+ messages within 10 minutes gets a reply nudging them to fill out the thank-you form (once per member per day, at most one nudge per channel every 5 minutes, mod/log category excluded). Turns itself off after the event |
+| `/thankyou` | Post the Thanksgiving thank-you form embed with a "Write a Thank You" button (Manage Server required). Submitters get an ephemeral confirmation and can submit as many as they want |
+| `/thankfulexport` | Download every thank-you submission as a CSV in the Google Sheet's column order (Manage Server required) |
+| *(no command)* Thanksgiving nudges | Through Fri 11/27 at noon ET, a member who sends 10+ messages within 10 minutes gets a reply nudging them to fill out the thank-you form, linking to the latest `/thankyou` embed (once per member per day, at most one nudge per channel every 5 minutes, mod/log category excluded). Turns itself off after the event |
 | *(no command)* `@Eventee`, `@Foodee`, etc. | Community ping roles are pinged directly. Pinging any of them again within 30 minutes of your last ping (even a different role) deletes the message and auto-times-out the member for 30 minutes (mods and Support exempt) |
 | `/pollee message:` | Ping the Pollee role with a message (restricted to a specific role) |
 | `/reactionrole <preset>` | Post a reaction role message from a preset (Manage Roles required) |
