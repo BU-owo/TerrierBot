@@ -27,9 +27,6 @@ EASTERN = ZoneInfo("America/New_York")
 EVENT_START = datetime(2026, 11, 24, 0, 0, tzinfo=EASTERN)
 EVENT_END = datetime(2026, 11, 27, 12, 0, tzinfo=EASTERN)
 
-# Fallback for nudges until /thankyou has posted the Discord form somewhere.
-FORM_URL = "https://forms.gle/9XaRheMvQqjWujHp6"
-
 # "Very active" = this many messages within this many seconds.
 ACTIVE_MESSAGE_COUNT = 10
 ACTIVE_WINDOW_SECONDS = 10 * 60
@@ -44,8 +41,6 @@ SHELVE_FILE = "terrierbot.shelve"
 NUDGED_KEY = "thankful_nudged"
 # list[dict] — every form submission (see ThankfulModal.on_submit).
 SUBMISSIONS_KEY = "thankful_submissions"
-# str — jump URL of the most recent /thankyou embed, used by the nudges.
-EMBED_URL_KEY = "thankful_embed_url"
 
 # ── Google Sheets (optional) ──────────────────────────────────────────────────
 # Each submission is appended to the response sheet of the old Google Form so
@@ -232,7 +227,6 @@ class ThankfulCog(
         self.channel_last_nudge: dict[int, float] = {}
         with shelve.open(SHELVE_FILE) as sh:
             self.nudged: dict[str, str] = sh.get(NUDGED_KEY, {})
-            self.embed_url: str | None = sh.get(EMBED_URL_KEY)
 
     def _save(self) -> None:
         with shelve.open(SHELVE_FILE) as sh:
@@ -250,14 +244,11 @@ class ThankfulCog(
         embed = discord.Embed(title=EMBED_TITLE, description=EMBED_DESCRIPTION, color=THANKFUL_COLOR)
         embed.set_footer(text=NUDGE_FOOTER)
         try:
-            msg = await channel.send(embed=embed, view=ThankfulView())
+            await channel.send(embed=embed, view=ThankfulView())
         except discord.HTTPException as e:
             await interaction.response.send_message(f"Couldn't post the form: {e}", ephemeral=True)
             return
 
-        self.embed_url = msg.jump_url
-        with shelve.open(SHELVE_FILE) as sh:
-            sh[EMBED_URL_KEY] = msg.jump_url
         await interaction.response.send_message("Posted the thank-you form ✅", ephemeral=True)
 
     @app_commands.command(name="thankfulexport", description="Download every thank-you form submission as a CSV.")
@@ -313,10 +304,10 @@ class ThankfulCog(
 
         texts, weights = zip(*NUDGES)
         text = random.choices(texts, weights=weights)[0].format(name=message.author.mention)
-        link = self.embed_url or FORM_URL
         try:
             await message.reply(
-                f"{text}\n## [Write a Thank You Message]({link})\n{NUDGE_FOOTER}",
+                f"{text}\n{NUDGE_FOOTER}",
+                view=ThankfulView(),
                 mention_author=False,
                 allowed_mentions=discord.AllowedMentions(users=[message.author], everyone=False, roles=False),
             )
