@@ -79,7 +79,7 @@ class DeleteUserDataCog(
         lines: list[str] = []
         with shelve.open(SHELVE_FILE) as sh:
             # {str(user_id): {...}} maps — drop the key outright.
-            for key in ("birthdays", "lockins", "hardmutes", "modtracker_message_counts", "member_activity", "thankful_nudged"):
+            for key in ("birthdays", "lockins", "hardmutes", "modtracker_message_counts", "member_activity", "thankful_nudged", "thankful_released"):
                 data = sh.get(key)
                 if isinstance(data, dict) and uid_s in data:
                     lines.append(f"shelve[{key}]: 1 entry")
