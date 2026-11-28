@@ -211,3 +211,4 @@ TerrierBot/
 ├── token.txt            # Discord bot token (not committed)
 └── terrierbot.shelve    # Small on-disk state store for bot settings
 ```
+
