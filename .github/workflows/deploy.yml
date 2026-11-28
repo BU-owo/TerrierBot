@@ -96,4 +96,5 @@ jobs:
         run: |
           cd /home/ubuntu/TerrierBot
           export PATH=$PATH:/home/ubuntu/.npm-global/bin
-          pm2 restart terrierbot --update-env || npx pm2 restart terrierbot
+          pm2 restart terrierbot --update-env || pm2 start bot.py --name terrierbot --interpreter /home/ubuntu/TerrierBot/.venv/bin/python
+          pm2 save
