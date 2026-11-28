@@ -13,3 +13,5 @@ data/mod_queue_reminders.json
 sheets_service_account.json
 .DS_Store
 sheets_service_account.json
+# Thank-you form exports (people's private messages) — never commit
+data/*Responses*.xlsx

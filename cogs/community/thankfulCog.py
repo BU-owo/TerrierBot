@@ -62,22 +62,10 @@ CSV_HEADER = [
     'Your Sign Off / Name (leave blank for "Anonymous")',
 ]
 
-THANKFUL_COLOR = discord.Color.from_rgb(230, 126, 34)
-
-EMBED_TITLE = "Who are YOU thankful for? 🦃"
-EMBED_DESCRIPTION = (
-    "**Happy Thanksgiving Week!** To celebrate the day of thankfulness, I invite you to "
-    "participate in this exercise to reflect on what others have done for you.\n\n"
-    "Has someone helped you with something, answered your questions, spent time with you, "
-    "been your friend, encouraged you, been a positive presence, supported you, or anything "
-    "else? **Please acknowledge them!**\n\n"
-    "These will be shared with the individuals via Discord the day after Thanksgiving <3"
-)
-
-SUBMITTED_MESSAGE = (
-    "## THANK YOU for being thankful! 🧡\n"
-    "Is there anyone else who's made your semester better? There's **no limit** and **no timer**, "
-    "so thank as many people as you want! 🦃🍂🥧"
+# The form is closed: /thankyou is gone and the button on old embeds says so.
+CLOSED_MESSAGE = (
+    "Terrier Hub Thanksgiving is over! If you have more thanks to give, "
+    "you should reach out to the person directly!"
 )
 
 # (message, weight) — {name} is replaced with the member's mention. Higher
@@ -112,7 +100,8 @@ RELEASE_FOOTER = "### Happy Thanksgiving!"
 
 
 async def setup(bot: TerrierBot):
-    # Persistent view so the button on old /thankyou embeds survives restarts.
+    # Persistent view so the button on old /thankyou embeds still answers (with
+    # CLOSED_MESSAGE) after restarts.
     bot.add_view(ThankfulView())
     await bot.add_cog(ThankfulCog(bot))
 
@@ -198,7 +187,8 @@ class ThankfulModal(discord.ui.Modal, title="Who are YOU thankful for? 🦃"):
             subs.append(sub)
             sh[SUBMISSIONS_KEY] = subs
 
-        await interaction.response.send_message(SUBMITTED_MESSAGE, view=ThankfulView(), ephemeral=True)
+        # Only reachable from a form opened before it closed; still saved.
+        await interaction.response.send_message(CLOSED_MESSAGE, ephemeral=True)
 
         if await asyncio.to_thread(_append_to_sheet_blocking, _submission_row(sub)):
             with shelve.open(SHELVE_FILE) as sh:
@@ -231,7 +221,7 @@ class ThankfulView(discord.ui.View):
     async def write_button(
         self, interaction: discord.Interaction, button: discord.ui.Button  # type: ignore[type-arg]
     ) -> None:
-        await interaction.response.send_modal(ThankfulModal())
+        await interaction.response.send_message(CLOSED_MESSAGE, ephemeral=True)
 
 
 # ── Release helpers ───────────────────────────────────────────────────────────
@@ -583,25 +573,6 @@ class ThankfulCog(
         if partial:
             report += "\n⚠️ Partially sent (won't be retried):\n" + "\n".join(f"• {_escape(p)}" for p in partial)
         await interaction.followup.send(report[:DM_CHAR_LIMIT], ephemeral=True)
-
-    @app_commands.command(name="thankyou", description="Post the Thanksgiving thank-you form in this channel.")
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.guild_only()
-    async def thankyou(self, interaction: discord.Interaction) -> None:
-        channel = interaction.channel
-        if not isinstance(channel, discord.abc.Messageable):
-            await interaction.response.send_message("I can't post here.", ephemeral=True)
-            return
-
-        embed = discord.Embed(title=EMBED_TITLE, description=EMBED_DESCRIPTION, color=THANKFUL_COLOR)
-        embed.set_footer(text=NUDGE_FOOTER)
-        try:
-            await channel.send(embed=embed, view=ThankfulView())
-        except discord.HTTPException as e:
-            await interaction.response.send_message(f"Couldn't post the form: {e}", ephemeral=True)
-            return
-
-        await interaction.response.send_message("Posted the thank-you form ✅", ephemeral=True)
 
     @app_commands.command(name="thankfulexport", description="Download every thank-you form submission as a CSV.")
     @app_commands.default_permissions(manage_guild=True)
