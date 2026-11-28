@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 from cogs.logging.logConfig import LogChannels, MOD_ROLE_ID
 from cogs.community.trollCog import owo_ify
 
+
 # Commands whose errors get uwu-ified instead of shown straight — matches
 # the bit these commands are already messing with.
 UWU_ERROR_COMMANDS = {"uwu", "troll"}
